@@ -1,0 +1,101 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev'
+}
+
+repositories {
+    maven {
+        name = 'Create'
+        url = uri('https://maven.createmod.net')
+    }
+    maven {
+        name = 'Registrate'
+        url = uri('https://maven.ithundxr.dev/snapshots')
+    }
+    maven {
+        name = 'BlameJared'
+        url = uri('https://maven.blamejared.com')
+    }
+    maven {
+        name = 'Curios'
+        url = uri('https://maven.theillusivec4.top/')
+    }
+    maven {
+        name = 'CCTweaked'
+        url = uri('https://maven.squiddev.cc')
+    }
+    maven {
+        name = 'CurseMaven'
+        url = uri('https://www.cursemaven.com')
+    }
+    maven {
+        name = 'Modrinth'
+        url = uri('https://api.modrinth.com/maven')
+    }
+    maven {
+        name = 'FTB'
+        url = uri('https://maven.ftb.dev/releases')
+    }
+    maven {
+        name = 'Architectury'
+        url = uri('https://maven.architectury.dev')
+    }
+    maven {
+        name = 'ModResources'
+        url = uri('https://raw.githubusercontent.com/Fuzss/modresources/main/maven')
+    }
+    maven {
+        name = 'JourneyMap'
+        url = uri('https://jm.gserv.me/repository/maven-public')
+    }
+    maven {
+        name = 'Chocolate'
+        url = uri('https://chocolateminecraft.com/maven')
+    }
+}
+
+neoForge {
+    version = neoforge_version
+    // Automatically enable neoforge AccessTransformers if the file exists
+    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+    parchment {
+        minecraftVersion = parchment_minecraft
+        mappingsVersion = parchment_version
+    }
+    runs {
+        configureEach {
+            systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})" // Unify the run config names with fabric
+        }
+        client {
+            client()
+        }
+        data {
+            data()
+
+            // DataGen can be run by - "./gradlew :neoforge:runData" in Terminal.
+            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+
+        }
+        server {
+            server()
+        }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim")
+    compileOnly("net.createmod.ponder:ponder-neoforge:1.0.82+mc1.21.1")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-1.21.1:1.0.6")
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
