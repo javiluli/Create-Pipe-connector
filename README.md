@@ -3,72 +3,96 @@
 
 # Create: Pipe Connector
 
-Beta addon for [Create](https://github.com/Creators-of-Create/Create) on Minecraft `1.21.1`.
+⚡ **Tired of laying pipes block by block? Connect them instantly.**
+
+A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Minecraft `1.21.1`.
 
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
 ![Loader](https://img.shields.io/badge/Loader-NeoForge-E65100?style=for-the-badge&logo=forge&logoColor=white)
 ![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-0.1.0Beta-455A64?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-0.1.0--beta-455A64?style=for-the-badge)
 
 </div>
 
-## What it does
+---
 
-Create: Pipe Connector removes the tedious part of routing Create fluid pipes. Select two pipes and the mod fills the shortest valid route between them, so you can build faster and with less manual placement.
+## 🚀 The Purpose: Why this addon?
 
-### Player features
+Designing massive factories in **Create** is incredibly rewarding, but routing long, winding fluid pipelines block by block can quickly become a tedious chore.
 
-- Connects two Create pipes automatically
-- Finds the shortest valid path around obstacles
-- Shows a ghost preview before placing anything
-- Refreshes Create pipe connections after placement
+**Create: Pipe Connector** is here to fix that. It eliminates the monotony of manual routing by letting you select two points and instantly filling the shortest valid path between them. Spend less time wrestling with pipe placement and more time optimizing your factory lines!
 
-### Supported blocks
+---
+
+## 🕹️ PLAYER SECTION (Usage & Features)
+
+### ✨ Key Features
+
+- **Instant Auto-Connection:** Link two distant pipes with a simple click combination.
+- **Smart Pathfinding:** The mod automatically calculates the shortest valid route around obstacles.
+- **Zero-Waste Ghost Preview:** See exactly where the pipes will go before spending a single item.
+- **Seamless Integration:** Fully refreshes Create's pipe networks instantly upon placement to avoid broken fluid flows.
+
+### 📦 Supported Blocks
 
 - `create:fluid_pipe`
 - `create:smart_fluid_pipe`
 
-## How to use it
+### 🔧 How to Use It
 
-1. Sneak and right-click a Create pipe with an empty hand.
-2. Sneak and right-click a second pipe of the same type.
-3. Check the ghost preview of the final route.
-4. Confirm the placement to build the line automatically.
+1.  **Select Start:** Sneak and right-click a Create pipe with an empty hand.
+2.  **Select End:** Sneak and right-click a second pipe of the same type.
+3.  **Preview:** Look at the custom _ghost preview_ rendered in the world to verify the path.
+4.  **Confirm:** Confirm the placement to instantly build the line!
 
-## Requirements
+### 📋 Requirements
 
-- Minecraft `1.21.1`
-- NeoForge `21.1.219` or compatible
-- Create `6.0.10-280` or compatible
-- Java `21`
+- **Minecraft:** `1.21.1`
+- **NeoForge:** `21.1.219` or compatible
+- **Create:** `6.0.10-280` or compatible
+- **Java:** `21`
 
-## For modpacks
+---
+
+## 📦 MODPACKMAKER SECTION
 
 - `Create` is required at runtime.
-- `Ponder` and `Flywheel` are only used to render the preview during development and modpack validation.
-- This addon is currently marked as beta, so the feature set may still evolve.
+- `Ponder` and `Flywheel` are utilized to ensure the preview renders smoothly during development and validation.
+- _Note: This addon is currently in **Beta (0.1.0-beta)**, meaning features are evolving rapidly._
 
-## Documentation
+💬 **We need your feedback!**  
+Are you a player with a cool feature idea, or a modpack maker who found a bug? We want to hear from you! Please **open an Issue** or drop a comment with your suggestions, tweaks, or feature requests to help us shape the definitive version of this tool.
 
-- `docs/PLAYER_GUIDE.md` - player-facing usage guide
-- `docs/MODPACK_GUIDE.md` - packmaker notes and requirements
-- `docs/DEV_GUIDE.md` - project layout and implementation flow
-- `docs/API.md` - integration notes for other mods
+---
 
-## Build
+---
 
-- `./gradlew :neoforge:runClient` starts the NeoForge dev client
-- `./gradlew :neoforge:build` builds the NeoForge artifact
+## 💻 DEVELOPER SECTION (Modders & Devs)
 
-## For devs and modders
+> 💡 **Repository Note:** The project maintains a clean, NeoForge-first structure. All legacy beacon rendering code has been completely removed to focus exclusively on the Create pipe connector feature set.
 
-- Shared logic lives in `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`.
-- NeoForge entrypoints, input handling, preview rendering, and server placement live under `neoforge/src/main/java/com/javiluli/createpipeconnector/`.
-- The ghost preview renderer is `neoforge/src/main/java/com/javiluli/createpipeconnector/client/render/PipeGhostRenderer.java`.
-- If you extend the connector logic, add new block support in `PipeConnectorLogic` first and keep loader code thin.
+### 🛠️ Project Structure & Flow
 
-## Status
+If you want to contribute, extend block support, or review the codebase, here is where the core logic lives:
 
-- The old beacon behavior is no longer active.
-- The project is now focused on the Create pipe connector feature.
-- The repository keeps a clean NeoForge-first structure for the current release.
+- **Core Logic (`/common`):**  
+  Shared backend logic lives in `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`.  
+  _If you want to extend block support, add it here first to keep loader-specific code thin._
+- **NeoForge Implementation (`/neoforge`):**  
+  Handles loader entrypoints, player input events, server-side placement, and preview pipelines under `neoforge/src/main/java/com/javiluli/createpipeconnector/`.
+- **Rendering (`/neoforge/.../client`):**  
+  The ghost preview system is managed by `PipeGhostRenderer.java` inside the client render package.
+
+### 🚀 Building the Project
+
+- Run the NeoForge dev client: `./gradlew :neoforge:runClient`
+- Build the production artifact: `./gradlew :neoforge:build`
+
+### 📖 Technical Documentation
+
+For deeper insights, check out our internal markdown guides:
+
+- `docs/PLAYER_GUIDE.md` - In-depth player usage
+- `docs/MODPACK_GUIDE.md` - Packmaker notes & advanced integration
+- `docs/DEV_GUIDE.md` - Implementation details & architecture flow
+- `docs/API.md` - Cross-mod integration capabilities
