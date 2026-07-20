@@ -1,101 +1,149 @@
-﻿<div align="center">
+<div align="center">
 <a><img src="./public/icon.png" width="180" /></a>
 
 # Create: Pipe Connector
 
-⚡ **Tired of laying pipes block by block? Connect them instantly.**
+⚡ **Connect Create pipes faster. Build less by hand.**
 
 A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Minecraft `1.21.1`.
+
+<!-- Optional badges: remove this block if CurseForge does not allow shields.io -->
 
 ![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
 ![Loader](https://img.shields.io/badge/Loader-NeoForge-E65100?style=for-the-badge&logo=forge&logoColor=white)
 ![Version](https://img.shields.io/badge/Version-0.2.0--beta-455A64?style=for-the-badge)
 
+<!-- End optional badges -->
+
 </div>
 
 ---
 
-## 🚀 The Purpose: Why this addon?
+## 🚀 What Is This Mod?
 
-Designing massive factories in **Create** is incredibly rewarding, but routing long, winding fluid pipelines block by block can quickly become a tedious chore.
+Building large factories in **Create** is fun, but placing long fluid pipe routes block by block can get repetitive fast.
 
-**Create: Pipe Connector** is here to fix that. It eliminates the monotony of manual routing by letting you select two points and instantly filling the shortest valid path between them. Spend less time wrestling with pipe placement and more time optimizing your factory lines!
+**Create: Pipe Connector** lets you plan a pipe route, preview it, and place the whole line at once. It is designed to make pipe building faster while still giving you control over the final path.
 
 ---
 
-## 🕹️ PLAYER SECTION (Usage & Features)
+## ✨ Main Features
 
-### ✨ Key Features
+- **Automatic Pipe Routing:** Quickly connect Create fluid pipes through a valid path.
+- **Smart Pathfinding:** Routes around obstacles when possible.
+- **Live Ghost Preview:** See where pipes will be placed before confirming.
+- **Anchor Waypoints:** Press `C` to force the route through a point.
+- **Undo Last Anchor:** Press `V` to remove the last anchor.
+- **Preview Lock:** Press `Left Alt` to freeze/unfreeze the current preview target.
+- **Survival Friendly:** Shows `required/available` pipes and blocks placement if you do not have enough.
+- **Configurable Controls:** Rebind connector keys from Minecraft's Controls menu.
+- **Create Integration:** Refreshes Create pipe networks after placement.
 
-- **Instant Auto-Connection:** Link two distant pipes with a simple click combination.
-- **Smart Pathfinding:** The mod automatically calculates the shortest valid route around obstacles.
-- **Zero-Waste Ghost Preview:** See exactly where the pipes will go before spending a single item.
-- **Anchor Waypoints:** Add or remove intermediate anchors to guide long or complex routes.
-- **Survival Inventory Check:** Shows required/available pipes and blocks placement when you do not have enough.
-- **Configurable Controls:** Rebind the preview lock and anchor controls from Minecraft's Controls menu.
-- **Seamless Integration:** Fully refreshes Create's pipe networks instantly upon placement to avoid broken fluid flows.
+---
 
-### 📦 Supported Blocks
+## 📦 Supported Pipes
 
 - `create:fluid_pipe`
 - `create:smart_fluid_pipe`
 
-### 🔧 How to Use It
+---
 
-1.  **Select Start:** Hold a Create pipe in the off-hand, keep the main hand empty, then sneak and right-click.
-2.  **Guide the Route:** Move your crosshair to preview the route. Press `C` to add an anchor and `V` to remove the last anchor.
-3.  **Lock Preview:** Press `Left Alt` to freeze/unfreeze the current preview target while you move around.
-4.  **Confirm:** Sneak and right-click again to place the full planned line.
-5.  **Customize Controls:** Open Minecraft's `Options > Controls > Key Binds` and look for `Create: Pipe Connector`.
+## 🎮 How To Use
 
-### 📋 Requirements
+1. Put a supported Create pipe in your **off-hand**.
+2. Keep your **main hand empty**.
+3. Sneak + right-click to start the connection.
+4. Move your crosshair to preview the route.
+5. Optional: press `C` to add an anchor.
+6. Optional: press `V` to remove the last anchor.
+7. Optional: press `Left Alt` to lock/unlock the preview target.
+8. Sneak + right-click again to place the planned pipe line.
+
+In survival, the action bar shows:
+
+```txt
+required/available
+```
+
+Example:
+
+```txt
+10/32
+```
+
+If you do not have enough pipes, the required number turns red and placement is cancelled.
+
+---
+
+## 📋 Requirements
 
 - **Minecraft:** `1.21.1`
+- **Loader:** `NeoForge`
 - **NeoForge:** `21.1.219` or compatible
 - **Create:** `6.0.10-280` or compatible
 - **Java:** `21`
 
 ---
 
-## 📦 MODPACKMAKER SECTION
+## 📦 For Modpacks
 
-- `Create` is required at runtime.
-- No extra hard dependencies are declared beyond `Minecraft`, `NeoForge`, and `Create`.
-- This branch targets the official NeoForge Create `1.21.1` release line.
-- _Note: This addon is currently in **Beta (0.2.0-beta)**, meaning features are evolving rapidly._
-
-💬 **We need your feedback!**  
-Are you a player with a cool feature idea, or a modpack maker who found a bug? We want to hear from you! Please **open an Issue** or drop a comment with your suggestions, tweaks, or feature requests to help us shape the definitive version of this tool.
+- Required on both client and server.
+- Requires `Create`.
+- No extra runtime mods are required beyond `Minecraft`, `NeoForge`, and `Create`.
+- Current recommended version: **Create `6.0.10-280`**.
+- Current addon version: **Create: Pipe Connector `0.2.0-beta`**.
 
 ---
 
-## 💻 DEVELOPER SECTION (Modders & Devs)
+## 🌱 Beta Notice
 
-> 💡 **Repository Note:** This branch is NeoForge-only. Shared placement logic lives in `common`, while the active runtime implementation lives in `neoforge`.
+This project is currently in **Beta**.
 
-### 🛠️ Project Structure & Flow
+You may still encounter minor bugs, edge cases, or visuals that need more polish. Feedback is very welcome, especially with screenshots or short descriptions of routes that behave strangely.
 
-If you want to contribute, extend block support, or review the codebase, here is where the core logic lives:
+---
 
-- **Core Logic (`/common`):**  
-  Shared backend logic lives in `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`.  
-  _If you want to extend block support, add it here first to keep loader-specific code thin._
-- **NeoForge Implementation (`/neoforge`):**  
-  Owns the entrypoint, event registration, networking, key binds, server-side placement bridge, and client preview renderer.
+## 💬 Feedback & Contributions
+
+This project is built around player and modpack feedback.
+
+You can help by:
+
+- Reporting bugs
+- Suggesting features
+- Sharing screenshots or videos of issues
+- Testing long or complex routes in real Create factories
+- Opening pull requests for fixes or improvements
+
+Thanks for helping make Create pipe building smoother!
+
+---
+
+## 💻 For Developers
+
+> This branch is **NeoForge-only**. Shared placement logic lives in `common`, while the active runtime implementation lives in `neoforge`.
+
+### Project Structure
+
+- **Core Logic (`/common`):**
+  Shared backend logic lives in `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`.
+
+- **NeoForge Implementation (`/neoforge`):**
+  Handles entrypoints, events, networking, keybinds, server-side placement, and client preview rendering.
+
 - **Rendering (`/neoforge/.../client/render`):**
   The ghost preview system is managed by `PipeGhostRenderer.java`, with anchor highlights in the `overlay` package.
 
-### 🚀 Building the Project
+### Building
 
 - Run the NeoForge dev client: `./gradlew :neoforge:runClient`
 - Build the NeoForge artifact: `./gradlew :neoforge:build`
+- Build and copy the release jar: `./gradlew buildAll`
 
-### 📖 Technical Documentation
-
-For deeper insights, check out our internal markdown guides:
+### Documentation
 
 - `docs/PLAYER_GUIDE.md` - In-depth player usage
-- `docs/MODPACK_GUIDE.md` - Packmaker notes & advanced integration
-- `docs/DEV_GUIDE.md` - Implementation details & architecture flow
-- `docs/API.md` - Cross-mod integration capabilities
+- `docs/MODPACK_GUIDE.md` - Packmaker notes and integration
+- `docs/DEV_GUIDE.md` - Implementation details and architecture
+- `docs/API.md` - Cross-mod integration notes
