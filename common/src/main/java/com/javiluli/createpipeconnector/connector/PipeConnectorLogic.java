@@ -33,8 +33,8 @@ import java.util.UUID;
 
 public final class PipeConnectorLogic {
     private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(
-            ResourceLocation.fromNamespaceAndPath("create", "fluid_pipe"),
-            ResourceLocation.fromNamespaceAndPath("create", "smart_fluid_pipe")
+            Objects.requireNonNull(ResourceLocation.tryParse("create:fluid_pipe")),
+            Objects.requireNonNull(ResourceLocation.tryParse("create:smart_fluid_pipe"))
     );
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
