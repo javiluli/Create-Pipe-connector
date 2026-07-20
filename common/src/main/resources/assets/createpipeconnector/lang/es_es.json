@@ -1,0 +1,6 @@
+{
+  "key.categories.createpipeconnector": "Create: Pipe Connector",
+  "key.createpipeconnector.toggle_preview_lock": "Bloquear preview de tuberías",
+  "key.createpipeconnector.add_anchor": "Añadir ancla de tuberías",
+  "key.createpipeconnector.remove_last_anchor": "Quitar última ancla de tuberías"
+}

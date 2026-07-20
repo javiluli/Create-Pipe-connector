@@ -1,0 +1,6 @@
+{
+  "key.categories.createpipeconnector": "Create: Pipe Connector",
+  "key.createpipeconnector.toggle_preview_lock": "Lock Pipe Preview",
+  "key.createpipeconnector.add_anchor": "Add Pipe Anchor",
+  "key.createpipeconnector.remove_last_anchor": "Remove Last Pipe Anchor"
+}
