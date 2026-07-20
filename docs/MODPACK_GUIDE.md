@@ -10,7 +10,6 @@
 ## Runtime dependencies
 
 - `Create` is the only gameplay mod required at runtime.
-- `Ponder` and `Flywheel` are compile-time helpers for the preview renderer only.
 - No extra runtime mods are required for the connector feature.
 
 ## What the addon does
@@ -18,6 +17,8 @@
 - Connects two Create fluid pipes automatically
 - Finds the shortest valid route around obstacles
 - Shows a ghost preview before placement
+- Supports anchor waypoints and configurable key binds
+- Checks survival inventory before placing pipes
 
 ## Pack integration
 
@@ -28,7 +29,7 @@
 ## Not yet provided
 
 - No public API
-- No config screen
+- No config screen beyond vanilla key binding options
 - No compatibility promise with every render or optimization mod
 
 ## Recommended version

@@ -19,18 +19,22 @@ Keep the multiloader structure intact while the NeoForge runtime focuses on the 
 - `neoforge/.../client/input/ClientPipeConnectorInputHandler.java`
   - first selection
   - live preview refresh
+  - key-driven anchors and preview locking
 - `neoforge/.../client/render/PipeGhostRenderer.java`
   - blueprint-style preview rendering
+- `neoforge/.../network/CreatePipeConnectorNetwork.java`
+  - client-to-server anchor sync
 - `neoforge/.../connector/ServerPipeConnectorEvents.java`
   - server-side placement and pipe refresh
 
 ## Feature flow
 
-1. Player selects the first pipe.
+1. Player enters pipe mode with a pipe in the off-hand and an empty main hand.
 2. Client stores the selection.
-3. The second pipe under the crosshair drives preview generation.
-4. The preview world is built from the computed path.
-5. Server placement fills the path and refreshes Create connections.
+3. Crosshair target and optional anchors drive preview generation.
+4. The preview world is built from the computed placement plan.
+5. Server validates anchors, inventory, and placement before consuming pipes.
+6. Server placement fills the path and refreshes Create connections.
 
 ## Useful commands
 

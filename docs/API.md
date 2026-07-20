@@ -4,8 +4,9 @@ This addon does not expose a public API yet.
 
 ## Current gameplay surface
 
-- sneak + empty-hand right-click the first Create pipe
-- sneak + empty-hand right-click the second Create pipe
+- pipe in off-hand + empty main-hand sneak right-click to start
+- crosshair target plus optional anchors define the route
+- sneak right-click again to confirm placement
 - the mod fills the shortest valid path between them
 - the client shows a ghost preview before placement
 
