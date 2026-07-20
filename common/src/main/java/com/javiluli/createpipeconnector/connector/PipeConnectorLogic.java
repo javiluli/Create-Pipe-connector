@@ -5,6 +5,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
@@ -33,6 +38,7 @@ public final class PipeConnectorLogic {
     );
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
+    private static final Map<UUID, List<PlacementTarget>> ANCHORS = new HashMap<>();
 
     private PipeConnectorLogic() {
     }
@@ -41,40 +47,165 @@ public final class PipeConnectorLogic {
         return CONNECTABLE_PIPES.contains(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
+    public static Block getPipeBlock(ItemStack stack) {
+        if (stack.getItem() instanceof BlockItem blockItem && isConnectablePipe(blockItem.getBlock().defaultBlockState())) {
+            return blockItem.getBlock();
+        }
+        return null;
+    }
+
+    public static PlacementTarget resolvePlacementTarget(Level level, BlockPos clickedPos, Direction clickedFace, Block pipeBlock) {
+        BlockState clickedState = level.getBlockState(clickedPos);
+        if (isConnectablePipe(clickedState)) {
+            if (clickedState.getBlock() == pipeBlock) {
+                return new PlacementTarget(clickedPos, clickedFace, true);
+            }
+            return null;
+        }
+
+        BlockPos placementPos = clickedState.isAir() || clickedState.canBeReplaced() ? clickedPos : clickedPos.relative(clickedFace);
+        BlockState placementState = level.getBlockState(placementPos);
+        if (isConnectablePipe(placementState)) {
+            if (placementState.getBlock() == pipeBlock) {
+                return new PlacementTarget(placementPos, clickedFace.getOpposite(), true);
+            }
+            return null;
+        }
+        if (!canPlacePipeAt(level, placementPos)) {
+            return null;
+        }
+
+        return new PlacementTarget(placementPos, clickedFace, false);
+    }
+
+    public static boolean canPlacePipeAt(Level level, BlockPos position) {
+        return isTraversableBlock(level, position);
+    }
+
+    public static boolean isSelectionStillValid(Level level, Selection selection) {
+        BlockState selectionState = level.getBlockState(selection.position());
+        if (selection.existingPipe()) {
+            return isConnectablePipe(selectionState) && selection.pipeBlock() == selectionState.getBlock();
+        }
+
+        return canPlacePipeAt(level, selection.position());
+    }
+
+    public static boolean isPlayerInPipeMode(Player player, Selection selection) {
+        Block heldPipeBlock = getPipeBlock(player.getOffhandItem());
+        return player.getMainHandItem().isEmpty()
+                && heldPipeBlock == selection.pipeBlock()
+                && isSelectionStillValid(player.level(), selection);
+    }
+
     public static Selection getSelection(UUID playerId) {
         return SELECTIONS.get(playerId);
     }
 
     public static void setSelection(UUID playerId, Selection selection) {
         SELECTIONS.put(playerId, selection);
+        ANCHORS.remove(playerId);
     }
 
     public static void clearSelection(UUID playerId) {
         SELECTIONS.remove(playerId);
+        ANCHORS.remove(playerId);
+    }
+
+    public static List<PlacementTarget> getAnchors(UUID playerId) {
+        return List.copyOf(ANCHORS.getOrDefault(playerId, List.of()));
+    }
+
+    public static void addAnchor(UUID playerId, PlacementTarget anchor) {
+        List<PlacementTarget> anchors = new ArrayList<>(ANCHORS.getOrDefault(playerId, List.of()));
+        if (!anchors.isEmpty() && anchors.get(anchors.size() - 1).position().equals(anchor.position())) {
+            anchors.set(anchors.size() - 1, anchor);
+        } else {
+            anchors.add(anchor);
+        }
+        ANCHORS.put(playerId, List.copyOf(anchors));
+    }
+
+    public static void removeLastAnchor(UUID playerId) {
+        List<PlacementTarget> anchors = new ArrayList<>(ANCHORS.getOrDefault(playerId, List.of()));
+        if (anchors.isEmpty()) {
+            return;
+        }
+
+        anchors.remove(anchors.size() - 1);
+        if (anchors.isEmpty()) {
+            ANCHORS.remove(playerId);
+        } else {
+            ANCHORS.put(playerId, List.copyOf(anchors));
+        }
+    }
+
+    public static void clearAnchors(UUID playerId) {
+        ANCHORS.remove(playerId);
     }
 
     public static boolean connect(ServerLevel level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
-        List<BlockPos> path = findPath(level, startPos, endPos);
-        if (path == null || path.size() < 2) {
+        ConnectionPlan plan = buildConnectionPlan(level, startPos, endPos);
+        if (plan == null) {
             return false;
         }
 
+        return connect(level, plan, pipeBlock);
+    }
+
+    public static boolean connect(ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
+        BlockPos startPos = plan.path().get(0);
         BlockState pipeState = createPipeState(pipeBlock, level.getBlockState(startPos));
 
-        for (int index = 1; index < path.size() - 1; index++) {
-            BlockPos position = path.get(index);
-            BlockState currentState = level.getBlockState(position);
-            if (isConnectablePipe(currentState)) {
-                continue;
-            }
-            if (!isTraversable(level, position, startPos, endPos)) {
+        for (BlockPos position : plan.placementPositions()) {
+            if (!isTraversableBlock(level, position)) {
                 return false;
             }
+        }
+
+        for (BlockPos position : plan.placementPositions()) {
             level.setBlockAndUpdate(position, pipeState);
         }
 
-        refreshPipeStates(level, path);
+        refreshPipeStates(level, plan.path());
         return true;
+    }
+
+    public static int countAvailablePipes(Player player, Block pipeBlock) {
+        if (player.getAbilities().instabuild) {
+            return Integer.MAX_VALUE;
+        }
+
+        Item pipeItem = pipeBlock.asItem();
+        if (pipeItem == Items.AIR) {
+            return 0;
+        }
+
+        int count = 0;
+        count += countMatchingStacks(player.getInventory().items, pipeItem);
+        count += countMatchingStacks(player.getInventory().offhand, pipeItem);
+        return count;
+    }
+
+    public static boolean hasEnoughPipes(Player player, Block pipeBlock, int requiredPipes) {
+        return player.getAbilities().instabuild || countAvailablePipes(player, pipeBlock) >= requiredPipes;
+    }
+
+    public static boolean consumePipes(Player player, Block pipeBlock, int requiredPipes) {
+        if (requiredPipes <= 0 || player.getAbilities().instabuild) {
+            return true;
+        }
+
+        if (!hasEnoughPipes(player, pipeBlock, requiredPipes)) {
+            return false;
+        }
+
+        Item pipeItem = pipeBlock.asItem();
+        int remaining = requiredPipes;
+        remaining = consumeMatchingStacks(player.getInventory().items, pipeItem, remaining);
+        remaining = consumeMatchingStacks(player.getInventory().offhand, pipeItem, remaining);
+        player.getInventory().setChanged();
+        return remaining == 0;
     }
 
     public static BlockState createPipeState(Block pipeBlock, BlockState sourceState) {
@@ -86,22 +217,28 @@ public final class PipeConnectorLogic {
     }
 
     public static List<PreviewPipe> buildPreview(Level level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
-        List<BlockPos> path = findPath(level, startPos, endPos);
-        if (path == null || path.isEmpty()) {
+        ConnectionPlan plan = buildConnectionPlan(level, startPos, endPos);
+        if (plan == null) {
             return List.of();
         }
 
+        return buildPreview(level, plan, pipeBlock);
+    }
+
+    public static List<PreviewPipe> buildPreview(Level level, ConnectionPlan plan, Block pipeBlock) {
         Map<BlockPos, BlockState> previewStates = new HashMap<>();
-        for (BlockPos position : path) {
-            previewStates.put(position, createPipeState(pipeBlock, level.getBlockState(position)));
+        for (BlockPos position : plan.path()) {
+            BlockState currentState = level.getBlockState(position);
+            previewStates.put(position, isConnectablePipe(currentState) ? currentState : createPipeState(pipeBlock, currentState));
         }
 
         BlockAndTintGetter previewWorld = createPreviewWorld(level, previewStates);
+        Map<BlockPos, Direction> preferredDirections = preferredDirectionsForPath(plan.path());
         for (int pass = 0; pass < 3; pass++) {
             boolean changed = false;
-            for (BlockPos position : path) {
+            for (BlockPos position : plan.path()) {
                 BlockState currentState = previewStates.get(position);
-                BlockState updatedState = updatePreviewState(currentState, preferredDirectionForPosition(path, position), previewWorld, position);
+                BlockState updatedState = updatePreviewState(currentState, preferredDirections.getOrDefault(position, Direction.NORTH), previewWorld, position);
                 if (!updatedState.equals(currentState)) {
                     previewStates.put(position, updatedState);
                     changed = true;
@@ -112,19 +249,238 @@ public final class PipeConnectorLogic {
             }
         }
 
-        List<PreviewPipe> previewPipes = new ArrayList<>(path.size());
-        for (BlockPos position : path) {
+        List<PreviewPipe> previewPipes = new ArrayList<>(plan.requiredPipes());
+        for (BlockPos position : plan.placementPositions()) {
             previewPipes.add(new PreviewPipe(position, previewStates.get(position)));
         }
         return previewPipes;
     }
 
+    public static ConnectionPlan buildConnectionPlan(Level level, BlockPos startPos, BlockPos endPos) {
+        return buildConnectionPlan(level, startPos, null, endPos, null);
+    }
+
+    public static ConnectionPlan buildConnectionPlan(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace) {
+        return buildPlacementPlan(level, startPos, startFace, true, endPos, endFace, true);
+    }
+
+    public static ConnectionPlan buildPlacementPreviewPlan(Level level, BlockPos startPos, Direction startFace, BlockPos targetPos) {
+        return buildPlacementPlan(level, startPos, startFace, true, targetPos, null, false);
+    }
+
+    public static ConnectionPlan buildPlacementPlan(Level level, Selection selection, PlacementTarget target) {
+        return buildPlacementPlan(
+                level,
+                selection.position(),
+                selection.face(),
+                selection.existingPipe(),
+                target.position(),
+                target.face(),
+                target.existingPipe()
+        );
+    }
+
+    public static ConnectionPlan buildPlacementPlan(Level level, Selection selection, List<PlacementTarget> anchors, PlacementTarget target) {
+        List<PlacementTarget> waypoints = new ArrayList<>();
+        if (anchors != null) {
+            waypoints.addAll(anchors);
+        }
+        waypoints.add(target);
+
+        SegmentEndpoint start = new SegmentEndpoint(selection.position(), selection.face(), selection.existingPipe());
+        List<BlockPos> mergedPath = new ArrayList<>();
+        Set<BlockPos> placementPositions = new LinkedHashSet<>();
+
+        for (PlacementTarget waypoint : waypoints) {
+            if (start.position().equals(waypoint.position())) {
+                start = new SegmentEndpoint(waypoint.position(), waypoint.face(), waypoint.existingPipe());
+                continue;
+            }
+
+            ConnectionPlan segment = buildPlacementPlan(
+                    level,
+                    start.position(),
+                    start.face(),
+                    start.existingPipe(),
+                    waypoint.position(),
+                    waypoint.face(),
+                    waypoint.existingPipe()
+            );
+            if (segment == null) {
+                return null;
+            }
+
+            appendSegmentPath(mergedPath, segment.path());
+            placementPositions.addAll(segment.placementPositions());
+            start = new SegmentEndpoint(waypoint.position(), waypoint.face(), waypoint.existingPipe());
+        }
+
+        if (mergedPath.size() < 2) {
+            return null;
+        }
+
+        return new ConnectionPlan(mergedPath, new ArrayList<>(placementPositions));
+    }
+
+    public static ConnectionPlan buildPlacementPlan(
+            Level level,
+            BlockPos startPos,
+            Direction startFace,
+            boolean startIsExistingPipe,
+            BlockPos endPos,
+            Direction endFace,
+            boolean endIsExistingPipe
+    ) {
+        Objects.requireNonNull(startFace, "startFace");
+        if (endIsExistingPipe) {
+            Objects.requireNonNull(endFace, "endFace");
+        }
+        if (startPos.equals(endPos)) {
+            return null;
+        }
+        if (startIsExistingPipe && !isConnectablePipe(level.getBlockState(startPos))) {
+            return null;
+        }
+        if (endIsExistingPipe && !isConnectablePipe(level.getBlockState(endPos))) {
+            return null;
+        }
+        if (!startIsExistingPipe && !canPlacePipeAt(level, startPos)) {
+            return null;
+        }
+        if (!endIsExistingPipe && !canPlacePipeAt(level, endPos)) {
+            return null;
+        }
+
+        Direction resolvedStartFace = startIsExistingPipe ? resolveStraightLineFace(startPos, startFace, endPos) : startFace;
+        Direction resolvedEndFace = endIsExistingPipe ? resolveStraightLineFace(endPos, endFace, startPos) : endFace;
+        List<BlockPos> path = findPlacementPath(level, startPos, resolvedStartFace, startIsExistingPipe, endPos, resolvedEndFace, endIsExistingPipe);
+        if (path == null || path.size() < 2) {
+            return null;
+        }
+
+        return buildConnectionPlan(level, path, startIsExistingPipe, endIsExistingPipe);
+    }
+
+    private static ConnectionPlan buildConnectionPlan(Level level, List<BlockPos> path, boolean startIsExistingPipe, boolean endIsExistingPipe) {
+        List<BlockPos> placementPositions = new ArrayList<>();
+        for (int index = 0; index < path.size(); index++) {
+            if ((index == 0 && startIsExistingPipe) || (index == path.size() - 1 && endIsExistingPipe)) {
+                continue;
+            }
+
+            BlockPos position = path.get(index);
+            BlockState currentState = level.getBlockState(position);
+            if (isConnectablePipe(currentState)) {
+                continue;
+            }
+            if (!isTraversableBlock(level, position)) {
+                return null;
+            }
+            placementPositions.add(position);
+        }
+
+        return new ConnectionPlan(path, placementPositions);
+    }
+
+    private static void appendSegmentPath(List<BlockPos> mergedPath, List<BlockPos> segmentPath) {
+        if (mergedPath.isEmpty()) {
+            mergedPath.addAll(segmentPath);
+            return;
+        }
+
+        for (int index = 0; index < segmentPath.size(); index++) {
+            BlockPos position = segmentPath.get(index);
+            if (index == 0 && position.equals(mergedPath.get(mergedPath.size() - 1))) {
+                continue;
+            }
+            mergedPath.add(position);
+        }
+    }
+
+    private static List<BlockPos> findPlacementPath(
+            Level level,
+            BlockPos startPos,
+            Direction startFace,
+            boolean startIsExistingPipe,
+            BlockPos endPos,
+            Direction endFace,
+            boolean endIsExistingPipe
+    ) {
+        if (startIsExistingPipe && endIsExistingPipe) {
+            return findFacedPath(level, startPos, startFace, endPos, endFace);
+        }
+
+        BlockPos routeStart = startIsExistingPipe ? startPos.relative(startFace) : startPos;
+        BlockPos routeEnd = endIsExistingPipe ? endPos.relative(endFace) : endPos;
+        if (!isTraversable(level, routeStart, startPos, endPos) || !isTraversable(level, routeEnd, startPos, endPos)) {
+            return null;
+        }
+
+        List<BlockPos> route = findPath(level, routeStart, routeEnd);
+        if (route == null) {
+            return null;
+        }
+
+        List<BlockPos> path = new ArrayList<>(route.size() + 2);
+        if (startIsExistingPipe) {
+            path.add(startPos);
+        }
+        path.addAll(route);
+        if (endIsExistingPipe) {
+            path.add(endPos);
+        }
+        return path;
+    }
+
+    private static Direction resolveStraightLineFace(BlockPos endpointPos, Direction clickedFace, BlockPos targetPos) {
+        Direction directFace = directFaceBetween(endpointPos, targetPos);
+        if (directFace == null) {
+            return clickedFace;
+        }
+
+        return directFace;
+    }
+
     public static List<BlockPos> findPath(Level level, BlockPos startPos, BlockPos endPos) {
+        return findPath(level, startPos, null, endPos, null);
+    }
+
+    public static List<BlockPos> findPath(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace) {
+        if (startFace != null && endFace != null) {
+            return findFacedPath(level, startPos, startFace, endPos, endFace);
+        }
+
         List<BlockPos> directPath = tryDirectAxisPaths(level, startPos, endPos);
         if (directPath != null) {
             return directPath;
         }
         return findAStarPath(level, startPos, endPos);
+    }
+
+    private static List<BlockPos> findFacedPath(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace) {
+        BlockPos startExitPos = startPos.relative(startFace);
+        BlockPos endEntryPos = endPos.relative(endFace);
+        boolean directlyConnected = startExitPos.equals(endPos) && endEntryPos.equals(startPos);
+        if (directlyConnected) {
+            return List.of(startPos, endPos);
+        }
+        if (startExitPos.equals(endPos) || endEntryPos.equals(startPos)) {
+            return null;
+        }
+        if (!isTraversable(level, startExitPos, startPos, endPos) || !isTraversable(level, endEntryPos, startPos, endPos)) {
+            return null;
+        }
+
+        List<BlockPos> middlePath = findPath(level, startExitPos, endEntryPos);
+        if (middlePath == null) {
+            return null;
+        }
+
+        List<BlockPos> path = new ArrayList<>(middlePath.size() + 2);
+        path.add(startPos);
+        path.addAll(middlePath);
+        path.add(endPos);
+        return path;
     }
 
     private static List<BlockPos> tryDirectAxisPaths(Level level, BlockPos startPos, BlockPos endPos) {
@@ -421,23 +777,52 @@ public final class PipeConnectorLogic {
         return Direction.NORTH;
     }
 
+    private static Map<BlockPos, Direction> preferredDirectionsForPath(List<BlockPos> path) {
+        Map<BlockPos, Direction> preferredDirections = new HashMap<>(path.size());
+        for (int index = 0; index < path.size(); index++) {
+            BlockPos position = path.get(index);
+            if (preferredDirections.containsKey(position)) {
+                continue;
+            }
+
+            if (index + 1 < path.size()) {
+                preferredDirections.put(position, directionBetween(position, path.get(index + 1)));
+            } else if (index > 0) {
+                preferredDirections.put(position, directionBetween(path.get(index - 1), position));
+            } else {
+                preferredDirections.put(position, Direction.NORTH);
+            }
+        }
+        return preferredDirections;
+    }
+
     private static Direction directionBetween(BlockPos from, BlockPos to) {
-        int deltaX = to.getX() - from.getX();
-        if (deltaX != 0) {
-            return deltaX > 0 ? Direction.EAST : Direction.WEST;
-        }
-
-        int deltaY = to.getY() - from.getY();
-        if (deltaY != 0) {
-            return deltaY > 0 ? Direction.UP : Direction.DOWN;
-        }
-
-        int deltaZ = to.getZ() - from.getZ();
-        if (deltaZ != 0) {
-            return deltaZ > 0 ? Direction.SOUTH : Direction.NORTH;
+        Direction directFace = directFaceBetween(from, to);
+        if (directFace != null) {
+            return directFace;
         }
 
         return Direction.NORTH;
+    }
+
+    private static Direction directFaceBetween(BlockPos from, BlockPos to) {
+        int deltaX = to.getX() - from.getX();
+        int deltaY = to.getY() - from.getY();
+        int deltaZ = to.getZ() - from.getZ();
+
+        if (deltaX != 0 && deltaY == 0 && deltaZ == 0) {
+            return deltaX > 0 ? Direction.EAST : Direction.WEST;
+        }
+
+        if (deltaY != 0 && deltaX == 0 && deltaZ == 0) {
+            return deltaY > 0 ? Direction.UP : Direction.DOWN;
+        }
+
+        if (deltaZ != 0 && deltaX == 0 && deltaY == 0) {
+            return deltaZ > 0 ? Direction.SOUTH : Direction.NORTH;
+        }
+
+        return null;
     }
 
     private static boolean isTraversable(Level level, BlockPos position, BlockPos startPos, BlockPos endPos) {
@@ -445,14 +830,51 @@ public final class PipeConnectorLogic {
             return true;
         }
 
+        return isTraversableBlock(level, position);
+    }
+
+    private static boolean isTraversableBlock(Level level, BlockPos position) {
         BlockState state = level.getBlockState(position);
         return state.isAir() || state.canBeReplaced() || isConnectablePipe(state);
     }
 
-    public record Selection(BlockPos position, Block pipeBlock) {
+    private static int countMatchingStacks(List<ItemStack> stacks, Item item) {
+        int count = 0;
+        for (ItemStack stack : stacks) {
+            if (stack.is(item)) {
+                count += stack.getCount();
+            }
+        }
+        return count;
+    }
+
+    private static int consumeMatchingStacks(List<ItemStack> stacks, Item item, int remaining) {
+        for (ItemStack stack : stacks) {
+            if (remaining <= 0) {
+                return 0;
+            }
+            if (!stack.is(item)) {
+                continue;
+            }
+            int consumed = Math.min(remaining, stack.getCount());
+            stack.shrink(consumed);
+            remaining -= consumed;
+        }
+        return remaining;
+    }
+
+    public record Selection(BlockPos position, Block pipeBlock, Direction face, boolean existingPipe) {
         public Selection {
             Objects.requireNonNull(position, "position");
             Objects.requireNonNull(pipeBlock, "pipeBlock");
+            Objects.requireNonNull(face, "face");
+        }
+    }
+
+    public record PlacementTarget(BlockPos position, Direction face, boolean existingPipe) {
+        public PlacementTarget {
+            Objects.requireNonNull(position, "position");
+            Objects.requireNonNull(face, "face");
         }
     }
 
@@ -463,7 +885,21 @@ public final class PipeConnectorLogic {
         }
     }
 
+    public record ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions) {
+        public ConnectionPlan {
+            path = List.copyOf(path);
+            placementPositions = List.copyOf(placementPositions);
+        }
+
+        public int requiredPipes() {
+            return placementPositions.size();
+        }
+    }
+
     private record PathNode(BlockPos position, Direction direction, int steps, int turns, int priority) {
+    }
+
+    private record SegmentEndpoint(BlockPos position, Direction face, boolean existingPipe) {
     }
 
     private enum Axis {
