@@ -7,10 +7,10 @@
 
 A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Minecraft `1.21.1`.
 
+![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
 ![Loader](https://img.shields.io/badge/Loader-NeoForge-E65100?style=for-the-badge&logo=forge&logoColor=white)
-![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-0.1.0--beta-455A64?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-0.2.0--beta-455A64?style=for-the-badge)
 
 </div>
 
@@ -31,6 +31,9 @@ Designing massive factories in **Create** is incredibly rewarding, but routing l
 - **Instant Auto-Connection:** Link two distant pipes with a simple click combination.
 - **Smart Pathfinding:** The mod automatically calculates the shortest valid route around obstacles.
 - **Zero-Waste Ghost Preview:** See exactly where the pipes will go before spending a single item.
+- **Anchor Waypoints:** Add or remove intermediate anchors to guide long or complex routes.
+- **Survival Inventory Check:** Shows required/available pipes and blocks placement when you do not have enough.
+- **Configurable Controls:** Rebind the preview lock and anchor controls from Minecraft's Controls menu.
 - **Seamless Integration:** Fully refreshes Create's pipe networks instantly upon placement to avoid broken fluid flows.
 
 ### 📦 Supported Blocks
@@ -40,10 +43,11 @@ Designing massive factories in **Create** is incredibly rewarding, but routing l
 
 ### 🔧 How to Use It
 
-1.  **Select Start:** Sneak and right-click a Create pipe with an empty hand.
-2.  **Select End:** Sneak and right-click a second pipe of the same type.
-3.  **Preview:** Look at the custom _ghost preview_ rendered in the world to verify the path.
-4.  **Confirm:** Confirm the placement to instantly build the line!
+1.  **Select Start:** Hold a Create pipe in the off-hand, keep the main hand empty, then sneak and right-click.
+2.  **Guide the Route:** Move your crosshair to preview the route. Press `C` to add an anchor and `V` to remove the last anchor.
+3.  **Lock Preview:** Press `Left Alt` to freeze/unfreeze the current preview target while you move around.
+4.  **Confirm:** Sneak and right-click again to place the full planned line.
+5.  **Customize Controls:** Open Minecraft's `Options > Controls > Key Binds` and look for `Create: Pipe Connector`.
 
 ### 📋 Requirements
 
@@ -57,19 +61,18 @@ Designing massive factories in **Create** is incredibly rewarding, but routing l
 ## 📦 MODPACKMAKER SECTION
 
 - `Create` is required at runtime.
-- `Ponder` and `Flywheel` are utilized to ensure the preview renders smoothly during development and validation.
-- _Note: This addon is currently in **Beta (0.1.0-beta)**, meaning features are evolving rapidly._
+- No extra hard dependencies are declared beyond `Minecraft`, `NeoForge`, and `Create`.
+- This branch targets the official NeoForge Create `1.21.1` release line.
+- _Note: This addon is currently in **Beta (0.2.0-beta)**, meaning features are evolving rapidly._
 
 💬 **We need your feedback!**  
 Are you a player with a cool feature idea, or a modpack maker who found a bug? We want to hear from you! Please **open an Issue** or drop a comment with your suggestions, tweaks, or feature requests to help us shape the definitive version of this tool.
 
 ---
 
----
-
 ## 💻 DEVELOPER SECTION (Modders & Devs)
 
-> 💡 **Repository Note:** The project maintains a clean, NeoForge-first structure. All legacy beacon rendering code has been completely removed to focus exclusively on the Create pipe connector feature set.
+> 💡 **Repository Note:** The project keeps shared placement logic in `common` and the active runtime implementation in `neoforge`. All legacy beacon rendering code has been removed to focus exclusively on the Create pipe connector feature set.
 
 ### 🛠️ Project Structure & Flow
 
@@ -79,14 +82,14 @@ If you want to contribute, extend block support, or review the codebase, here is
   Shared backend logic lives in `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`.  
   _If you want to extend block support, add it here first to keep loader-specific code thin._
 - **NeoForge Implementation (`/neoforge`):**  
-  Handles loader entrypoints, player input events, server-side placement, and preview pipelines under `neoforge/src/main/java/com/javiluli/createpipeconnector/`.
-- **Rendering (`/neoforge/.../client`):**  
-  The ghost preview system is managed by `PipeGhostRenderer.java` inside the client render package.
+  Owns the entrypoint, event registration, networking, key binds, server-side placement bridge, and client preview renderer.
+- **Rendering (`/neoforge/.../client/render`):**
+  The ghost preview system is managed by `PipeGhostRenderer.java`, with anchor highlights in the `overlay` package.
 
 ### 🚀 Building the Project
 
 - Run the NeoForge dev client: `./gradlew :neoforge:runClient`
-- Build the production artifact: `./gradlew :neoforge:build`
+- Build the NeoForge artifact: `./gradlew :neoforge:build`
 
 ### 📖 Technical Documentation
 
