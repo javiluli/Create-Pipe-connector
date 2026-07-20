@@ -1,17 +1,38 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 public final class ServerPipeConnectorEvents {
     private ServerPipeConnectorEvents() {
+    }
+
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) {
+            return;
+        }
+
+        Selection selection = PipeConnectorLogic.getSelection(player.getUUID());
+        if (selection == null) {
+            return;
+        }
+
+        if (PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
+            return;
+        }
+
+        PipeConnectorLogic.clearSelection(player.getUUID());
+        clearActionBar(player);
     }
 
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
@@ -24,9 +45,13 @@ public final class ServerPipeConnectorEvents {
             return;
         }
 
-        BlockPos clickedPos = event.getPos();
-        BlockState clickedState = event.getLevel().getBlockState(clickedPos);
-        if (!PipeConnectorLogic.isConnectablePipe(clickedState)) {
+        Block heldPipeBlock = PipeConnectorLogic.getPipeBlock(player.getOffhandItem());
+        if (heldPipeBlock == null) {
+            return;
+        }
+
+        PlacementTarget clickedTarget = PipeConnectorLogic.resolvePlacementTarget(event.getLevel(), event.getPos(), event.getFace(), heldPipeBlock);
+        if (clickedTarget == null) {
             return;
         }
 
@@ -35,20 +60,20 @@ public final class ServerPipeConnectorEvents {
 
         Selection currentSelection = PipeConnectorLogic.getSelection(player.getUUID());
         if (currentSelection == null) {
-            PipeConnectorLogic.setSelection(player.getUUID(), new Selection(clickedPos, clickedState.getBlock()));
-            player.displayClientMessage(Component.literal("Primer tubo seleccionado. Ahora marca el segundo."), true);
+            PipeConnectorLogic.setSelection(player.getUUID(), new Selection(clickedTarget.position(), heldPipeBlock, clickedTarget.face(), clickedTarget.existingPipe()));
+            player.displayClientMessage(Component.literal("Primer punto seleccionado. Ahora marca el segundo."), true);
             return;
         }
 
-        if (currentSelection.position().equals(clickedPos)) {
+        if (currentSelection.position().equals(clickedTarget.position())) {
             PipeConnectorLogic.clearSelection(player.getUUID());
-            player.displayClientMessage(Component.literal("Selección cancelada."), true);
+            clearActionBar(player);
             return;
         }
 
-        if (currentSelection.pipeBlock() != clickedState.getBlock()) {
+        if (currentSelection.pipeBlock() != heldPipeBlock) {
             PipeConnectorLogic.clearSelection(player.getUUID());
-            player.displayClientMessage(Component.literal("Las dos tuberías deben ser del mismo tipo."), true);
+            clearActionBar(player);
             return;
         }
 
@@ -56,10 +81,30 @@ public final class ServerPipeConnectorEvents {
             return;
         }
 
-        boolean connected = PipeConnectorLogic.connect(serverLevel, currentSelection.position(), clickedPos, currentSelection.pipeBlock());
+        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, currentSelection, PipeConnectorLogic.getAnchors(player.getUUID()), clickedTarget);
+        if (plan == null) {
+            PipeConnectorLogic.clearSelection(player.getUUID());
+            clearActionBar(player);
+            return;
+        }
+
+        int requiredPipes = plan.requiredPipes();
+        if (!PipeConnectorLogic.hasEnoughPipes(player, currentSelection.pipeBlock(), requiredPipes)) {
+            PipeConnectorLogic.clearSelection(player.getUUID());
+            clearActionBar(player);
+            return;
+        }
+
+        boolean connected = PipeConnectorLogic.connect(serverLevel, plan, currentSelection.pipeBlock());
+        if (connected) {
+            PipeConnectorLogic.consumePipes(player, currentSelection.pipeBlock(), requiredPipes);
+        }
+
         PipeConnectorLogic.clearSelection(player.getUUID());
-        player.displayClientMessage(Component.literal(
-                connected ? "Tuberías conectadas." : "No se encontró un recorrido libre para conectar esas tuberías."
-        ), true);
+        clearActionBar(player);
+    }
+
+    private static void clearActionBar(Player player) {
+        player.displayClientMessage(Component.empty(), true);
     }
 }
