@@ -2,13 +2,12 @@
 
 ## Goal
 
-Keep the multiloader structure intact while the NeoForge runtime focuses on the Create pipe connector feature.
+Keep the project focused on the NeoForge runtime while preserving shared logic in `common`.
 
 ## Main folders
 
-- `common/`: shared logic between loaders
+- `common/`: shared gameplay and placement logic
 - `neoforge/`: NeoForge entrypoints, input handling, preview rendering, and server placement
-- `fabric/`: kept for structure and future support
 
 ## Key classes
 

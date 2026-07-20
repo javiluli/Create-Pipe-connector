@@ -72,7 +72,7 @@ Are you a player with a cool feature idea, or a modpack maker who found a bug? W
 
 ## 💻 DEVELOPER SECTION (Modders & Devs)
 
-> 💡 **Repository Note:** The project keeps shared placement logic in `common` and the active runtime implementation in `neoforge`. All legacy beacon rendering code has been removed to focus exclusively on the Create pipe connector feature set.
+> 💡 **Repository Note:** This branch is NeoForge-only. Shared placement logic lives in `common`, while the active runtime implementation lives in `neoforge`.
 
 ### 🛠️ Project Structure & Flow
 
