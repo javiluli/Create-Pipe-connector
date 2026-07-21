@@ -21,6 +21,8 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
   - key-driven anchors and preview locking
 - `neoforge/.../client/render/PipeGhostRenderer.java`
   - blueprint-style preview rendering
+- `neoforge/.../client/render/hud/PipeConnectorControlsHud.java`
+  - active connector controls above the hotbar
 - `neoforge/.../network/CreatePipeConnectorNetwork.java`
   - client-to-server anchor sync
 - `neoforge/.../connector/ServerPipeConnectorEvents.java`
@@ -28,12 +30,15 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 
 ## Feature flow
 
-1. Player enters pipe mode with a pipe in the off-hand and an empty main hand.
-2. Client stores the selection.
-3. Crosshair target and optional anchors drive preview generation.
-4. The preview world is built from the computed placement plan.
-5. Server validates anchors, inventory, and placement before consuming pipes.
-6. Server placement fills the path and refreshes Create connections.
+1. Player toggles Connector Pipe mode with the configurable `B` key.
+2. Client syncs the mode state to the server.
+3. Player starts a route by targeting a reachable block with a pipe in either hand.
+4. Client sends the selected target to the server and stores the local selection.
+5. Crosshair or air target plus optional anchors drive preview generation.
+6. The preview world is built from the computed placement plan.
+7. Right-click confirms the current preview; left-click cancels the current route.
+8. Server validates mode, anchors, inventory, and placement before consuming pipes.
+9. Server placement fills the path and refreshes Create connections.
 
 ## Useful commands
 

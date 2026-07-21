@@ -2,11 +2,14 @@
 
 ## What it does
 
-- Hold a Create pipe in the off-hand and keep the main hand empty.
-- Sneak + right-click to start a connection from the targeted face or block.
-- Sneak + right-click again to confirm the route.
+- Press `B` to enable Connector Pipe mode.
+- Hold a Create pipe in either hand.
+- Right-click a reachable block or pipe face to start a connection.
+- Right-click again to confirm the current preview, even through open air.
+- Left-click during a preview to cancel the current route without disabling Connector Pipe mode.
 - The mod fills the shortest valid route automatically.
 - A ghost preview shows the result before placement.
+- A control HUD appears above the hotbar while Connector Pipe mode is enabled.
 - The action bar shows `required/available` pipe counts in survival.
 
 ## Supported pipes
@@ -16,16 +19,21 @@
 
 ## How to use it
 
-1. Put a supported Create pipe in the off-hand.
-2. Keep the main hand empty, sneak, and right-click to select the start point.
-3. Move the crosshair to guide the live preview.
-4. Press `C` to add an anchor, or `V` to remove the last anchor.
-5. Press `Left Alt` to lock or unlock the current preview target.
-6. Sneak + right-click again to place the planned route.
+1. Press `B` to enable Connector Pipe mode.
+2. Hold a supported Create pipe in either hand.
+3. Check the control HUD above the hotbar.
+4. Look at a reachable block or pipe face and right-click to select the start point.
+5. Move the crosshair to guide the live preview, even through open air.
+6. Press `C` to add an anchor, or `V` to remove the last anchor.
+7. Press `Left Alt` to lock or unlock the current preview target.
+8. Right-click again to place the planned route, even if no block is targeted.
+9. Left-click during a preview to cancel only the current route.
+10. Press `B` again to disable Connector Pipe mode.
 
 ## Preview behavior
 
 - The preview tries to look like the final pipe line.
+- When no block is targeted, the preview uses the point at your normal block interaction range.
 - Anchors are highlighted with a yellow transparent box.
 - If obstacles block the path, the mod finds an alternate route.
 - If no valid route exists, nothing is placed.
