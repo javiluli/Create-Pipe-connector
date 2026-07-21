@@ -12,7 +12,7 @@ A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Mi
 ![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
 ![Loader](https://img.shields.io/badge/Loader-NeoForge-E65100?style=for-the-badge&logo=forge&logoColor=white)
-![Version](https://img.shields.io/badge/Version-0.3.0--beta-455A64?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-0.4.0--beta-455A64?style=for-the-badge)
 
 <!-- End optional badges -->
 
@@ -24,7 +24,7 @@ A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Mi
 
 Building large factories in **Create** is fun, but placing long fluid pipe routes block by block can get repetitive fast.
 
-**Create: Pipe Connector** lets you plan a pipe route, preview it, and place the whole line at once. It is designed to make pipe building faster while still giving you control over the final path.
+**Create: Pipe Connector** lets you plan a pipe route, preview it, and place the whole line at once. It keeps Create's building style, but removes the repetitive part of placing every pipe manually.
 
 ---
 
@@ -38,6 +38,9 @@ Building large factories in **Create** is fun, but placing long fluid pipe route
 - **Anchor Waypoints:** Press `C` to force the route through a point.
 - **Undo Last Anchor:** Press `V` to remove the last anchor.
 - **Preview Lock:** Press `Left Alt` to freeze/unfreeze the current preview target.
+- **Auto Mechanical Pumps:** Press `P` to insert Create mechanical pumps along long routes.
+- **Pump-Aware Preview:** Mechanical pumps are shown in the ghost preview with their route direction.
+- **Pipe Style Toggle:** With Connector Pipe mode enabled, double right-click a pipe with Create's wrench to toggle a connected pipe segment between default and glass.
 - **Survival Friendly:** Shows `required/available` pipes and blocks placement if you do not have enough.
 - **Control HUD:** Shows the active connector controls above the hotbar while the mode is enabled.
 - **Configurable Controls:** Rebind connector mode and route helper keys from Minecraft's Controls menu.
@@ -45,10 +48,21 @@ Building large factories in **Create** is fun, but placing long fluid pipe route
 
 ---
 
-## 📦 Supported Pipes
+## 📦 Supported Create Blocks
+
+Pipe routing supports:
 
 - `create:fluid_pipe`
 - `create:smart_fluid_pipe`
+
+The wrench shortcut can swap straight segments between:
+
+- `create:fluid_pipe`
+- `create:glass_fluid_pipe`
+
+Optional auto-pump placement uses:
+
+- `create:mechanical_pump`
 
 ---
 
@@ -62,14 +76,24 @@ Building large factories in **Create** is fun, but placing long fluid pipe route
 6. Optional: press `C` to add an anchor.
 7. Optional: press `V` to remove the last anchor.
 8. Optional: press `Left Alt` to lock/unlock the preview target.
-9. Right-click again to place the planned pipe line, even if no block is targeted.
-10. Optional: left-click during the preview to cancel only the current route.
-11. Press `B` again to return to normal gameplay.
+9. Optional: press `P` to toggle automatic Mechanical Pumps for long routes.
+10. Right-click again to place the planned pipe line, even if no block is targeted.
+11. Optional: left-click during the preview to cancel only the current route.
+12. Press `B` again to return to normal gameplay.
+
+### Wrench Shortcut
+
+While **Connector Pipe** mode is enabled, hold Create's wrench and double right-click a fluid pipe to toggle the connected straight pipe segment between:
+
+- default `create:fluid_pipe`
+- glass `create:glass_fluid_pipe`
+
+The shortcut stops at mechanical pumps and keeps corners/default elbows unchanged when a glass pipe cannot represent the shape.
 
 In survival, the action bar shows:
 
 ```txt
-required/available
+Pipes required/available
 ```
 
 Example:
@@ -78,7 +102,15 @@ Example:
 10/32
 ```
 
-If you do not have enough pipes, the required number turns red and placement is cancelled.
+With auto-pumps enabled, pumps are counted separately:
+
+```txt
+Pipes 32/64 | Pumps 3/4
+```
+
+If you do not have enough pipes or pumps, the required number turns red and placement is cancelled.
+
+Auto-pumps are placed on straight route sections and avoid corners when possible, because Create mechanical pumps cannot bend like pipe elbows.
 
 ---
 
@@ -98,7 +130,8 @@ If you do not have enough pipes, the required number turns red and placement is 
 - Requires `Create`.
 - No extra runtime mods are required beyond `Minecraft`, `NeoForge`, and `Create`.
 - Current recommended version: **Create `6.0.10-280`**.
-- Current addon version: **Create: Pipe Connector `0.3.0-beta`**.
+- Current addon version: **Create: Pipe Connector `0.4.0-beta`**.
+- Optional auto-pumps use Create's own `create:mechanical_pump`; no extra dependency is added.
 
 ---
 
@@ -133,7 +166,7 @@ Thanks for helping make Create pipe building smoother!
 ### Project Structure
 
 - **Core Logic (`/common`):**
-  Shared backend logic lives in `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`.
+  Shared routing is exposed through `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`, with focused helpers for Create block states, inventory checks, auto-pump planning, wrench pipe-style toggles, and server-side connector sessions.
 
 - **NeoForge Implementation (`/neoforge`):**
   Handles entrypoints, events, networking, keybinds, server-side placement, and client preview rendering.

@@ -12,9 +12,22 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 ## Key classes
 
 - `common/.../connector/PipeConnectorLogic.java`
-  - pathfinding
-  - pipe state creation
+  - public connector facade
+  - pathfinding and connection plan creation
   - preview world generation
+- `common/.../connector/CreatePipeBlocks.java`
+  - Create block/item lookup
+  - pipe and pump block state helpers
+- `common/.../connector/AutoPumpPlanner.java`
+  - automatic Mechanical Pump slot generation
+- `common/.../connector/PipePreviewBuilder.java`
+  - ghost preview block states and preview world proxy
+- `common/.../connector/PipeDisplayToggler.java`
+  - pipe display segment toggling between default and glass
+- `common/.../connector/PipeInventory.java`
+  - survival inventory counting and item consumption
+- `common/.../connector/PipeConnectorSessions.java`
+  - server-side connector mode, selections, anchors, and auto-pump state
 - `neoforge/.../client/input/ClientPipeConnectorInputHandler.java`
   - first selection
   - live preview refresh
@@ -24,9 +37,9 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 - `neoforge/.../client/render/hud/PipeConnectorControlsHud.java`
   - active connector controls above the hotbar
 - `neoforge/.../network/CreatePipeConnectorNetwork.java`
-  - client-to-server anchor sync
+  - client-to-server mode, anchor, target, auto-pump, and wrench shortcut sync
 - `neoforge/.../connector/ServerPipeConnectorEvents.java`
-  - server-side placement and pipe refresh
+  - server-side placement, wrench double-click handling, and pipe refresh
 
 ## Feature flow
 
@@ -35,10 +48,12 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 3. Player starts a route by targeting a reachable block with a pipe in either hand.
 4. Client sends the selected target to the server and stores the local selection.
 5. Crosshair or air target plus optional anchors drive preview generation.
-6. The preview world is built from the computed placement plan.
-7. Right-click confirms the current preview; left-click cancels the current route.
-8. Server validates mode, anchors, inventory, and placement before consuming pipes.
-9. Server placement fills the path and refreshes Create connections.
+6. If auto-pumps are enabled, the connection plan marks straight pipe slots for Mechanical Pumps.
+7. The preview world is built from the computed placement plan.
+8. Right-click confirms the current preview; left-click cancels the current route.
+9. Server validates mode, anchors, inventory, pumps, and placement before consuming items.
+10. Server placement fills the path and refreshes Create connections.
+11. With a wrench in Connector Pipe mode, client sends a pipe display payload and the server requires two clicks on the same pipe before converting the connected segment.
 
 ## Useful commands
 
@@ -48,6 +63,9 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 ## Extension points
 
 - Add more connectable blocks in `PipeConnectorLogic`.
+- Keep Create-specific block IDs and state helpers in `CreatePipeBlocks`.
+- Keep inventory rules in `PipeInventory`.
+- Keep display-style conversion rules in `PipeDisplayToggler`.
 - Tune pathfinding without touching the renderer.
 - Split visual behavior from placement behavior if the addon grows.
 

@@ -18,12 +18,15 @@
 - Finds the shortest valid route around obstacles
 - Shows a ghost preview before placement
 - Supports anchor waypoints and configurable key binds
-- Checks survival inventory before placing pipes
+- Can optionally insert Create Mechanical Pumps along long routes
+- Adds a Connector Pipe mode wrench shortcut to toggle straight pipe segments between default and glass
+- Checks survival inventory before placing pipes and pumps
 
 ## Pack integration
 
 - Include Create in the pack.
 - This addon already declares Create as a required NeoForge dependency.
+- Auto-pumps use `create:mechanical_pump`; no additional mod dependency is added.
 - Test the mod with Create pipe variants and long routes before releasing the pack.
 
 ## Not yet provided

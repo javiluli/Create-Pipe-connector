@@ -8,6 +8,8 @@ This addon does not expose a public API yet.
 - crosshair or air target plus optional anchors define the route
 - right-click again to confirm the current preview target
 - left-click cancels the current route while leaving Connector Pipe mode enabled
+- optional auto-pump mode inserts Mechanical Pumps into straight sections of the plan
+- Connector Pipe mode also adds a wrench shortcut for toggling straight connected pipe segments between default and glass
 - the mod fills the shortest valid path between them
 - the client shows a ghost preview before placement
 
