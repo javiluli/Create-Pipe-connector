@@ -9,6 +9,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
@@ -27,6 +28,12 @@ public final class ServerPipeConnectorEvents {
             return;
         }
 
+        if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
+            PipeConnectorLogic.clearSelection(player.getUUID());
+            clearActionBar(player);
+            return;
+        }
+
         if (PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
             return;
         }
@@ -41,11 +48,11 @@ public final class ServerPipeConnectorEvents {
         }
 
         Player player = event.getEntity();
-        if (!player.isShiftKeyDown() || !player.getMainHandItem().isEmpty()) {
+        if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
             return;
         }
 
-        Block heldPipeBlock = PipeConnectorLogic.getPipeBlock(player.getOffhandItem());
+        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
         if (heldPipeBlock == null) {
             return;
         }
@@ -57,42 +64,52 @@ public final class ServerPipeConnectorEvents {
 
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.SUCCESS);
+        if (event.getLevel() instanceof ServerLevel serverLevel) {
+            handlePipeTarget(player, serverLevel, clickedTarget);
+        }
+    }
+
+    public static boolean handlePipeTarget(Player player, ServerLevel serverLevel, PlacementTarget target) {
+        if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
+            return false;
+        }
+
+        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
+        if (heldPipeBlock == null || !isTargetValid(player, serverLevel, heldPipeBlock, target)) {
+            return false;
+        }
 
         Selection currentSelection = PipeConnectorLogic.getSelection(player.getUUID());
         if (currentSelection == null) {
-            PipeConnectorLogic.setSelection(player.getUUID(), new Selection(clickedTarget.position(), heldPipeBlock, clickedTarget.face(), clickedTarget.existingPipe()));
+            PipeConnectorLogic.setSelection(player.getUUID(), new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
             player.displayClientMessage(Component.literal("Primer punto seleccionado. Ahora marca el segundo."), true);
-            return;
+            return true;
         }
 
-        if (currentSelection.position().equals(clickedTarget.position())) {
+        if (currentSelection.position().equals(target.position())) {
             PipeConnectorLogic.clearSelection(player.getUUID());
             clearActionBar(player);
-            return;
+            return true;
         }
 
         if (currentSelection.pipeBlock() != heldPipeBlock) {
             PipeConnectorLogic.clearSelection(player.getUUID());
             clearActionBar(player);
-            return;
+            return true;
         }
 
-        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, currentSelection, PipeConnectorLogic.getAnchors(player.getUUID()), clickedTarget);
+        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, currentSelection, PipeConnectorLogic.getAnchors(player.getUUID()), target);
         if (plan == null) {
             PipeConnectorLogic.clearSelection(player.getUUID());
             clearActionBar(player);
-            return;
+            return true;
         }
 
         int requiredPipes = plan.requiredPipes();
         if (!PipeConnectorLogic.hasEnoughPipes(player, currentSelection.pipeBlock(), requiredPipes)) {
             PipeConnectorLogic.clearSelection(player.getUUID());
             clearActionBar(player);
-            return;
+            return true;
         }
 
         boolean connected = PipeConnectorLogic.connect(serverLevel, plan, currentSelection.pipeBlock());
@@ -102,6 +119,27 @@ public final class ServerPipeConnectorEvents {
 
         PipeConnectorLogic.clearSelection(player.getUUID());
         clearActionBar(player);
+        return true;
+    }
+
+    public static void cancelPipeConnection(Player player) {
+        PipeConnectorLogic.clearSelection(player.getUUID());
+        clearActionBar(player);
+    }
+
+    private static boolean isTargetValid(Player player, ServerLevel level, Block pipeBlock, PlacementTarget target) {
+        if (!PipeConnectorLogic.isWithinInteractionRange(player, target.position())) {
+            return false;
+        }
+
+        BlockState targetState = level.getBlockState(target.position());
+        if (!target.existingPipe()) {
+            return !PipeConnectorLogic.isConnectablePipe(targetState)
+                    && PipeConnectorLogic.canPlacePipeAt(level, target.position());
+        }
+
+        return PipeConnectorLogic.isConnectablePipe(targetState)
+                && targetState.getBlock() == pipeBlock;
     }
 
     private static void clearActionBar(Player player) {
