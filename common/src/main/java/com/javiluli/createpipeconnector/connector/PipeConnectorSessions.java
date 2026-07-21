@@ -16,6 +16,7 @@ final class PipeConnectorSessions {
     private static final Map<UUID, List<PlacementTarget>> ANCHORS = new HashMap<>();
     private static final Set<UUID> CONNECTOR_MODE_PLAYERS = new HashSet<>();
     private static final Set<UUID> AUTO_PUMP_PLAYERS = new HashSet<>();
+    private static final Set<UUID> REVERSED_AUTO_PUMP_PLAYERS = new HashSet<>();
 
     private PipeConnectorSessions() {
     }
@@ -45,6 +46,19 @@ final class PipeConnectorSessions {
         }
 
         AUTO_PUMP_PLAYERS.remove(playerId);
+    }
+
+    static boolean isAutoPumpDirectionReversed(UUID playerId) {
+        return REVERSED_AUTO_PUMP_PLAYERS.contains(playerId);
+    }
+
+    static void setAutoPumpDirectionReversed(UUID playerId, boolean reversed) {
+        if (reversed) {
+            REVERSED_AUTO_PUMP_PLAYERS.add(playerId);
+            return;
+        }
+
+        REVERSED_AUTO_PUMP_PLAYERS.remove(playerId);
     }
 
     static Selection getSelection(UUID playerId) {

@@ -37,6 +37,11 @@ public final class ClientPipeConnectorKeyMappings {
             GLFW.GLFW_KEY_P,
             CATEGORY
     );
+    private static final KeyMapping REVERSE_AUTO_PUMP_DIRECTION = new KeyMapping(
+            "key.createpipeconnector.reverse_auto_pump_direction",
+            GLFW.GLFW_KEY_R,
+            CATEGORY
+    );
 
     private ClientPipeConnectorKeyMappings() {
     }
@@ -48,6 +53,7 @@ public final class ClientPipeConnectorKeyMappings {
         event.register(ADD_ANCHOR);
         event.register(REMOVE_LAST_ANCHOR);
         event.register(TOGGLE_AUTO_PUMPS);
+        event.register(REVERSE_AUTO_PUMP_DIRECTION);
     }
 
     public static boolean consumeConnectorModeToggle() {
@@ -70,6 +76,10 @@ public final class ClientPipeConnectorKeyMappings {
         return TOGGLE_AUTO_PUMPS.consumeClick();
     }
 
+    public static boolean consumeAutoPumpDirectionReverse() {
+        return REVERSE_AUTO_PUMP_DIRECTION.consumeClick();
+    }
+
     public static KeyMapping toggleConnectorModeKey() {
         return TOGGLE_CONNECTOR_MODE;
     }
@@ -90,6 +100,10 @@ public final class ClientPipeConnectorKeyMappings {
         return TOGGLE_AUTO_PUMPS;
     }
 
+    public static KeyMapping reverseAutoPumpDirectionKey() {
+        return REVERSE_AUTO_PUMP_DIRECTION;
+    }
+
     public static void drainPlacementClicks() {
         while (consumeConnectorModeToggle()) {
         }
@@ -100,6 +114,8 @@ public final class ClientPipeConnectorKeyMappings {
         while (consumeRemoveLastAnchor()) {
         }
         while (consumeAutoPumpsToggle()) {
+        }
+        while (consumeAutoPumpDirectionReverse()) {
         }
     }
 }

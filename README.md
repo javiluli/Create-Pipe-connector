@@ -39,7 +39,9 @@ Building large factories in **Create** is fun, but placing long fluid pipe route
 - **Undo Last Anchor:** Press `V` to remove the last anchor.
 - **Preview Lock:** Press `Left Alt` to freeze/unfreeze the current preview target.
 - **Auto Mechanical Pumps:** Press `P` to insert Create mechanical pumps along long routes.
+- **Reversible Pump Direction:** Press `R` while auto-pumps are enabled to flip the planned pump direction.
 - **Pump-Aware Preview:** Mechanical pumps are shown in the ghost preview with their route direction.
+- **Missing Material Preview:** Pipes or pumps that exceed your survival inventory are tinted red in the preview.
 - **Pipe Style Toggle:** With Connector Pipe mode enabled, double right-click a pipe with Create's wrench to toggle a connected pipe segment between default and glass.
 - **Survival Friendly:** Shows `required/available` pipes and blocks placement if you do not have enough.
 - **Control HUD:** Shows the active connector controls above the hotbar while the mode is enabled.
@@ -77,9 +79,10 @@ Optional auto-pump placement uses:
 7. Optional: press `V` to remove the last anchor.
 8. Optional: press `Left Alt` to lock/unlock the preview target.
 9. Optional: press `P` to toggle automatic Mechanical Pumps for long routes.
-10. Right-click again to place the planned pipe line, even if no block is targeted.
-11. Optional: left-click during the preview to cancel only the current route.
-12. Press `B` again to return to normal gameplay.
+10. Optional: press `R` to reverse the planned Mechanical Pump direction.
+11. Right-click again to place the planned pipe line, even if no block is targeted.
+12. Optional: left-click during the preview to cancel only the current route.
+13. Press `B` again to return to normal gameplay.
 
 ### Wrench Shortcut
 
@@ -108,7 +111,7 @@ With auto-pumps enabled, pumps are counted separately:
 Pipes 32/64 | Pumps 3/4
 ```
 
-If you do not have enough pipes or pumps, the required number turns red and placement is cancelled.
+If you do not have enough pipes or pumps, the required number turns red, the missing preview pieces are tinted red, and placement is cancelled.
 
 Auto-pumps are placed on straight route sections and avoid corners when possible, because Create mechanical pumps cannot bend like pipe elbows.
 

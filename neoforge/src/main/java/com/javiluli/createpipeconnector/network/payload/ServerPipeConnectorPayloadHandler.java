@@ -24,6 +24,11 @@ public final class ServerPipeConnectorPayloadHandler {
         PipeConnectorLogic.setAutoPumpsEnabled(player.getUUID(), payload.enabled());
     }
 
+    public static void handleReverseAutoPumpDirection(ReverseAutoPumpDirectionPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        PipeConnectorLogic.setAutoPumpDirectionReversed(player.getUUID(), payload.reversed());
+    }
+
     public static void handleSelectPipeTarget(SelectPipeTargetPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (!(player.level() instanceof ServerLevel serverLevel)) {

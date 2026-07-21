@@ -20,6 +20,10 @@ final class AutoPumpPlanner {
     }
 
     static ConnectionPlan apply(ConnectionPlan plan) {
+        return apply(plan, false);
+    }
+
+    static ConnectionPlan apply(ConnectionPlan plan, boolean reversed) {
         if (CreatePipeBlocks.getMechanicalPumpBlock() == null || plan.placementPositions().isEmpty()) {
             return plan;
         }
@@ -29,7 +33,7 @@ final class AutoPumpPlanner {
             return plan;
         }
 
-        return new ConnectionPlan(plan.path(), plan.placementPositions(), pumpPlacements);
+        return new ConnectionPlan(plan.path(), plan.placementPositions(), reversed ? reverseDirections(pumpPlacements) : pumpPlacements);
     }
 
     private static Map<BlockPos, Direction> calculatePumpPlacements(ConnectionPlan plan) {
@@ -129,6 +133,12 @@ final class AutoPumpPlanner {
         }
         cachedPumpPipeGap = FALLBACK_PUMP_PIPE_GAP;
         return cachedPumpPipeGap;
+    }
+
+    private static Map<BlockPos, Direction> reverseDirections(Map<BlockPos, Direction> pumpPlacements) {
+        Map<BlockPos, Direction> reversedPlacements = new HashMap<>(pumpPlacements.size());
+        pumpPlacements.forEach((position, direction) -> reversedPlacements.put(position, direction.getOpposite()));
+        return reversedPlacements;
     }
 
     private record PumpSlot(int pathIndex, BlockPos position, Direction facing) {

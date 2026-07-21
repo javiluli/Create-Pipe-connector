@@ -9,9 +9,10 @@ This addon does not expose a public API yet.
 - right-click again to confirm the current preview target
 - left-click cancels the current route while leaving Connector Pipe mode enabled
 - optional auto-pump mode inserts Mechanical Pumps into straight sections of the plan
+- auto-pump direction can be reversed before confirming the route
 - Connector Pipe mode also adds a wrench shortcut for toggling straight connected pipe segments between default and glass
 - the mod fills the shortest valid path between them
-- the client shows a ghost preview before placement
+- the client shows a ghost preview before placement, including red-tinted missing materials in survival
 
 ## For pack authors
 

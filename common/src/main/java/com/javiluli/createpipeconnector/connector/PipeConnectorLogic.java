@@ -123,6 +123,14 @@ public final class PipeConnectorLogic {
         PipeConnectorSessions.setAutoPumpsEnabled(playerId, enabled);
     }
 
+    public static boolean isAutoPumpDirectionReversed(UUID playerId) {
+        return PipeConnectorSessions.isAutoPumpDirectionReversed(playerId);
+    }
+
+    public static void setAutoPumpDirectionReversed(UUID playerId, boolean reversed) {
+        PipeConnectorSessions.setAutoPumpDirectionReversed(playerId, reversed);
+    }
+
     public static Selection getSelection(UUID playerId) {
         return PipeConnectorSessions.getSelection(playerId);
     }
@@ -229,6 +237,10 @@ public final class PipeConnectorLogic {
 
     public static ConnectionPlan withAutoPumps(ConnectionPlan plan) {
         return AutoPumpPlanner.apply(plan);
+    }
+
+    public static ConnectionPlan withAutoPumps(ConnectionPlan plan, boolean reversed) {
+        return AutoPumpPlanner.apply(plan, reversed);
     }
 
     public static ConnectionPlan buildConnectionPlan(Level level, BlockPos startPos, BlockPos endPos) {
@@ -756,9 +768,17 @@ public final class PipeConnectorLogic {
         }
     }
 
-    public record PreviewPipe(BlockPos position, BlockState state, Direction mechanicalPumpFacing) {
+    public record PreviewPipe(BlockPos position, BlockState state, Direction mechanicalPumpFacing, boolean missingMaterial) {
         public PreviewPipe(BlockPos position, BlockState state) {
-            this(position, state, null);
+            this(position, state, null, false);
+        }
+
+        public PreviewPipe(BlockPos position, BlockState state, Direction mechanicalPumpFacing) {
+            this(position, state, mechanicalPumpFacing, false);
+        }
+
+        public PreviewPipe withMissingMaterial(boolean missingMaterial) {
+            return new PreviewPipe(position, state, mechanicalPumpFacing, missingMaterial);
         }
 
         public PreviewPipe {

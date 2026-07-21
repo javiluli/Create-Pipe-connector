@@ -5,10 +5,12 @@ import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PreviewPipe;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
 import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
+import com.javiluli.createpipeconnector.network.payload.ReverseAutoPumpDirectionPayload;
 import com.javiluli.createpipeconnector.network.payload.SelectPipeTargetPayload;
 import com.javiluli.createpipeconnector.network.payload.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.network.payload.ToggleConnectorModePayload;
@@ -33,7 +35,10 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
 public final class ClientPipeConnectorInputHandler {
@@ -186,6 +191,13 @@ public final class ClientPipeConnectorInputHandler {
             clearPipeStatus(minecraft.player);
         }
 
+        if (consumeAutoPumpDirectionReverse(minecraft) && ClientPipeConnectorState.isAutoPumpsEnabled()) {
+            boolean reversed = !ClientPipeConnectorState.isAutoPumpDirectionReversed();
+            ClientPipeConnectorState.setAutoPumpDirectionReversed(reversed);
+            PacketDistributor.sendToServer(new ReverseAutoPumpDirectionPayload(reversed));
+            clearPipeStatus(minecraft.player);
+        }
+
         Selection selection = ClientPipeConnectorState.getSelection();
         if (selection == null) {
             drainRoutingKeys();
@@ -235,7 +247,7 @@ public final class ClientPipeConnectorInputHandler {
             plan = applyAutoPumps(plan);
         }
 
-        ClientPipeConnectorState.setPreviewPipes(PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock()));
+        ClientPipeConnectorState.setPreviewPipes(markMissingPreviewMaterials(minecraft.player, selection, plan, PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock())));
         showPipeRequirement(minecraft.player, selection, plan);
     }
 
@@ -269,6 +281,10 @@ public final class ClientPipeConnectorInputHandler {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle();
     }
 
+    private static boolean consumeAutoPumpDirectionReverse(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse();
+    }
+
     private static boolean consumeAddAnchor(Minecraft minecraft) {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAddAnchor();
     }
@@ -287,7 +303,54 @@ public final class ClientPipeConnectorInputHandler {
     }
 
     private static ConnectionPlan applyAutoPumps(ConnectionPlan plan) {
-        return ClientPipeConnectorState.isAutoPumpsEnabled() ? PipeConnectorLogic.withAutoPumps(plan) : plan;
+        return ClientPipeConnectorState.isAutoPumpsEnabled()
+                ? PipeConnectorLogic.withAutoPumps(plan, ClientPipeConnectorState.isAutoPumpDirectionReversed())
+                : plan;
+    }
+
+    private static List<PreviewPipe> markMissingPreviewMaterials(LocalPlayer player, Selection selection, ConnectionPlan plan, List<PreviewPipe> previewPipes) {
+        if (player.getAbilities().instabuild || previewPipes.isEmpty()) {
+            return previewPipes;
+        }
+
+        int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
+        int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
+        if (availablePipes >= plan.requiredPipes() && availablePumps >= plan.requiredPumps()) {
+            return previewPipes;
+        }
+
+        Set<BlockPos> missingPositions = missingMaterialPositions(plan, availablePipes, availablePumps);
+        if (missingPositions.isEmpty()) {
+            return previewPipes;
+        }
+
+        List<PreviewPipe> markedPreviewPipes = new ArrayList<>(previewPipes.size());
+        for (PreviewPipe previewPipe : previewPipes) {
+            markedPreviewPipes.add(previewPipe.withMissingMaterial(missingPositions.contains(previewPipe.position())));
+        }
+        return markedPreviewPipes;
+    }
+
+    private static Set<BlockPos> missingMaterialPositions(ConnectionPlan plan, int availablePipes, int availablePumps) {
+        Set<BlockPos> missingPositions = new HashSet<>();
+        int pipeIndex = 0;
+        int pumpIndex = 0;
+
+        for (BlockPos position : plan.placementPositions()) {
+            if (plan.pumpPlacements().containsKey(position)) {
+                pumpIndex++;
+                if (pumpIndex > availablePumps) {
+                    missingPositions.add(position);
+                }
+            } else {
+                pipeIndex++;
+                if (pipeIndex > availablePipes) {
+                    missingPositions.add(position);
+                }
+            }
+        }
+
+        return missingPositions;
     }
 
     private static PlacementTarget getPreviewTarget(Minecraft minecraft, Block pipeBlock) {
@@ -408,6 +471,8 @@ public final class ClientPipeConnectorInputHandler {
         while (ClientPipeConnectorKeyMappings.consumeRemoveLastAnchor()) {
         }
         while (ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse()) {
         }
     }
 }

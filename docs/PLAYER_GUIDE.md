@@ -11,8 +11,10 @@
 - A ghost preview shows the result before placement.
 - A control HUD appears above the hotbar while Connector Pipe mode is enabled.
 - Press `P` to automatically place Mechanical Pumps along long routes.
+- Press `R` while auto-pumps are enabled to reverse the planned pump direction.
 - With Create's wrench, double right-click a pipe to toggle a straight connected segment between default and glass.
 - The action bar shows `required/available` counts in survival.
+- Missing pipes or pumps are tinted red in the ghost preview.
 
 ## Supported pipes
 
@@ -29,9 +31,10 @@
 6. Press `C` to add an anchor, or `V` to remove the last anchor.
 7. Press `Left Alt` to lock or unlock the current preview target.
 8. Press `P` to enable or disable automatic Mechanical Pumps.
-9. Right-click again to place the planned route, even if no block is targeted.
-10. Left-click during a preview to cancel only the current route.
-11. Press `B` again to disable Connector Pipe mode.
+9. Press `R` to reverse the planned Mechanical Pump direction.
+10. Right-click again to place the planned route, even if no block is targeted.
+11. Left-click during a preview to cancel only the current route.
+12. Press `B` again to disable Connector Pipe mode.
 
 ## Preview behavior
 
@@ -42,6 +45,7 @@
 - If obstacles block the path, the mod finds an alternate route.
 - If no valid route exists, nothing is placed.
 - If survival inventory is insufficient, the required count turns red and placement is cancelled.
+- Missing pipe or pump preview pieces are tinted red so you can see what cannot be afforded.
 - With auto-pumps enabled, pipe and pump requirements are shown separately.
 
 ## Wrench shortcut

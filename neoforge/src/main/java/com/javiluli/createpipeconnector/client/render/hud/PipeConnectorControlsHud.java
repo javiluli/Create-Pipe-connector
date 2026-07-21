@@ -83,7 +83,7 @@ public final class PipeConnectorControlsHud {
         List<String> lines = new ArrayList<>();
         lines.add(Component.translatable("hud.createpipeconnector.connector_mode").getString());
 
-        List<String> hints = List.of(
+        List<String> hints = new ArrayList<>(List.of(
                 hint(keyName(minecraft.options.keyUse), "hud.createpipeconnector.control.start_confirm"),
                 hint(keyName(minecraft.options.keyAttack), "hud.createpipeconnector.control.cancel"),
                 hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), "hud.createpipeconnector.control.add_anchor"),
@@ -93,7 +93,12 @@ public final class PipeConnectorControlsHud {
                         ? "hud.createpipeconnector.control.auto_pumps_on"
                         : "hud.createpipeconnector.control.auto_pumps_off"),
                 hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), "hud.createpipeconnector.control.exit_mode")
-        );
+        ));
+        if (ClientPipeConnectorState.isAutoPumpsEnabled()) {
+            hints.add(hints.size() - 1, hint(keyName(ClientPipeConnectorKeyMappings.reverseAutoPumpDirectionKey()), ClientPipeConnectorState.isAutoPumpDirectionReversed()
+                    ? "hud.createpipeconnector.control.pump_direction_reversed"
+                    : "hud.createpipeconnector.control.pump_direction_normal"));
+        }
 
         String separator = "  |  ";
         String currentLine = "";

@@ -10,6 +10,7 @@ import java.util.List;
 public final class ClientPipeConnectorState {
     private static boolean connectorModeEnabled;
     private static boolean autoPumpsEnabled;
+    private static boolean autoPumpDirectionReversed;
     private static Selection selection;
     private static List<PlacementTarget> anchors = List.of();
     private static List<PreviewPipe> previewPipes = List.of();
@@ -35,6 +36,15 @@ public final class ClientPipeConnectorState {
 
     public static void setAutoPumpsEnabled(boolean enabled) {
         autoPumpsEnabled = enabled;
+        setPreviewPipes(List.of());
+    }
+
+    public static boolean isAutoPumpDirectionReversed() {
+        return autoPumpDirectionReversed;
+    }
+
+    public static void setAutoPumpDirectionReversed(boolean reversed) {
+        autoPumpDirectionReversed = reversed;
         setPreviewPipes(List.of());
     }
 

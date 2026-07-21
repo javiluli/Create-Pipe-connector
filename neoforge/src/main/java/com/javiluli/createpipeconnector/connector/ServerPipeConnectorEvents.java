@@ -155,7 +155,7 @@ public final class ServerPipeConnectorEvents {
             return true;
         }
         if (PipeConnectorLogic.isAutoPumpsEnabled(player.getUUID())) {
-            plan = PipeConnectorLogic.withAutoPumps(plan);
+            plan = PipeConnectorLogic.withAutoPumps(plan, PipeConnectorLogic.isAutoPumpDirectionReversed(player.getUUID()));
         }
 
         if (!PipeConnectorLogic.hasEnoughItems(player, currentSelection.pipeBlock(), plan)) {

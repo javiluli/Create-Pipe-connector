@@ -19,8 +19,9 @@
 - Shows a ghost preview before placement
 - Supports anchor waypoints and configurable key binds
 - Can optionally insert Create Mechanical Pumps along long routes
+- Lets players reverse planned Mechanical Pump direction before confirming
 - Adds a Connector Pipe mode wrench shortcut to toggle straight pipe segments between default and glass
-- Checks survival inventory before placing pipes and pumps
+- Checks survival inventory before placing pipes and pumps, with missing preview pieces tinted red
 
 ## Pack integration
 

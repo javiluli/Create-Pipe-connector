@@ -19,7 +19,7 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
   - Create block/item lookup
   - pipe and pump block state helpers
 - `common/.../connector/AutoPumpPlanner.java`
-  - automatic Mechanical Pump slot generation
+  - automatic Mechanical Pump slot generation and direction reversal
 - `common/.../connector/PipePreviewBuilder.java`
   - ghost preview block states and preview world proxy
 - `common/.../connector/PipeDisplayToggler.java`
@@ -37,7 +37,7 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 - `neoforge/.../client/render/hud/PipeConnectorControlsHud.java`
   - active connector controls above the hotbar
 - `neoforge/.../network/CreatePipeConnectorNetwork.java`
-  - client-to-server mode, anchor, target, auto-pump, and wrench shortcut sync
+  - client-to-server mode, anchor, target, auto-pump, pump direction, and wrench shortcut sync
 - `neoforge/.../connector/ServerPipeConnectorEvents.java`
   - server-side placement, wrench double-click handling, and pipe refresh
 
@@ -49,11 +49,12 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 4. Client sends the selected target to the server and stores the local selection.
 5. Crosshair or air target plus optional anchors drive preview generation.
 6. If auto-pumps are enabled, the connection plan marks straight pipe slots for Mechanical Pumps.
-7. The preview world is built from the computed placement plan.
-8. Right-click confirms the current preview; left-click cancels the current route.
-9. Server validates mode, anchors, inventory, pumps, and placement before consuming items.
-10. Server placement fills the path and refreshes Create connections.
-11. With a wrench in Connector Pipe mode, client sends a pipe display payload and the server requires two clicks on the same pipe before converting the connected segment.
+7. The optional reversed pump direction state flips planned pump facings on client and server.
+8. The preview world is built from the computed placement plan and marks unaffordable pieces as missing.
+9. Right-click confirms the current preview; left-click cancels the current route.
+10. Server validates mode, anchors, inventory, pumps, and placement before consuming items.
+11. Server placement fills the path and refreshes Create connections.
+12. With a wrench in Connector Pipe mode, client sends a pipe display payload and the server requires two clicks on the same pipe before converting the connected segment.
 
 ## Useful commands
 
