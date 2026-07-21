@@ -12,7 +12,7 @@ A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Mi
 ![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
 ![Loader](https://img.shields.io/badge/Loader-NeoForge-E65100?style=for-the-badge&logo=forge&logoColor=white)
-![Version](https://img.shields.io/badge/Version-0.2.0--beta-455A64?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-0.3.0--beta-455A64?style=for-the-badge)
 
 <!-- End optional badges -->
 
@@ -98,7 +98,7 @@ If you do not have enough pipes, the required number turns red and placement is 
 - Requires `Create`.
 - No extra runtime mods are required beyond `Minecraft`, `NeoForge`, and `Create`.
 - Current recommended version: **Create `6.0.10-280`**.
-- Current addon version: **Create: Pipe Connector `0.2.0-beta`**.
+- Current addon version: **Create: Pipe Connector `0.3.0-beta`**.
 
 ---
 
