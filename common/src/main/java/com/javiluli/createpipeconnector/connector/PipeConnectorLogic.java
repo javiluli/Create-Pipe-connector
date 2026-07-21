@@ -15,6 +15,7 @@ import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.Vec3;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -39,6 +40,7 @@ public final class PipeConnectorLogic {
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
     private static final Map<UUID, List<PlacementTarget>> ANCHORS = new HashMap<>();
+    private static final Set<UUID> CONNECTOR_MODE_PLAYERS = new HashSet<>();
 
     private PipeConnectorLogic() {
     }
@@ -52,6 +54,15 @@ public final class PipeConnectorLogic {
             return blockItem.getBlock();
         }
         return null;
+    }
+
+    public static Block getHeldPipeBlock(Player player) {
+        Block mainHandPipe = getPipeBlock(player.getMainHandItem());
+        if (mainHandPipe != null) {
+            return mainHandPipe;
+        }
+
+        return getPipeBlock(player.getOffhandItem());
     }
 
     public static PlacementTarget resolvePlacementTarget(Level level, BlockPos clickedPos, Direction clickedFace, Block pipeBlock) {
@@ -92,10 +103,28 @@ public final class PipeConnectorLogic {
     }
 
     public static boolean isPlayerInPipeMode(Player player, Selection selection) {
-        Block heldPipeBlock = getPipeBlock(player.getOffhandItem());
-        return player.getMainHandItem().isEmpty()
-                && heldPipeBlock == selection.pipeBlock()
+        Block heldPipeBlock = getHeldPipeBlock(player);
+        return heldPipeBlock == selection.pipeBlock()
                 && isSelectionStillValid(player.level(), selection);
+    }
+
+    public static boolean isConnectorModeEnabled(UUID playerId) {
+        return CONNECTOR_MODE_PLAYERS.contains(playerId);
+    }
+
+    public static boolean isWithinInteractionRange(Player player, BlockPos position) {
+        double maxDistance = player.blockInteractionRange() + 1.0D;
+        return player.getEyePosition().distanceToSqr(Vec3.atCenterOf(position)) <= maxDistance * maxDistance;
+    }
+
+    public static void setConnectorModeEnabled(UUID playerId, boolean enabled) {
+        if (enabled) {
+            CONNECTOR_MODE_PLAYERS.add(playerId);
+            return;
+        }
+
+        CONNECTOR_MODE_PLAYERS.remove(playerId);
+        clearSelection(playerId);
     }
 
     public static Selection getSelection(UUID playerId) {

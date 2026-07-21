@@ -12,6 +12,11 @@ import org.lwjgl.glfw.GLFW;
 public final class ClientPipeConnectorKeyMappings {
     private static final String CATEGORY = "key.categories.createpipeconnector";
 
+    private static final KeyMapping TOGGLE_CONNECTOR_MODE = new KeyMapping(
+            "key.createpipeconnector.toggle_connector_mode",
+            GLFW.GLFW_KEY_B,
+            CATEGORY
+    );
     private static final KeyMapping TOGGLE_PREVIEW_LOCK = new KeyMapping(
             "key.createpipeconnector.toggle_preview_lock",
             GLFW.GLFW_KEY_LEFT_ALT,
@@ -33,9 +38,14 @@ public final class ClientPipeConnectorKeyMappings {
 
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
+        event.register(TOGGLE_CONNECTOR_MODE);
         event.register(TOGGLE_PREVIEW_LOCK);
         event.register(ADD_ANCHOR);
         event.register(REMOVE_LAST_ANCHOR);
+    }
+
+    public static boolean consumeConnectorModeToggle() {
+        return TOGGLE_CONNECTOR_MODE.consumeClick();
     }
 
     public static boolean consumePreviewLockToggle() {
@@ -50,7 +60,25 @@ public final class ClientPipeConnectorKeyMappings {
         return REMOVE_LAST_ANCHOR.consumeClick();
     }
 
+    public static KeyMapping toggleConnectorModeKey() {
+        return TOGGLE_CONNECTOR_MODE;
+    }
+
+    public static KeyMapping togglePreviewLockKey() {
+        return TOGGLE_PREVIEW_LOCK;
+    }
+
+    public static KeyMapping addAnchorKey() {
+        return ADD_ANCHOR;
+    }
+
+    public static KeyMapping removeLastAnchorKey() {
+        return REMOVE_LAST_ANCHOR;
+    }
+
     public static void drainPlacementClicks() {
+        while (consumeConnectorModeToggle()) {
+        }
         while (consumePreviewLockToggle()) {
         }
         while (consumeAddAnchor()) {
