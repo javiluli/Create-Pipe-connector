@@ -5,7 +5,9 @@ import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayl
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.SelectPipeTargetPayload;
 import com.javiluli.createpipeconnector.network.payload.ServerPipeConnectorPayloadHandler;
+import com.javiluli.createpipeconnector.network.payload.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.network.payload.ToggleConnectorModePayload;
+import com.javiluli.createpipeconnector.network.payload.WrenchPipeDisplayPayload;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
@@ -18,9 +20,11 @@ public final class CreatePipeConnectorNetwork {
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(NETWORK_VERSION);
         registrar.playToServer(ToggleConnectorModePayload.TYPE, ToggleConnectorModePayload.STREAM_CODEC, ServerPipeConnectorPayloadHandler::handleToggleConnectorMode);
+        registrar.playToServer(ToggleAutoPumpsPayload.TYPE, ToggleAutoPumpsPayload.STREAM_CODEC, ServerPipeConnectorPayloadHandler::handleToggleAutoPumps);
         registrar.playToServer(SelectPipeTargetPayload.TYPE, SelectPipeTargetPayload.STREAM_CODEC, ServerPipeConnectorPayloadHandler::handleSelectPipeTarget);
         registrar.playToServer(CancelPipeConnectionPayload.TYPE, CancelPipeConnectionPayload.STREAM_CODEC, ServerPipeConnectorPayloadHandler::handleCancelPipeConnection);
         registrar.playToServer(AddAnchorPayload.TYPE, AddAnchorPayload.STREAM_CODEC, ServerPipeConnectorPayloadHandler::handleAddAnchor);
         registrar.playToServer(RemoveLastAnchorPayload.TYPE, RemoveLastAnchorPayload.STREAM_CODEC, ServerPipeConnectorPayloadHandler::handleRemoveLastAnchor);
+        registrar.playToServer(WrenchPipeDisplayPayload.TYPE, WrenchPipeDisplayPayload.STREAM_CODEC, ServerPipeConnectorPayloadHandler::handleWrenchPipeDisplay);
     }
 }

@@ -4,11 +4,20 @@
   "key.createpipeconnector.toggle_preview_lock": "Lock Pipe Preview",
   "key.createpipeconnector.add_anchor": "Add Pipe Anchor",
   "key.createpipeconnector.remove_last_anchor": "Remove Last Pipe Anchor",
+  "key.createpipeconnector.toggle_auto_pumps": "Toggle Auto Mechanical Pumps",
   "hud.createpipeconnector.connector_mode": "Connector Pipe Mode",
   "hud.createpipeconnector.control.start_confirm": "Start/Confirm",
   "hud.createpipeconnector.control.cancel": "Cancel route",
   "hud.createpipeconnector.control.add_anchor": "Add anchor",
   "hud.createpipeconnector.control.remove_anchor": "Undo anchor",
   "hud.createpipeconnector.control.lock_preview": "Lock preview",
-  "hud.createpipeconnector.control.exit_mode": "Exit mode"
+  "hud.createpipeconnector.control.auto_pumps_on": "Auto pumps ON",
+  "hud.createpipeconnector.control.auto_pumps_off": "Auto pumps OFF",
+  "hud.createpipeconnector.control.exit_mode": "Exit mode",
+  "hud.createpipeconnector.no_route": "No free route.",
+  "hud.createpipeconnector.first_point_selected": "First point selected. Mark the second point.",
+  "hud.createpipeconnector.pipe_style_click_again": "Right-click again to toggle this pipe segment.",
+  "hud.createpipeconnector.pipe_style_to_glass": "Changed %s pipes to glass.",
+  "hud.createpipeconnector.pipe_style_to_default": "Changed %s pipes to default.",
+  "hud.createpipeconnector.pipe_style_no_changes": "No straight pipes to change."
 }

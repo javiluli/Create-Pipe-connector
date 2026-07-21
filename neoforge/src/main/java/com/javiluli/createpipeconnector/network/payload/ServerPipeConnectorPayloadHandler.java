@@ -19,6 +19,11 @@ public final class ServerPipeConnectorPayloadHandler {
         PipeConnectorLogic.setConnectorModeEnabled(player.getUUID(), payload.enabled());
     }
 
+    public static void handleToggleAutoPumps(ToggleAutoPumpsPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        PipeConnectorLogic.setAutoPumpsEnabled(player.getUUID(), payload.enabled());
+    }
+
     public static void handleSelectPipeTarget(SelectPipeTargetPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (!(player.level() instanceof ServerLevel serverLevel)) {
@@ -60,6 +65,15 @@ public final class ServerPipeConnectorPayloadHandler {
         if (validatedSelection(player) != null) {
             PipeConnectorLogic.removeLastAnchor(player.getUUID());
         }
+    }
+
+    public static void handleWrenchPipeDisplay(WrenchPipeDisplayPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        ServerPipeConnectorEvents.handleWrenchPipeDisplayClick(player, serverLevel, payload.position());
     }
 
     private static Selection validatedSelection(Player player) {
