@@ -2,24 +2,17 @@ package com.javiluli.createpipeconnector.connector;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -33,36 +26,37 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class PipeConnectorLogic {
-    private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(
-            ResourceLocation.fromNamespaceAndPath("create", "fluid_pipe"),
-            ResourceLocation.fromNamespaceAndPath("create", "smart_fluid_pipe")
-    );
     private static final Direction[] DIRECTIONS = Direction.values();
-    private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
-    private static final Map<UUID, List<PlacementTarget>> ANCHORS = new HashMap<>();
-    private static final Set<UUID> CONNECTOR_MODE_PLAYERS = new HashSet<>();
 
     private PipeConnectorLogic() {
     }
 
     public static boolean isConnectablePipe(BlockState state) {
-        return CONNECTABLE_PIPES.contains(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
+        return CreatePipeBlocks.isConnectablePipe(state);
+    }
+
+    public static boolean isCreateWrench(ItemStack stack) {
+        return CreatePipeBlocks.isCreateWrench(stack);
+    }
+
+    public static boolean isPipeDisplayToggleTarget(BlockState state) {
+        return CreatePipeBlocks.isPipeDisplayToggleTarget(state);
     }
 
     public static Block getPipeBlock(ItemStack stack) {
-        if (stack.getItem() instanceof BlockItem blockItem && isConnectablePipe(blockItem.getBlock().defaultBlockState())) {
-            return blockItem.getBlock();
-        }
-        return null;
+        return CreatePipeBlocks.getPipeBlock(stack);
     }
 
     public static Block getHeldPipeBlock(Player player) {
-        Block mainHandPipe = getPipeBlock(player.getMainHandItem());
-        if (mainHandPipe != null) {
-            return mainHandPipe;
-        }
+        return CreatePipeBlocks.getHeldPipeBlock(player);
+    }
 
-        return getPipeBlock(player.getOffhandItem());
+    public static Block getMechanicalPumpBlock() {
+        return CreatePipeBlocks.getMechanicalPumpBlock();
+    }
+
+    public static PipeDisplayToggleResult togglePipeDisplaySegment(ServerLevel level, BlockPos origin) {
+        return PipeDisplayToggler.toggleSegment(level, origin);
     }
 
     public static PlacementTarget resolvePlacementTarget(Level level, BlockPos clickedPos, Direction clickedFace, Block pipeBlock) {
@@ -109,7 +103,7 @@ public final class PipeConnectorLogic {
     }
 
     public static boolean isConnectorModeEnabled(UUID playerId) {
-        return CONNECTOR_MODE_PLAYERS.contains(playerId);
+        return PipeConnectorSessions.isConnectorModeEnabled(playerId);
     }
 
     public static boolean isWithinInteractionRange(Player player, BlockPos position) {
@@ -118,59 +112,43 @@ public final class PipeConnectorLogic {
     }
 
     public static void setConnectorModeEnabled(UUID playerId, boolean enabled) {
-        if (enabled) {
-            CONNECTOR_MODE_PLAYERS.add(playerId);
-            return;
-        }
+        PipeConnectorSessions.setConnectorModeEnabled(playerId, enabled);
+    }
 
-        CONNECTOR_MODE_PLAYERS.remove(playerId);
-        clearSelection(playerId);
+    public static boolean isAutoPumpsEnabled(UUID playerId) {
+        return PipeConnectorSessions.isAutoPumpsEnabled(playerId);
+    }
+
+    public static void setAutoPumpsEnabled(UUID playerId, boolean enabled) {
+        PipeConnectorSessions.setAutoPumpsEnabled(playerId, enabled);
     }
 
     public static Selection getSelection(UUID playerId) {
-        return SELECTIONS.get(playerId);
+        return PipeConnectorSessions.getSelection(playerId);
     }
 
     public static void setSelection(UUID playerId, Selection selection) {
-        SELECTIONS.put(playerId, selection);
-        ANCHORS.remove(playerId);
+        PipeConnectorSessions.setSelection(playerId, selection);
     }
 
     public static void clearSelection(UUID playerId) {
-        SELECTIONS.remove(playerId);
-        ANCHORS.remove(playerId);
+        PipeConnectorSessions.clearSelection(playerId);
     }
 
     public static List<PlacementTarget> getAnchors(UUID playerId) {
-        return List.copyOf(ANCHORS.getOrDefault(playerId, List.of()));
+        return PipeConnectorSessions.getAnchors(playerId);
     }
 
     public static void addAnchor(UUID playerId, PlacementTarget anchor) {
-        List<PlacementTarget> anchors = new ArrayList<>(ANCHORS.getOrDefault(playerId, List.of()));
-        if (!anchors.isEmpty() && anchors.get(anchors.size() - 1).position().equals(anchor.position())) {
-            anchors.set(anchors.size() - 1, anchor);
-        } else {
-            anchors.add(anchor);
-        }
-        ANCHORS.put(playerId, List.copyOf(anchors));
+        PipeConnectorSessions.addAnchor(playerId, anchor);
     }
 
     public static void removeLastAnchor(UUID playerId) {
-        List<PlacementTarget> anchors = new ArrayList<>(ANCHORS.getOrDefault(playerId, List.of()));
-        if (anchors.isEmpty()) {
-            return;
-        }
-
-        anchors.remove(anchors.size() - 1);
-        if (anchors.isEmpty()) {
-            ANCHORS.remove(playerId);
-        } else {
-            ANCHORS.put(playerId, List.copyOf(anchors));
-        }
+        PipeConnectorSessions.removeLastAnchor(playerId);
     }
 
     public static void clearAnchors(UUID playerId) {
-        ANCHORS.remove(playerId);
+        PipeConnectorSessions.clearAnchors(playerId);
     }
 
     public static boolean connect(ServerLevel level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
@@ -185,6 +163,7 @@ public final class PipeConnectorLogic {
     public static boolean connect(ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
         BlockPos startPos = plan.path().get(0);
         BlockState pipeState = createPipeState(pipeBlock, level.getBlockState(startPos));
+        Block pumpBlock = getMechanicalPumpBlock();
 
         for (BlockPos position : plan.placementPositions()) {
             if (!isTraversableBlock(level, position)) {
@@ -193,7 +172,10 @@ public final class PipeConnectorLogic {
         }
 
         for (BlockPos position : plan.placementPositions()) {
-            level.setBlockAndUpdate(position, pipeState);
+            BlockState state = plan.pumpPlacements().containsKey(position) && pumpBlock != null
+                    ? createPumpState(pumpBlock, level.getBlockState(position), plan.pumpPlacements().get(position))
+                    : pipeState;
+            level.setBlockAndUpdate(position, state);
         }
 
         refreshPipeStates(level, plan.path());
@@ -201,48 +183,35 @@ public final class PipeConnectorLogic {
     }
 
     public static int countAvailablePipes(Player player, Block pipeBlock) {
-        if (player.getAbilities().instabuild) {
-            return Integer.MAX_VALUE;
-        }
-
-        Item pipeItem = pipeBlock.asItem();
-        if (pipeItem == Items.AIR) {
-            return 0;
-        }
-
-        int count = 0;
-        count += countMatchingStacks(player.getInventory().items, pipeItem);
-        count += countMatchingStacks(player.getInventory().offhand, pipeItem);
-        return count;
+        return PipeInventory.countAvailablePipes(player, pipeBlock);
     }
 
     public static boolean hasEnoughPipes(Player player, Block pipeBlock, int requiredPipes) {
-        return player.getAbilities().instabuild || countAvailablePipes(player, pipeBlock) >= requiredPipes;
+        return player.getAbilities().instabuild || PipeInventory.countAvailablePipes(player, pipeBlock) >= requiredPipes;
+    }
+
+    public static int countAvailablePumps(Player player) {
+        return PipeInventory.countAvailablePumps(player);
+    }
+
+    public static boolean hasEnoughItems(Player player, Block pipeBlock, ConnectionPlan plan) {
+        return PipeInventory.hasEnoughItems(player, pipeBlock, plan);
     }
 
     public static boolean consumePipes(Player player, Block pipeBlock, int requiredPipes) {
-        if (requiredPipes <= 0 || player.getAbilities().instabuild) {
-            return true;
-        }
+        return PipeInventory.consumePipes(player, pipeBlock, requiredPipes);
+    }
 
-        if (!hasEnoughPipes(player, pipeBlock, requiredPipes)) {
-            return false;
-        }
-
-        Item pipeItem = pipeBlock.asItem();
-        int remaining = requiredPipes;
-        remaining = consumeMatchingStacks(player.getInventory().items, pipeItem, remaining);
-        remaining = consumeMatchingStacks(player.getInventory().offhand, pipeItem, remaining);
-        player.getInventory().setChanged();
-        return remaining == 0;
+    public static boolean consumeItems(Player player, Block pipeBlock, ConnectionPlan plan) {
+        return PipeInventory.consumeItems(player, pipeBlock, plan);
     }
 
     public static BlockState createPipeState(Block pipeBlock, BlockState sourceState) {
-        BlockState pipeState = pipeBlock.defaultBlockState();
-        if (pipeState.hasProperty(BlockStateProperties.WATERLOGGED) && sourceState.hasProperty(BlockStateProperties.WATERLOGGED)) {
-            pipeState = pipeState.setValue(BlockStateProperties.WATERLOGGED, sourceState.getValue(BlockStateProperties.WATERLOGGED));
-        }
-        return pipeState;
+        return CreatePipeBlocks.createPipeState(pipeBlock, sourceState);
+    }
+
+    public static BlockState createPumpState(Block pumpBlock, BlockState sourceState, Direction facing) {
+        return CreatePipeBlocks.createPumpState(pumpBlock, sourceState, facing);
     }
 
     public static List<PreviewPipe> buildPreview(Level level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
@@ -255,34 +224,11 @@ public final class PipeConnectorLogic {
     }
 
     public static List<PreviewPipe> buildPreview(Level level, ConnectionPlan plan, Block pipeBlock) {
-        Map<BlockPos, BlockState> previewStates = new HashMap<>();
-        for (BlockPos position : plan.path()) {
-            BlockState currentState = level.getBlockState(position);
-            previewStates.put(position, isConnectablePipe(currentState) ? currentState : createPipeState(pipeBlock, currentState));
-        }
+        return PipePreviewBuilder.buildPreview(level, plan, pipeBlock);
+    }
 
-        BlockAndTintGetter previewWorld = createPreviewWorld(level, previewStates);
-        Map<BlockPos, Direction> preferredDirections = preferredDirectionsForPath(plan.path());
-        for (int pass = 0; pass < 3; pass++) {
-            boolean changed = false;
-            for (BlockPos position : plan.path()) {
-                BlockState currentState = previewStates.get(position);
-                BlockState updatedState = updatePreviewState(currentState, preferredDirections.getOrDefault(position, Direction.NORTH), previewWorld, position);
-                if (!updatedState.equals(currentState)) {
-                    previewStates.put(position, updatedState);
-                    changed = true;
-                }
-            }
-            if (!changed) {
-                break;
-            }
-        }
-
-        List<PreviewPipe> previewPipes = new ArrayList<>(plan.requiredPipes());
-        for (BlockPos position : plan.placementPositions()) {
-            previewPipes.add(new PreviewPipe(position, previewStates.get(position)));
-        }
-        return previewPipes;
+    public static ConnectionPlan withAutoPumps(ConnectionPlan plan) {
+        return AutoPumpPlanner.apply(plan);
     }
 
     public static ConnectionPlan buildConnectionPlan(Level level, BlockPos startPos, BlockPos endPos) {
@@ -630,7 +576,7 @@ public final class PipeConnectorLogic {
         return path;
     }
 
-    private static void refreshPipeStates(ServerLevel level, List<BlockPos> path) {
+    static void refreshPipeStates(ServerLevel level, List<BlockPos> path) {
         Set<BlockPos> candidates = new LinkedHashSet<>(path);
         for (BlockPos position : path) {
             for (Direction direction : DIRECTIONS) {
@@ -668,61 +614,8 @@ public final class PipeConnectorLogic {
         }
     }
 
-    private static BlockState updatePreviewState(BlockState state, Direction preferredDirection, BlockAndTintGetter world, BlockPos position) {
-        try {
-            Method updateBlockState = state.getBlock().getClass().getMethod(
-                    "updateBlockState",
-                    BlockState.class,
-                    Direction.class,
-                    Direction.class,
-                    BlockAndTintGetter.class,
-                    BlockPos.class
-            );
-            return (BlockState) updateBlockState.invoke(state.getBlock(), state, preferredDirection, null, world, position);
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException exception) {
-            return state;
-        }
-    }
-
     public static BlockAndTintGetter createPreviewWorld(Level level, Map<BlockPos, BlockState> previewStates) {
-        ClassLoader classLoader = PipeConnectorLogic.class.getClassLoader();
-        return (BlockAndTintGetter) Proxy.newProxyInstance(classLoader, new Class<?>[]{BlockAndTintGetter.class}, (proxy, method, args) -> {
-            String methodName = method.getName();
-            if ("getBlockState".equals(methodName) && args != null && args.length == 1 && args[0] instanceof BlockPos blockPos) {
-                return previewStates.getOrDefault(blockPos, level.getBlockState(blockPos));
-            }
-            if ("getBlockEntity".equals(methodName) && args != null && args.length == 1 && args[0] instanceof BlockPos blockPos) {
-                return level.getBlockEntity(blockPos);
-            }
-            if ("toString".equals(methodName)) {
-                return "PreviewWorldProxy";
-            }
-            if ("hashCode".equals(methodName)) {
-                return System.identityHashCode(proxy);
-            }
-            if ("equals".equals(methodName)) {
-                return proxy == args[0];
-            }
-
-            try {
-                return method.invoke(level, args);
-            } catch (ReflectiveOperationException exception) {
-                Class<?> returnType = method.getReturnType();
-                if (returnType == boolean.class) {
-                    return false;
-                }
-                if (returnType == int.class || returnType == short.class || returnType == byte.class || returnType == long.class) {
-                    return 0;
-                }
-                if (returnType == float.class || returnType == double.class) {
-                    return 0.0;
-                }
-                if (returnType == char.class) {
-                    return '\0';
-                }
-                return null;
-            }
-        });
+        return PipePreviewBuilder.createPreviewWorld(level, previewStates);
     }
 
     private static int heuristic(BlockPos firstPos, BlockPos secondPos) {
@@ -806,26 +699,7 @@ public final class PipeConnectorLogic {
         return Direction.NORTH;
     }
 
-    private static Map<BlockPos, Direction> preferredDirectionsForPath(List<BlockPos> path) {
-        Map<BlockPos, Direction> preferredDirections = new HashMap<>(path.size());
-        for (int index = 0; index < path.size(); index++) {
-            BlockPos position = path.get(index);
-            if (preferredDirections.containsKey(position)) {
-                continue;
-            }
-
-            if (index + 1 < path.size()) {
-                preferredDirections.put(position, directionBetween(position, path.get(index + 1)));
-            } else if (index > 0) {
-                preferredDirections.put(position, directionBetween(path.get(index - 1), position));
-            } else {
-                preferredDirections.put(position, Direction.NORTH);
-            }
-        }
-        return preferredDirections;
-    }
-
-    private static Direction directionBetween(BlockPos from, BlockPos to) {
+    static Direction directionBetween(BlockPos from, BlockPos to) {
         Direction directFace = directFaceBetween(from, to);
         if (directFace != null) {
             return directFace;
@@ -867,31 +741,6 @@ public final class PipeConnectorLogic {
         return state.isAir() || state.canBeReplaced() || isConnectablePipe(state);
     }
 
-    private static int countMatchingStacks(List<ItemStack> stacks, Item item) {
-        int count = 0;
-        for (ItemStack stack : stacks) {
-            if (stack.is(item)) {
-                count += stack.getCount();
-            }
-        }
-        return count;
-    }
-
-    private static int consumeMatchingStacks(List<ItemStack> stacks, Item item, int remaining) {
-        for (ItemStack stack : stacks) {
-            if (remaining <= 0) {
-                return 0;
-            }
-            if (!stack.is(item)) {
-                continue;
-            }
-            int consumed = Math.min(remaining, stack.getCount());
-            stack.shrink(consumed);
-            remaining -= consumed;
-        }
-        return remaining;
-    }
-
     public record Selection(BlockPos position, Block pipeBlock, Direction face, boolean existingPipe) {
         public Selection {
             Objects.requireNonNull(position, "position");
@@ -907,21 +756,40 @@ public final class PipeConnectorLogic {
         }
     }
 
-    public record PreviewPipe(BlockPos position, BlockState state) {
+    public record PreviewPipe(BlockPos position, BlockState state, Direction mechanicalPumpFacing) {
+        public PreviewPipe(BlockPos position, BlockState state) {
+            this(position, state, null);
+        }
+
         public PreviewPipe {
             Objects.requireNonNull(position, "position");
             Objects.requireNonNull(state, "state");
         }
     }
 
-    public record ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions) {
+    public record ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions, Map<BlockPos, Direction> pumpPlacements) {
+        public ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions) {
+            this(path, placementPositions, Map.of());
+        }
+
         public ConnectionPlan {
             path = List.copyOf(path);
             placementPositions = List.copyOf(placementPositions);
+            pumpPlacements = Map.copyOf(pumpPlacements);
         }
 
         public int requiredPipes() {
-            return placementPositions.size();
+            return placementPositions.size() - requiredPumps();
+        }
+
+        public int requiredPumps() {
+            return pumpPlacements.size();
+        }
+    }
+
+    public record PipeDisplayToggleResult(boolean glassMode, int changed, int skipped, int total) {
+        public static PipeDisplayToggleResult empty(boolean glassMode) {
+            return new PipeDisplayToggleResult(glassMode, 0, 0, 0);
         }
     }
 
