@@ -14,6 +14,7 @@ import java.util.UUID;
 final class PipeConnectorSessions {
     private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
     private static final Map<UUID, List<PlacementTarget>> ANCHORS = new HashMap<>();
+    private static final Map<UUID, PipeConnectorLogic.RoutePriority> ROUTE_PRIORITIES = new HashMap<>();
     private static final Set<UUID> CONNECTOR_MODE_PLAYERS = new HashSet<>();
     private static final Set<UUID> AUTO_PUMP_PLAYERS = new HashSet<>();
     private static final Set<UUID> REVERSED_AUTO_PUMP_PLAYERS = new HashSet<>();
@@ -59,6 +60,19 @@ final class PipeConnectorSessions {
         }
 
         REVERSED_AUTO_PUMP_PLAYERS.remove(playerId);
+    }
+
+    static PipeConnectorLogic.RoutePriority getRoutePriority(UUID playerId) {
+        return ROUTE_PRIORITIES.getOrDefault(playerId, PipeConnectorLogic.RoutePriority.AUTO);
+    }
+
+    static void setRoutePriority(UUID playerId, PipeConnectorLogic.RoutePriority priority) {
+        if (priority == null || priority == PipeConnectorLogic.RoutePriority.AUTO) {
+            ROUTE_PRIORITIES.remove(playerId);
+            return;
+        }
+
+        ROUTE_PRIORITIES.put(playerId, priority);
     }
 
     static Selection getSelection(UUID playerId) {

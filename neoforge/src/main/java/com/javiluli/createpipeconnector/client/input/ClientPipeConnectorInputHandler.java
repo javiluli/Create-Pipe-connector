@@ -2,6 +2,7 @@ package com.javiluli.createpipeconnector.client.input;
 
 import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
+import com.javiluli.createpipeconnector.client.screen.RouteStyleRadialScreen;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
@@ -135,7 +136,14 @@ public final class ClientPipeConnectorInputHandler {
 
         event.setCanceled(true);
         event.setSwingHand(false);
+        if (currentSelection != null && !PipeConnectorLogic.isWithinInteractionRange(player, target.position())) {
+            clearCurrentConnection(player);
+            PacketDistributor.sendToServer(new CancelPipeConnectionPayload());
+            return;
+        }
         if (currentSelection != null && ClientPipeConnectorState.getPreviewPipes().isEmpty()) {
+            clearCurrentConnection(player);
+            PacketDistributor.sendToServer(new CancelPipeConnectionPayload());
             return;
         }
         handleClientTarget(player, heldPipeBlock, target);
@@ -187,7 +195,6 @@ public final class ClientPipeConnectorInputHandler {
             boolean enabled = !ClientPipeConnectorState.isAutoPumpsEnabled();
             ClientPipeConnectorState.setAutoPumpsEnabled(enabled);
             PacketDistributor.sendToServer(new ToggleAutoPumpsPayload(enabled));
-            clearPreviewTargetLock();
             clearPipeStatus(minecraft.player);
         }
 
@@ -195,6 +202,11 @@ public final class ClientPipeConnectorInputHandler {
             boolean reversed = !ClientPipeConnectorState.isAutoPumpDirectionReversed();
             ClientPipeConnectorState.setAutoPumpDirectionReversed(reversed);
             PacketDistributor.sendToServer(new ReverseAutoPumpDirectionPayload(reversed));
+            clearPipeStatus(minecraft.player);
+        }
+
+        if (consumeRoutePriorityCycle(minecraft)) {
+            minecraft.setScreen(new RouteStyleRadialScreen());
             clearPipeStatus(minecraft.player);
         }
 
@@ -227,7 +239,7 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
-        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target);
+        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target, ClientPipeConnectorState.getRoutePriority());
         if (plan == null) {
             ClientPipeConnectorState.setPreviewPipes(List.of());
             showPipeStatus(minecraft.player, Component.translatable("hud.createpipeconnector.no_route").withStyle(ChatFormatting.RED));
@@ -239,7 +251,7 @@ public final class ClientPipeConnectorInputHandler {
             ClientPipeConnectorState.addAnchor(target);
             PacketDistributor.sendToServer(new AddAnchorPayload(target.position(), target.face(), target.existingPipe()));
             clearPreviewTargetLock();
-            plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target);
+            plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target, ClientPipeConnectorState.getRoutePriority());
             if (plan == null) {
                 ClientPipeConnectorState.setPreviewPipes(List.of());
                 return;
@@ -283,6 +295,10 @@ public final class ClientPipeConnectorInputHandler {
 
     private static boolean consumeAutoPumpDirectionReverse(Minecraft minecraft) {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse();
+    }
+
+    private static boolean consumeRoutePriorityCycle(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRoutePriorityCycle();
     }
 
     private static boolean consumeAddAnchor(Minecraft minecraft) {
@@ -473,6 +489,8 @@ public final class ClientPipeConnectorInputHandler {
         while (ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle()) {
         }
         while (ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeRoutePriorityCycle()) {
         }
     }
 }

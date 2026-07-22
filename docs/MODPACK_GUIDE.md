@@ -18,6 +18,7 @@
 - Finds the shortest valid route around obstacles
 - Shows a ghost preview before placement
 - Supports anchor waypoints and configurable key binds
+- Lets players choose route styles from a radial selector for different axis orders
 - Can optionally insert Create Mechanical Pumps along long routes
 - Lets players reverse planned Mechanical Pump direction before confirming
 - Adds a Connector Pipe mode wrench shortcut to toggle straight pipe segments between default and glass

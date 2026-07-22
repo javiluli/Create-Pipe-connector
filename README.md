@@ -38,6 +38,7 @@ Building large factories in **Create** is fun, but placing long fluid pipe route
 - **Anchor Waypoints:** Press `C` to force the route through a point.
 - **Undo Last Anchor:** Press `V` to remove the last anchor.
 - **Preview Lock:** Press `Left Alt` to freeze/unfreeze the current preview target.
+- **Route Style Radial:** Press `N` to open a radial selector and reshape the preview: automatic, horizontal first, vertical first, X axis first, Z axis first, or avoid vertical.
 - **Auto Mechanical Pumps:** Press `P` to insert Create mechanical pumps along long routes.
 - **Reversible Pump Direction:** Press `R` while auto-pumps are enabled to flip the planned pump direction.
 - **Pump-Aware Preview:** Mechanical pumps are shown in the ghost preview with their route direction.
@@ -78,11 +79,12 @@ Optional auto-pump placement uses:
 6. Optional: press `C` to add an anchor.
 7. Optional: press `V` to remove the last anchor.
 8. Optional: press `Left Alt` to lock/unlock the preview target.
-9. Optional: press `P` to toggle automatic Mechanical Pumps for long routes.
-10. Optional: press `R` to reverse the planned Mechanical Pump direction.
-11. Right-click again to place the planned pipe line, even if no block is targeted.
-12. Optional: left-click during the preview to cancel only the current route.
-13. Press `B` again to return to normal gameplay.
+9. Optional: press `N` to open the route style radial and reshape the preview without losing a locked target.
+10. Optional: press `P` to toggle automatic Mechanical Pumps for long routes.
+11. Optional: press `R` to reverse the planned Mechanical Pump direction.
+12. Right-click again to place the planned pipe line, even if no block is targeted.
+13. Optional: left-click during the preview to cancel only the current route.
+14. Press `B` again to return to normal gameplay.
 
 ### Wrench Shortcut
 

@@ -25,6 +25,7 @@ public final class PipeConnectorControlsHud {
     private static final int BACKGROUND_COLOR = 0xAA101010;
     private static final int TEXT_COLOR = 0xFFE8E8E8;
     private static final int TITLE_COLOR = 0xFF66D9EF;
+    private static final int ROUTE_COLOR = 0xFFFFD166;
     private static final int MAX_WIDTH_PADDING = 24;
     private static final float TEXT_SCALE = 0.75F;
     private static final int LINE_HEIGHT = 9;
@@ -60,7 +61,7 @@ public final class PipeConnectorControlsHud {
         guiGraphics.pose().scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
         try {
             for (int index = 0; index < lines.size(); index++) {
-                int color = index == 0 ? TITLE_COLOR : TEXT_COLOR;
+                int color = lineColor(index);
                 int lineWidth = Math.round(font.width(lines.get(index)) * TEXT_SCALE);
                 int lineX = Math.round(((guiGraphics.guiWidth() - lineWidth) / 2.0F) / TEXT_SCALE);
                 int lineY = Math.round((y + index * LINE_HEIGHT) / TEXT_SCALE);
@@ -69,6 +70,16 @@ public final class PipeConnectorControlsHud {
         } finally {
             guiGraphics.pose().popPose();
         }
+    }
+
+    private static int lineColor(int index) {
+        if (index == 0) {
+            return TITLE_COLOR;
+        }
+        if (index == 1) {
+            return ROUTE_COLOR;
+        }
+        return TEXT_COLOR;
     }
 
     private static boolean shouldRender(Minecraft minecraft) {
@@ -82,6 +93,7 @@ public final class PipeConnectorControlsHud {
     private static List<String> buildControlLines(Minecraft minecraft, Font font, int maxWidth) {
         List<String> lines = new ArrayList<>();
         lines.add(Component.translatable("hud.createpipeconnector.connector_mode").getString());
+        lines.add(Component.translatable("hud.createpipeconnector.route_priority", Component.translatable(routePriorityTranslationKey())).getString());
 
         List<String> hints = new ArrayList<>(List.of(
                 hint(keyName(minecraft.options.keyUse), "hud.createpipeconnector.control.start_confirm"),
@@ -89,6 +101,7 @@ public final class PipeConnectorControlsHud {
                 hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), "hud.createpipeconnector.control.add_anchor"),
                 hint(keyName(ClientPipeConnectorKeyMappings.removeLastAnchorKey()), "hud.createpipeconnector.control.remove_anchor"),
                 hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), "hud.createpipeconnector.control.lock_preview"),
+                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), "hud.createpipeconnector.control.cycle_route_priority"),
                 hint(keyName(ClientPipeConnectorKeyMappings.toggleAutoPumpsKey()), ClientPipeConnectorState.isAutoPumpsEnabled()
                         ? "hud.createpipeconnector.control.auto_pumps_on"
                         : "hud.createpipeconnector.control.auto_pumps_off"),
@@ -121,6 +134,10 @@ public final class PipeConnectorControlsHud {
 
     private static String hint(String keyName, String actionTranslationKey) {
         return Component.translatable(actionTranslationKey).getString() + ": \"" + keyName + "\"";
+    }
+
+    private static String routePriorityTranslationKey() {
+        return "hud.createpipeconnector.control.route_priority." + ClientPipeConnectorState.getRoutePriority().name().toLowerCase(java.util.Locale.ROOT);
     }
 
     private static String keyName(KeyMapping keyMapping) {

@@ -42,6 +42,11 @@ public final class ClientPipeConnectorKeyMappings {
             GLFW.GLFW_KEY_R,
             CATEGORY
     );
+    private static final KeyMapping CYCLE_ROUTE_PRIORITY = new KeyMapping(
+            "key.createpipeconnector.cycle_route_priority",
+            GLFW.GLFW_KEY_N,
+            CATEGORY
+    );
 
     private ClientPipeConnectorKeyMappings() {
     }
@@ -54,6 +59,7 @@ public final class ClientPipeConnectorKeyMappings {
         event.register(REMOVE_LAST_ANCHOR);
         event.register(TOGGLE_AUTO_PUMPS);
         event.register(REVERSE_AUTO_PUMP_DIRECTION);
+        event.register(CYCLE_ROUTE_PRIORITY);
     }
 
     public static boolean consumeConnectorModeToggle() {
@@ -80,6 +86,10 @@ public final class ClientPipeConnectorKeyMappings {
         return REVERSE_AUTO_PUMP_DIRECTION.consumeClick();
     }
 
+    public static boolean consumeRoutePriorityCycle() {
+        return CYCLE_ROUTE_PRIORITY.consumeClick();
+    }
+
     public static KeyMapping toggleConnectorModeKey() {
         return TOGGLE_CONNECTOR_MODE;
     }
@@ -104,6 +114,10 @@ public final class ClientPipeConnectorKeyMappings {
         return REVERSE_AUTO_PUMP_DIRECTION;
     }
 
+    public static KeyMapping cycleRoutePriorityKey() {
+        return CYCLE_ROUTE_PRIORITY;
+    }
+
     public static void drainPlacementClicks() {
         while (consumeConnectorModeToggle()) {
         }
@@ -116,6 +130,8 @@ public final class ClientPipeConnectorKeyMappings {
         while (consumeAutoPumpsToggle()) {
         }
         while (consumeAutoPumpDirectionReverse()) {
+        }
+        while (consumeRoutePriorityCycle()) {
         }
     }
 }

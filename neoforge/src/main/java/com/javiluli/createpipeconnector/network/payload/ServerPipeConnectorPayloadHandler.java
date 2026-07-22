@@ -29,6 +29,11 @@ public final class ServerPipeConnectorPayloadHandler {
         PipeConnectorLogic.setAutoPumpDirectionReversed(player.getUUID(), payload.reversed());
     }
 
+    public static void handleRoutePriority(RoutePriorityPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        PipeConnectorLogic.setRoutePriority(player.getUUID(), payload.priority());
+    }
+
     public static void handleSelectPipeTarget(SelectPipeTargetPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (!(player.level() instanceof ServerLevel serverLevel)) {
@@ -59,7 +64,7 @@ public final class ServerPipeConnectorPayloadHandler {
             return;
         }
 
-        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, selection, PipeConnectorLogic.getAnchors(player.getUUID()), anchor);
+        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, selection, PipeConnectorLogic.getAnchors(player.getUUID()), anchor, PipeConnectorLogic.getRoutePriority(player.getUUID()));
         if (plan != null) {
             PipeConnectorLogic.addAnchor(player.getUUID(), anchor);
         }

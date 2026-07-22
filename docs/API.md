@@ -6,6 +6,7 @@ This addon does not expose a public API yet.
 
 - Connector Pipe mode + held pipe + targeted block right-click to start
 - crosshair or air target plus optional anchors define the route
+- route style can change preferred axis order before preview and placement
 - right-click again to confirm the current preview target
 - left-click cancels the current route while leaving Connector Pipe mode enabled
 - optional auto-pump mode inserts Mechanical Pumps into straight sections of the plan

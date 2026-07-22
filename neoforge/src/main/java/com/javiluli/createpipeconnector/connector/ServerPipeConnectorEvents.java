@@ -125,11 +125,15 @@ public final class ServerPipeConnectorEvents {
         }
 
         Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
+        Selection currentSelection = PipeConnectorLogic.getSelection(player.getUUID());
         if (heldPipeBlock == null || !isTargetValid(player, serverLevel, heldPipeBlock, target)) {
+            if (currentSelection != null) {
+                PipeConnectorLogic.clearSelection(player.getUUID());
+                clearActionBar(player);
+            }
             return false;
         }
 
-        Selection currentSelection = PipeConnectorLogic.getSelection(player.getUUID());
         if (currentSelection == null) {
             PipeConnectorLogic.setSelection(player.getUUID(), new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
             player.displayClientMessage(Component.translatable("hud.createpipeconnector.first_point_selected"), true);
@@ -148,7 +152,7 @@ public final class ServerPipeConnectorEvents {
             return true;
         }
 
-        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, currentSelection, PipeConnectorLogic.getAnchors(player.getUUID()), target);
+        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, currentSelection, PipeConnectorLogic.getAnchors(player.getUUID()), target, PipeConnectorLogic.getRoutePriority(player.getUUID()));
         if (plan == null) {
             PipeConnectorLogic.clearSelection(player.getUUID());
             clearActionBar(player);

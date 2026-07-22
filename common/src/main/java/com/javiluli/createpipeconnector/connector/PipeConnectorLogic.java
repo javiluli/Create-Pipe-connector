@@ -131,6 +131,14 @@ public final class PipeConnectorLogic {
         PipeConnectorSessions.setAutoPumpDirectionReversed(playerId, reversed);
     }
 
+    public static RoutePriority getRoutePriority(UUID playerId) {
+        return PipeConnectorSessions.getRoutePriority(playerId);
+    }
+
+    public static void setRoutePriority(UUID playerId, RoutePriority priority) {
+        PipeConnectorSessions.setRoutePriority(playerId, priority);
+    }
+
     public static Selection getSelection(UUID playerId) {
         return PipeConnectorSessions.getSelection(playerId);
     }
@@ -256,6 +264,10 @@ public final class PipeConnectorLogic {
     }
 
     public static ConnectionPlan buildPlacementPlan(Level level, Selection selection, PlacementTarget target) {
+        return buildPlacementPlan(level, selection, target, RoutePriority.AUTO);
+    }
+
+    public static ConnectionPlan buildPlacementPlan(Level level, Selection selection, PlacementTarget target, RoutePriority routePriority) {
         return buildPlacementPlan(
                 level,
                 selection.position(),
@@ -263,11 +275,16 @@ public final class PipeConnectorLogic {
                 selection.existingPipe(),
                 target.position(),
                 target.face(),
-                target.existingPipe()
+                target.existingPipe(),
+                routePriority
         );
     }
 
     public static ConnectionPlan buildPlacementPlan(Level level, Selection selection, List<PlacementTarget> anchors, PlacementTarget target) {
+        return buildPlacementPlan(level, selection, anchors, target, RoutePriority.AUTO);
+    }
+
+    public static ConnectionPlan buildPlacementPlan(Level level, Selection selection, List<PlacementTarget> anchors, PlacementTarget target, RoutePriority routePriority) {
         List<PlacementTarget> waypoints = new ArrayList<>();
         if (anchors != null) {
             waypoints.addAll(anchors);
@@ -291,7 +308,8 @@ public final class PipeConnectorLogic {
                     start.existingPipe(),
                     waypoint.position(),
                     waypoint.face(),
-                    waypoint.existingPipe()
+                    waypoint.existingPipe(),
+                    routePriority
             );
             if (segment == null) {
                 return null;
@@ -318,6 +336,19 @@ public final class PipeConnectorLogic {
             Direction endFace,
             boolean endIsExistingPipe
     ) {
+        return buildPlacementPlan(level, startPos, startFace, startIsExistingPipe, endPos, endFace, endIsExistingPipe, RoutePriority.AUTO);
+    }
+
+    public static ConnectionPlan buildPlacementPlan(
+            Level level,
+            BlockPos startPos,
+            Direction startFace,
+            boolean startIsExistingPipe,
+            BlockPos endPos,
+            Direction endFace,
+            boolean endIsExistingPipe,
+            RoutePriority routePriority
+    ) {
         Objects.requireNonNull(startFace, "startFace");
         if (endIsExistingPipe) {
             Objects.requireNonNull(endFace, "endFace");
@@ -340,7 +371,7 @@ public final class PipeConnectorLogic {
 
         Direction resolvedStartFace = startIsExistingPipe ? resolveStraightLineFace(startPos, startFace, endPos) : startFace;
         Direction resolvedEndFace = endIsExistingPipe ? resolveStraightLineFace(endPos, endFace, startPos) : endFace;
-        List<BlockPos> path = findPlacementPath(level, startPos, resolvedStartFace, startIsExistingPipe, endPos, resolvedEndFace, endIsExistingPipe);
+        List<BlockPos> path = findPlacementPath(level, startPos, resolvedStartFace, startIsExistingPipe, endPos, resolvedEndFace, endIsExistingPipe, normalizePriority(routePriority));
         if (path == null || path.size() < 2) {
             return null;
         }
@@ -391,10 +422,11 @@ public final class PipeConnectorLogic {
             boolean startIsExistingPipe,
             BlockPos endPos,
             Direction endFace,
-            boolean endIsExistingPipe
+            boolean endIsExistingPipe,
+            RoutePriority routePriority
     ) {
         if (startIsExistingPipe && endIsExistingPipe) {
-            return findFacedPath(level, startPos, startFace, endPos, endFace);
+            return findFacedPath(level, startPos, startFace, endPos, endFace, routePriority);
         }
 
         BlockPos routeStart = startIsExistingPipe ? startPos.relative(startFace) : startPos;
@@ -403,7 +435,7 @@ public final class PipeConnectorLogic {
             return null;
         }
 
-        List<BlockPos> route = findPath(level, routeStart, routeEnd);
+        List<BlockPos> route = findPath(level, routeStart, routeEnd, routePriority);
         if (route == null) {
             return null;
         }
@@ -429,22 +461,31 @@ public final class PipeConnectorLogic {
     }
 
     public static List<BlockPos> findPath(Level level, BlockPos startPos, BlockPos endPos) {
-        return findPath(level, startPos, null, endPos, null);
+        return findPath(level, startPos, endPos, RoutePriority.AUTO);
+    }
+
+    public static List<BlockPos> findPath(Level level, BlockPos startPos, BlockPos endPos, RoutePriority routePriority) {
+        return findPath(level, startPos, null, endPos, null, routePriority);
     }
 
     public static List<BlockPos> findPath(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace) {
+        return findPath(level, startPos, startFace, endPos, endFace, RoutePriority.AUTO);
+    }
+
+    public static List<BlockPos> findPath(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace, RoutePriority routePriority) {
+        RoutePriority normalizedPriority = normalizePriority(routePriority);
         if (startFace != null && endFace != null) {
-            return findFacedPath(level, startPos, startFace, endPos, endFace);
+            return findFacedPath(level, startPos, startFace, endPos, endFace, normalizedPriority);
         }
 
-        List<BlockPos> directPath = tryDirectAxisPaths(level, startPos, endPos);
+        List<BlockPos> directPath = tryDirectAxisPaths(level, startPos, endPos, normalizedPriority);
         if (directPath != null) {
             return directPath;
         }
-        return findAStarPath(level, startPos, endPos);
+        return findAStarPath(level, startPos, endPos, normalizedPriority);
     }
 
-    private static List<BlockPos> findFacedPath(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace) {
+    private static List<BlockPos> findFacedPath(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace, RoutePriority routePriority) {
         BlockPos startExitPos = startPos.relative(startFace);
         BlockPos endEntryPos = endPos.relative(endFace);
         boolean directlyConnected = startExitPos.equals(endPos) && endEntryPos.equals(startPos);
@@ -458,7 +499,7 @@ public final class PipeConnectorLogic {
             return null;
         }
 
-        List<BlockPos> middlePath = findPath(level, startExitPos, endEntryPos);
+        List<BlockPos> middlePath = findPath(level, startExitPos, endEntryPos, routePriority);
         if (middlePath == null) {
             return null;
         }
@@ -470,8 +511,8 @@ public final class PipeConnectorLogic {
         return path;
     }
 
-    private static List<BlockPos> tryDirectAxisPaths(Level level, BlockPos startPos, BlockPos endPos) {
-        Axis[] preferredOrder = preferredAxisOrder(startPos, endPos);
+    private static List<BlockPos> tryDirectAxisPaths(Level level, BlockPos startPos, BlockPos endPos, RoutePriority routePriority) {
+        Axis[] preferredOrder = preferredAxisOrder(startPos, endPos, routePriority);
         List<Axis[]> permutations = new ArrayList<>(List.of(
                 new Axis[]{Axis.X, Axis.Y, Axis.Z},
                 new Axis[]{Axis.X, Axis.Z, Axis.Y},
@@ -510,7 +551,7 @@ public final class PipeConnectorLogic {
         return null;
     }
 
-    private static List<BlockPos> findAStarPath(Level level, BlockPos startPos, BlockPos endPos) {
+    private static List<BlockPos> findAStarPath(Level level, BlockPos startPos, BlockPos endPos, RoutePriority routePriority) {
         int manhattanDistance = startPos.distManhattan(endPos);
         int padding = Math.max(8, Math.min(32, manhattanDistance / 2));
 
@@ -521,11 +562,11 @@ public final class PipeConnectorLogic {
         int maxY = Math.max(startPos.getY(), endPos.getY()) + padding;
         int maxZ = Math.max(startPos.getZ(), endPos.getZ()) + padding;
 
-        Axis[] preferredAxes = preferredAxisOrder(startPos, endPos);
+        Axis[] preferredAxes = preferredAxisOrder(startPos, endPos, routePriority);
         PriorityQueue<PathNode> openSet = new PriorityQueue<>(Comparator
                 .comparingInt(PathNode::priority)
                 .thenComparingInt(PathNode::turns)
-                .thenComparingInt(node -> directionPreference(node.direction(), node.position(), endPos, preferredAxes)));
+                .thenComparingInt(PathNode::steps));
         Map<BlockPos, Integer> gScore = new HashMap<>();
         Map<BlockPos, Integer> turnScore = new HashMap<>();
         Map<BlockPos, BlockPos> cameFrom = new HashMap<>();
@@ -556,7 +597,7 @@ public final class PipeConnectorLogic {
                     continue;
                 }
 
-                int tentativeScore = gScore.get(current.position()) + 1;
+                int tentativeScore = gScore.get(current.position()) + movementCost(direction, routePriority);
                 int tentativeTurns = current.turns() + (current.direction() != null && current.direction() != direction ? 1 : 0);
                 int knownScore = gScore.getOrDefault(nextPos, Integer.MAX_VALUE);
                 int knownTurns = turnScore.getOrDefault(nextPos, Integer.MAX_VALUE);
@@ -634,7 +675,30 @@ public final class PipeConnectorLogic {
         return firstPos.distManhattan(secondPos);
     }
 
-    private static Axis[] preferredAxisOrder(BlockPos startPos, BlockPos endPos) {
+    private static int movementCost(Direction direction, RoutePriority routePriority) {
+        return direction.getAxis() == Direction.Axis.Y ? normalizePriority(routePriority).verticalCost() : 1;
+    }
+
+    private static RoutePriority normalizePriority(RoutePriority routePriority) {
+        return routePriority == null ? RoutePriority.AUTO : routePriority;
+    }
+
+    private static Axis[] preferredAxisOrder(BlockPos startPos, BlockPos endPos, RoutePriority routePriority) {
+        RoutePriority normalizedPriority = normalizePriority(routePriority);
+        Axis primaryHorizontalAxis = Math.abs(Axis.X.distance(startPos, endPos)) >= Math.abs(Axis.Z.distance(startPos, endPos)) ? Axis.X : Axis.Z;
+        Axis secondaryHorizontalAxis = primaryHorizontalAxis == Axis.X ? Axis.Z : Axis.X;
+
+        return switch (normalizedPriority) {
+            case HORIZONTAL_FIRST -> new Axis[]{primaryHorizontalAxis, secondaryHorizontalAxis, Axis.Y};
+            case VERTICAL_FIRST -> new Axis[]{Axis.Y, primaryHorizontalAxis, secondaryHorizontalAxis};
+            case X_FIRST -> new Axis[]{Axis.X, Axis.Z, Axis.Y};
+            case Z_FIRST -> new Axis[]{Axis.Z, Axis.X, Axis.Y};
+            case AVOID_VERTICAL -> new Axis[]{primaryHorizontalAxis, secondaryHorizontalAxis, Axis.Y};
+            case AUTO -> automaticAxisOrder(startPos, endPos);
+        };
+    }
+
+    private static Axis[] automaticAxisOrder(BlockPos startPos, BlockPos endPos) {
         List<Axis> axes = new ArrayList<>(List.of(Axis.X, Axis.Y, Axis.Z));
         axes.sort(Comparator
                 .comparingInt((Axis axis) -> -Math.abs(axis.distance(startPos, endPos)))
@@ -653,42 +717,30 @@ public final class PipeConnectorLogic {
     }
 
     private static List<Direction> orderedDirections(BlockPos currentPos, BlockPos endPos, Axis[] preferredAxes, Direction previousDirection) {
-        List<Direction> directions = new ArrayList<>(List.of(DIRECTIONS));
-        directions.sort(Comparator
-                .comparingInt((Direction direction) -> directionPreference(direction, currentPos, endPos, preferredAxes))
-                .thenComparingInt(direction -> previousDirection != null && direction == previousDirection ? -1 : 0));
+        List<Direction> directions = new ArrayList<>(DIRECTIONS.length);
+        for (Axis axis : preferredAxes) {
+            addAxisDirections(directions, axis, currentPos, endPos);
+        }
+        for (Direction direction : DIRECTIONS) {
+            if (!directions.contains(direction)) {
+                directions.add(direction);
+            }
+        }
+        if (previousDirection != null && directions.remove(previousDirection)) {
+            directions.add(0, previousDirection);
+        }
         return directions;
     }
 
-    private static int directionPreference(Direction direction, BlockPos currentPos, BlockPos endPos, Axis[] preferredAxes) {
-        if (direction == null) {
-            return preferredAxes.length * 10;
+    private static void addAxisDirections(List<Direction> directions, Axis axis, BlockPos currentPos, BlockPos endPos) {
+        Direction preferredDirection = axis.directionTowards(currentPos, endPos);
+        if (preferredDirection != null) {
+            directions.add(preferredDirection);
+            directions.add(preferredDirection.getOpposite());
+        } else {
+            directions.add(axis.positiveDirection());
+            directions.add(axis.positiveDirection().getOpposite());
         }
-
-        int axisScore = switch (direction.getAxis()) {
-            case X -> axisRank(preferredAxes, Axis.X);
-            case Y -> axisRank(preferredAxes, Axis.Y);
-            case Z -> axisRank(preferredAxes, Axis.Z);
-        };
-        int stepScore = 0;
-        int delta = switch (direction.getAxis()) {
-            case X -> endPos.getX() - currentPos.getX();
-            case Y -> endPos.getY() - currentPos.getY();
-            case Z -> endPos.getZ() - currentPos.getZ();
-        };
-        if (delta != 0 && Integer.signum(delta) == direction.getStepX() + direction.getStepY() + direction.getStepZ()) {
-            stepScore -= 1;
-        }
-        return axisScore * 10 + stepScore;
-    }
-
-    private static int axisRank(Axis[] preferredAxes, Axis axis) {
-        for (int index = 0; index < preferredAxes.length; index++) {
-            if (preferredAxes[index] == axis) {
-                return index;
-            }
-        }
-        return preferredAxes.length;
     }
 
     private static Direction preferredDirectionForPosition(List<BlockPos> path, BlockPos position) {
@@ -813,6 +865,35 @@ public final class PipeConnectorLogic {
         }
     }
 
+    public enum RoutePriority {
+        AUTO(1),
+        HORIZONTAL_FIRST(1),
+        VERTICAL_FIRST(1),
+        X_FIRST(1),
+        Z_FIRST(1),
+        AVOID_VERTICAL(8);
+
+        private final int verticalCost;
+
+        RoutePriority(int verticalCost) {
+            this.verticalCost = verticalCost;
+        }
+
+        public RoutePriority next() {
+            RoutePriority[] priorities = values();
+            return priorities[(ordinal() + 1) % priorities.length];
+        }
+
+        public RoutePriority previous() {
+            RoutePriority[] priorities = values();
+            return priorities[(ordinal() + priorities.length - 1) % priorities.length];
+        }
+
+        private int verticalCost() {
+            return verticalCost;
+        }
+    }
+
     private record PathNode(BlockPos position, Direction direction, int steps, int turns, int priority) {
     }
 
@@ -830,6 +911,11 @@ public final class PipeConnectorLogic {
             BlockPos stepTowards(BlockPos current, BlockPos target) {
                 return current.offset(Integer.signum(target.getX() - current.getX()), 0, 0);
             }
+
+            @Override
+            Direction positiveDirection() {
+                return Direction.EAST;
+            }
         },
         Y {
             @Override
@@ -840,6 +926,11 @@ public final class PipeConnectorLogic {
             @Override
             BlockPos stepTowards(BlockPos current, BlockPos target) {
                 return current.offset(0, Integer.signum(target.getY() - current.getY()), 0);
+            }
+
+            @Override
+            Direction positiveDirection() {
+                return Direction.UP;
             }
         },
         Z {
@@ -852,10 +943,26 @@ public final class PipeConnectorLogic {
             BlockPos stepTowards(BlockPos current, BlockPos target) {
                 return current.offset(0, 0, Integer.signum(target.getZ() - current.getZ()));
             }
+
+            @Override
+            Direction positiveDirection() {
+                return Direction.SOUTH;
+            }
         };
 
         abstract int distance(BlockPos current, BlockPos target);
 
         abstract BlockPos stepTowards(BlockPos current, BlockPos target);
+
+        abstract Direction positiveDirection();
+
+        Direction directionTowards(BlockPos current, BlockPos target) {
+            int distance = distance(current, target);
+            if (distance == 0) {
+                return null;
+            }
+            Direction positiveDirection = positiveDirection();
+            return distance > 0 ? positiveDirection : positiveDirection.getOpposite();
+        }
     }
 }

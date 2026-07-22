@@ -2,6 +2,7 @@ package com.javiluli.createpipeconnector.client.state;
 
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PreviewPipe;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.RoutePriority;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
 
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ public final class ClientPipeConnectorState {
     private static boolean connectorModeEnabled;
     private static boolean autoPumpsEnabled;
     private static boolean autoPumpDirectionReversed;
+    private static RoutePriority routePriority = RoutePriority.AUTO;
     private static Selection selection;
     private static List<PlacementTarget> anchors = List.of();
     private static List<PreviewPipe> previewPipes = List.of();
@@ -46,6 +48,14 @@ public final class ClientPipeConnectorState {
     public static void setAutoPumpDirectionReversed(boolean reversed) {
         autoPumpDirectionReversed = reversed;
         setPreviewPipes(List.of());
+    }
+
+    public static RoutePriority getRoutePriority() {
+        return routePriority;
+    }
+
+    public static void setRoutePriority(RoutePriority priority) {
+        routePriority = priority == null ? RoutePriority.AUTO : priority;
     }
 
     public static Selection getSelection() {

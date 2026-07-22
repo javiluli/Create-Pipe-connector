@@ -10,6 +10,7 @@
 - The mod fills the shortest valid route automatically.
 - A ghost preview shows the result before placement.
 - A control HUD appears above the hotbar while Connector Pipe mode is enabled.
+- Press `N` to open the route style radial when you want the preview to move through different axes first.
 - Press `P` to automatically place Mechanical Pumps along long routes.
 - Press `R` while auto-pumps are enabled to reverse the planned pump direction.
 - With Create's wrench, double right-click a pipe to toggle a straight connected segment between default and glass.
@@ -30,11 +31,23 @@
 5. Move the crosshair to guide the live preview, even through open air.
 6. Press `C` to add an anchor, or `V` to remove the last anchor.
 7. Press `Left Alt` to lock or unlock the current preview target.
-8. Press `P` to enable or disable automatic Mechanical Pumps.
-9. Press `R` to reverse the planned Mechanical Pump direction.
-10. Right-click again to place the planned route, even if no block is targeted.
-11. Left-click during a preview to cancel only the current route.
-12. Press `B` again to disable Connector Pipe mode.
+8. Press `N` to open the route style radial without losing a locked preview target.
+9. Press `P` to enable or disable automatic Mechanical Pumps.
+10. Press `R` to reverse the planned Mechanical Pump direction.
+11. Right-click again to place the planned route, even if no block is targeted.
+12. Left-click during a preview to cancel only the current route.
+13. Press `B` again to disable Connector Pipe mode.
+
+## Route styles
+
+- **Auto:** default behavior.
+- **Horizontal first:** tries horizontal axes before vertical movement.
+- **Vertical first:** tries vertical movement before horizontal axes.
+- **X first:** tries the X axis before Z/Y.
+- **Z first:** tries the Z axis before X/Y.
+- **Avoid vertical:** strongly avoids up/down movement unless needed.
+- The active style is shown in the Connector Pipe HUD while the mode is enabled.
+- Use left-click or the mouse wheel to change styles without closing the radial; release `N`, right-click, or press `Esc` to close it.
 
 ## Preview behavior
 
