@@ -55,6 +55,22 @@ public final class PipeConnectorLogic {
         return CreatePipeBlocks.getMechanicalPumpBlock();
     }
 
+    public static Block getCopperCasingBlock() {
+        return CreatePipeBlocks.getCopperCasingBlock();
+    }
+
+    public static Block getGlassFluidPipeBlock() {
+        return CreatePipeBlocks.getGlassFluidPipeBlock();
+    }
+
+    public static boolean supportsCopperCasing(Block pipeBlock) {
+        return CreatePipeBlocks.supportsCopperCasing(pipeBlock);
+    }
+
+    public static boolean supportsGlassPipeStyle(Block pipeBlock) {
+        return CreatePipeBlocks.supportsGlassPipeStyle(pipeBlock);
+    }
+
     public static PipeDisplayToggleResult togglePipeDisplaySegment(ServerLevel level, BlockPos origin) {
         return PipeDisplayToggler.toggleSegment(level, origin);
     }
@@ -116,11 +132,35 @@ public final class PipeConnectorLogic {
     }
 
     public static boolean isAutoPumpsEnabled(UUID playerId) {
-        return PipeConnectorSessions.isAutoPumpsEnabled(playerId);
+        return getPumpMode(playerId).isAutomatic();
     }
 
     public static void setAutoPumpsEnabled(UUID playerId, boolean enabled) {
-        PipeConnectorSessions.setAutoPumpsEnabled(playerId, enabled);
+        setPumpMode(playerId, enabled ? PumpMode.EFFICIENT : PumpMode.OFF);
+    }
+
+    public static PumpMode getPumpMode(UUID playerId) {
+        return PipeConnectorSessions.getPumpMode(playerId);
+    }
+
+    public static void setPumpMode(UUID playerId, PumpMode mode) {
+        PipeConnectorSessions.setPumpMode(playerId, mode);
+    }
+
+    public static CopperCasingMode getCopperCasingMode(UUID playerId) {
+        return PipeConnectorSessions.getCopperCasingMode(playerId);
+    }
+
+    public static void setCopperCasingMode(UUID playerId, CopperCasingMode mode) {
+        PipeConnectorSessions.setCopperCasingMode(playerId, mode);
+    }
+
+    public static PipeStyleMode getPipeStyleMode(UUID playerId) {
+        return PipeConnectorSessions.getPipeStyleMode(playerId);
+    }
+
+    public static void setPipeStyleMode(UUID playerId, PipeStyleMode mode) {
+        PipeConnectorSessions.setPipeStyleMode(playerId, mode);
     }
 
     public static boolean isAutoPumpDirectionReversed(UUID playerId) {
@@ -167,6 +207,30 @@ public final class PipeConnectorLogic {
         PipeConnectorSessions.clearAnchors(playerId);
     }
 
+    public static List<BlockPos> getManualPumps(UUID playerId) {
+        return PipeConnectorSessions.getManualPumps(playerId);
+    }
+
+    public static void toggleManualPump(UUID playerId, BlockPos position) {
+        PipeConnectorSessions.toggleManualPump(playerId, position);
+    }
+
+    public static void removeLastManualPump(UUID playerId) {
+        PipeConnectorSessions.removeLastManualPump(playerId);
+    }
+
+    public static List<BlockPos> getCopperCasings(UUID playerId) {
+        return PipeConnectorSessions.getCopperCasings(playerId);
+    }
+
+    public static void toggleCopperCasing(UUID playerId, BlockPos position) {
+        PipeConnectorSessions.toggleCopperCasing(playerId, position);
+    }
+
+    public static void removeLastCopperCasing(UUID playerId) {
+        PipeConnectorSessions.removeLastCopperCasing(playerId);
+    }
+
     public static boolean connect(ServerLevel level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
         ConnectionPlan plan = buildConnectionPlan(level, startPos, endPos);
         if (plan == null) {
@@ -177,8 +241,6 @@ public final class PipeConnectorLogic {
     }
 
     public static boolean connect(ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
-        BlockPos startPos = plan.path().get(0);
-        BlockState pipeState = createPipeState(pipeBlock, level.getBlockState(startPos));
         Block pumpBlock = getMechanicalPumpBlock();
 
         for (BlockPos position : plan.placementPositions()) {
@@ -187,10 +249,13 @@ public final class PipeConnectorLogic {
             }
         }
 
+        Map<BlockPos, BlockState> connectionStates = PipePreviewBuilder.buildConnectionStates(level, plan, pipeBlock);
         for (BlockPos position : plan.placementPositions()) {
+            BlockState sourceState = level.getBlockState(position);
+            BlockState connectedPipeState = connectionStates.getOrDefault(position, createPipeState(pipeBlock, sourceState));
             BlockState state = plan.pumpPlacements().containsKey(position) && pumpBlock != null
-                    ? createPumpState(pumpBlock, level.getBlockState(position), plan.pumpPlacements().get(position))
-                    : pipeState;
+                    ? createPumpState(pumpBlock, sourceState, plan.pumpPlacements().get(position))
+                    : createPlacementPipeState(connectedPipeState, sourceState, plan.copperCasingPlacements().contains(position), plan.glassPipePlacements().contains(position));
             level.setBlockAndUpdate(position, state);
         }
 
@@ -210,6 +275,10 @@ public final class PipeConnectorLogic {
         return PipeInventory.countAvailablePumps(player);
     }
 
+    public static int countAvailableGlassPipes(Player player) {
+        return PipeInventory.countAvailableGlassPipes(player);
+    }
+
     public static boolean hasEnoughItems(Player player, Block pipeBlock, ConnectionPlan plan) {
         return PipeInventory.hasEnoughItems(player, pipeBlock, plan);
     }
@@ -220,6 +289,10 @@ public final class PipeConnectorLogic {
 
     public static boolean consumeItems(Player player, Block pipeBlock, ConnectionPlan plan) {
         return PipeInventory.consumeItems(player, pipeBlock, plan);
+    }
+
+    public static int countAvailableCopperCasings(Player player) {
+        return PipeInventory.countAvailableCopperCasings(player);
     }
 
     public static BlockState createPipeState(Block pipeBlock, BlockState sourceState) {
@@ -249,6 +322,79 @@ public final class PipeConnectorLogic {
 
     public static ConnectionPlan withAutoPumps(ConnectionPlan plan, boolean reversed) {
         return AutoPumpPlanner.apply(plan, reversed);
+    }
+
+    public static ConnectionPlan withPumpMode(ConnectionPlan plan, PumpMode mode, boolean reversed) {
+        return AutoPumpPlanner.apply(plan, mode, reversed);
+    }
+
+    public static ConnectionPlan withManualPumps(ConnectionPlan plan, List<BlockPos> pumpPositions) {
+        if (getMechanicalPumpBlock() == null || pumpPositions == null || pumpPositions.isEmpty()) {
+            return plan;
+        }
+
+        Set<BlockPos> placementPositions = new HashSet<>(plan.placementPositions());
+        Map<BlockPos, Direction> pumpPlacements = new HashMap<>(plan.pumpPlacements());
+        for (BlockPos position : pumpPositions) {
+            if (!placementPositions.contains(position)) {
+                continue;
+            }
+
+            Direction pumpFacing = straightPumpFacing(plan.path(), position);
+            if (pumpFacing != null) {
+                pumpPlacements.put(position, pumpFacing);
+            }
+        }
+        return new ConnectionPlan(plan.path(), plan.placementPositions(), pumpPlacements, plan.copperCasingPlacements(), plan.glassPipePlacements());
+    }
+
+    public static ConnectionPlan withCopperCasings(ConnectionPlan plan, List<BlockPos> casingPositions, Block pipeBlock) {
+        return withCopperCasingMode(plan, CopperCasingMode.MANUAL, casingPositions, pipeBlock);
+    }
+
+    public static ConnectionPlan withCopperCasingMode(ConnectionPlan plan, CopperCasingMode mode, List<BlockPos> casingPositions, Block pipeBlock) {
+        if (!CreatePipeBlocks.supportsCopperCasing(pipeBlock)) {
+            return new ConnectionPlan(plan.path(), plan.placementPositions(), plan.pumpPlacements(), Set.of(), plan.glassPipePlacements());
+        }
+
+        CopperCasingMode normalizedMode = mode == null ? CopperCasingMode.MANUAL : mode;
+        if (normalizedMode == CopperCasingMode.NONE) {
+            return new ConnectionPlan(plan.path(), plan.placementPositions(), plan.pumpPlacements(), Set.of(), plan.glassPipePlacements());
+        }
+
+        Set<BlockPos> placementPositions = new HashSet<>(plan.placementPositions());
+        Set<BlockPos> copperCasingPlacements = new LinkedHashSet<>();
+        if (normalizedMode == CopperCasingMode.ALL) {
+            for (BlockPos position : plan.placementPositions()) {
+                if (!plan.pumpPlacements().containsKey(position)) {
+                    copperCasingPlacements.add(position);
+                }
+            }
+        } else if (casingPositions != null) {
+            for (BlockPos position : casingPositions) {
+                if (placementPositions.contains(position) && !plan.pumpPlacements().containsKey(position)) {
+                    copperCasingPlacements.add(position);
+                }
+            }
+        }
+        return new ConnectionPlan(plan.path(), plan.placementPositions(), plan.pumpPlacements(), copperCasingPlacements, plan.glassPipePlacements());
+    }
+
+    public static ConnectionPlan withPipeStyleMode(ConnectionPlan plan, PipeStyleMode mode, Block pipeBlock) {
+        if (mode != PipeStyleMode.GLASS || !CreatePipeBlocks.supportsGlassPipeStyle(pipeBlock)) {
+            return new ConnectionPlan(plan.path(), plan.placementPositions(), plan.pumpPlacements(), plan.copperCasingPlacements(), Set.of());
+        }
+
+        Set<BlockPos> glassPipePlacements = new LinkedHashSet<>();
+        for (BlockPos position : plan.placementPositions()) {
+            if (plan.pumpPlacements().containsKey(position) || plan.copperCasingPlacements().contains(position)) {
+                continue;
+            }
+            if (straightPumpFacing(plan.path(), position) != null) {
+                glassPipePlacements.add(position);
+            }
+        }
+        return new ConnectionPlan(plan.path(), plan.placementPositions(), plan.pumpPlacements(), plan.copperCasingPlacements(), glassPipePlacements);
     }
 
     public static ConnectionPlan buildConnectionPlan(Level level, BlockPos startPos, BlockPos endPos) {
@@ -772,6 +918,37 @@ public final class PipeConnectorLogic {
         return Direction.NORTH;
     }
 
+    public static Direction straightPumpFacing(List<BlockPos> path, BlockPos position) {
+        int index = path.indexOf(position);
+        if (index < 0 || path.size() < 2) {
+            return null;
+        }
+        if (index == 0) {
+            return directionBetween(position, path.get(1));
+        }
+        if (index == path.size() - 1) {
+            return directionBetween(path.get(index - 1), position);
+        }
+
+        Direction fromPrevious = directionBetween(path.get(index - 1), position);
+        Direction toNext = directionBetween(position, path.get(index + 1));
+        return fromPrevious.getAxis() == toNext.getAxis() ? toNext : null;
+    }
+
+    private static BlockState createPlacementPipeState(BlockState pipeState, BlockState sourceState, boolean copperCasing, boolean glassPipe) {
+        if (copperCasing) {
+            BlockState encasedState = CreatePipeBlocks.createEncasedPipeState(pipeState, sourceState);
+            return encasedState == null ? pipeState : encasedState;
+        }
+
+        if (glassPipe) {
+            BlockState glassState = CreatePipeBlocks.createGlassPipeState(pipeState);
+            return glassState == null ? pipeState : glassState;
+        }
+
+        return pipeState;
+    }
+
     private static Direction directFaceBetween(BlockPos from, BlockPos to) {
         int deltaX = to.getX() - from.getX();
         int deltaY = to.getY() - from.getY();
@@ -839,23 +1016,41 @@ public final class PipeConnectorLogic {
         }
     }
 
-    public record ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions, Map<BlockPos, Direction> pumpPlacements) {
+    public record ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions, Map<BlockPos, Direction> pumpPlacements, Set<BlockPos> copperCasingPlacements, Set<BlockPos> glassPipePlacements) {
         public ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions) {
             this(path, placementPositions, Map.of());
+        }
+
+        public ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions, Map<BlockPos, Direction> pumpPlacements) {
+            this(path, placementPositions, pumpPlacements, Set.of());
+        }
+
+        public ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions, Map<BlockPos, Direction> pumpPlacements, Set<BlockPos> copperCasingPlacements) {
+            this(path, placementPositions, pumpPlacements, copperCasingPlacements, Set.of());
         }
 
         public ConnectionPlan {
             path = List.copyOf(path);
             placementPositions = List.copyOf(placementPositions);
             pumpPlacements = Map.copyOf(pumpPlacements);
+            copperCasingPlacements = Set.copyOf(copperCasingPlacements);
+            glassPipePlacements = Set.copyOf(glassPipePlacements);
         }
 
         public int requiredPipes() {
-            return placementPositions.size() - requiredPumps();
+            return placementPositions.size() - requiredPumps() - requiredGlassPipes();
         }
 
         public int requiredPumps() {
             return pumpPlacements.size();
+        }
+
+        public int requiredCopperCasings() {
+            return copperCasingPlacements.isEmpty() ? 0 : 1;
+        }
+
+        public int requiredGlassPipes() {
+            return glassPipePlacements.size();
         }
     }
 
@@ -891,6 +1086,57 @@ public final class PipeConnectorLogic {
 
         private int verticalCost() {
             return verticalCost;
+        }
+    }
+
+    public enum PumpMode {
+        OFF,
+        EFFICIENT,
+        SAFE;
+
+        public boolean isAutomatic() {
+            return this == EFFICIENT || this == SAFE;
+        }
+
+        public PumpMode next() {
+            PumpMode[] modes = values();
+            return modes[(ordinal() + 1) % modes.length];
+        }
+
+        public PumpMode previous() {
+            PumpMode[] modes = values();
+            return modes[(ordinal() + modes.length - 1) % modes.length];
+        }
+    }
+
+    public enum CopperCasingMode {
+        NONE,
+        MANUAL,
+        ALL;
+
+        public CopperCasingMode next() {
+            CopperCasingMode[] modes = values();
+            return modes[(ordinal() + 1) % modes.length];
+        }
+
+        public CopperCasingMode previous() {
+            CopperCasingMode[] modes = values();
+            return modes[(ordinal() + modes.length - 1) % modes.length];
+        }
+    }
+
+    public enum PipeStyleMode {
+        DEFAULT,
+        GLASS;
+
+        public PipeStyleMode next() {
+            PipeStyleMode[] modes = values();
+            return modes[(ordinal() + 1) % modes.length];
+        }
+
+        public PipeStyleMode previous() {
+            PipeStyleMode[] modes = values();
+            return modes[(ordinal() + modes.length - 1) % modes.length];
         }
     }
 

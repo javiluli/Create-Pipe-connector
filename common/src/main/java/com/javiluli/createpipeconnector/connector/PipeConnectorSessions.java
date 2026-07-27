@@ -2,6 +2,7 @@ package com.javiluli.createpipeconnector.connector;
 
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
+import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,9 +15,13 @@ import java.util.UUID;
 final class PipeConnectorSessions {
     private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
     private static final Map<UUID, List<PlacementTarget>> ANCHORS = new HashMap<>();
+    private static final Map<UUID, List<BlockPos>> MANUAL_PUMPS = new HashMap<>();
+    private static final Map<UUID, List<BlockPos>> COPPER_CASINGS = new HashMap<>();
     private static final Map<UUID, PipeConnectorLogic.RoutePriority> ROUTE_PRIORITIES = new HashMap<>();
+    private static final Map<UUID, PipeConnectorLogic.PumpMode> PUMP_MODES = new HashMap<>();
+    private static final Map<UUID, PipeConnectorLogic.CopperCasingMode> COPPER_CASING_MODES = new HashMap<>();
+    private static final Map<UUID, PipeConnectorLogic.PipeStyleMode> PIPE_STYLE_MODES = new HashMap<>();
     private static final Set<UUID> CONNECTOR_MODE_PLAYERS = new HashSet<>();
-    private static final Set<UUID> AUTO_PUMP_PLAYERS = new HashSet<>();
     private static final Set<UUID> REVERSED_AUTO_PUMP_PLAYERS = new HashSet<>();
 
     private PipeConnectorSessions() {
@@ -37,16 +42,50 @@ final class PipeConnectorSessions {
     }
 
     static boolean isAutoPumpsEnabled(UUID playerId) {
-        return AUTO_PUMP_PLAYERS.contains(playerId);
+        return getPumpMode(playerId).isAutomatic();
     }
 
     static void setAutoPumpsEnabled(UUID playerId, boolean enabled) {
-        if (enabled) {
-            AUTO_PUMP_PLAYERS.add(playerId);
+        setPumpMode(playerId, enabled ? PipeConnectorLogic.PumpMode.EFFICIENT : PipeConnectorLogic.PumpMode.OFF);
+    }
+
+    static PipeConnectorLogic.PumpMode getPumpMode(UUID playerId) {
+        return PUMP_MODES.getOrDefault(playerId, PipeConnectorLogic.PumpMode.OFF);
+    }
+
+    static void setPumpMode(UUID playerId, PipeConnectorLogic.PumpMode mode) {
+        if (mode == null || mode == PipeConnectorLogic.PumpMode.OFF) {
+            PUMP_MODES.remove(playerId);
             return;
         }
 
-        AUTO_PUMP_PLAYERS.remove(playerId);
+        PUMP_MODES.put(playerId, mode);
+    }
+
+    static PipeConnectorLogic.CopperCasingMode getCopperCasingMode(UUID playerId) {
+        return COPPER_CASING_MODES.getOrDefault(playerId, PipeConnectorLogic.CopperCasingMode.MANUAL);
+    }
+
+    static void setCopperCasingMode(UUID playerId, PipeConnectorLogic.CopperCasingMode mode) {
+        if (mode == null || mode == PipeConnectorLogic.CopperCasingMode.MANUAL) {
+            COPPER_CASING_MODES.remove(playerId);
+            return;
+        }
+
+        COPPER_CASING_MODES.put(playerId, mode);
+    }
+
+    static PipeConnectorLogic.PipeStyleMode getPipeStyleMode(UUID playerId) {
+        return PIPE_STYLE_MODES.getOrDefault(playerId, PipeConnectorLogic.PipeStyleMode.DEFAULT);
+    }
+
+    static void setPipeStyleMode(UUID playerId, PipeConnectorLogic.PipeStyleMode mode) {
+        if (mode == null || mode == PipeConnectorLogic.PipeStyleMode.DEFAULT) {
+            PIPE_STYLE_MODES.remove(playerId);
+            return;
+        }
+
+        PIPE_STYLE_MODES.put(playerId, mode);
     }
 
     static boolean isAutoPumpDirectionReversed(UUID playerId) {
@@ -82,11 +121,15 @@ final class PipeConnectorSessions {
     static void setSelection(UUID playerId, Selection selection) {
         SELECTIONS.put(playerId, selection);
         ANCHORS.remove(playerId);
+        MANUAL_PUMPS.remove(playerId);
+        COPPER_CASINGS.remove(playerId);
     }
 
     static void clearSelection(UUID playerId) {
         SELECTIONS.remove(playerId);
         ANCHORS.remove(playerId);
+        MANUAL_PUMPS.remove(playerId);
+        COPPER_CASINGS.remove(playerId);
     }
 
     static List<PlacementTarget> getAnchors(UUID playerId) {
@@ -119,5 +162,71 @@ final class PipeConnectorSessions {
 
     static void clearAnchors(UUID playerId) {
         ANCHORS.remove(playerId);
+    }
+
+    static List<BlockPos> getManualPumps(UUID playerId) {
+        return List.copyOf(MANUAL_PUMPS.getOrDefault(playerId, List.of()));
+    }
+
+    static void toggleManualPump(UUID playerId, BlockPos position) {
+        List<BlockPos> manualPumps = new ArrayList<>(MANUAL_PUMPS.getOrDefault(playerId, List.of()));
+        if (manualPumps.remove(position)) {
+            updateManualPumps(playerId, manualPumps);
+            return;
+        }
+
+        manualPumps.add(position);
+        MANUAL_PUMPS.put(playerId, List.copyOf(manualPumps));
+    }
+
+    static void removeLastManualPump(UUID playerId) {
+        List<BlockPos> manualPumps = new ArrayList<>(MANUAL_PUMPS.getOrDefault(playerId, List.of()));
+        if (manualPumps.isEmpty()) {
+            return;
+        }
+
+        manualPumps.remove(manualPumps.size() - 1);
+        updateManualPumps(playerId, manualPumps);
+    }
+
+    private static void updateManualPumps(UUID playerId, List<BlockPos> manualPumps) {
+        if (manualPumps.isEmpty()) {
+            MANUAL_PUMPS.remove(playerId);
+        } else {
+            MANUAL_PUMPS.put(playerId, List.copyOf(manualPumps));
+        }
+    }
+
+    static List<BlockPos> getCopperCasings(UUID playerId) {
+        return List.copyOf(COPPER_CASINGS.getOrDefault(playerId, List.of()));
+    }
+
+    static void toggleCopperCasing(UUID playerId, BlockPos position) {
+        List<BlockPos> copperCasings = new ArrayList<>(COPPER_CASINGS.getOrDefault(playerId, List.of()));
+        if (copperCasings.remove(position)) {
+            updateCopperCasings(playerId, copperCasings);
+            return;
+        }
+
+        copperCasings.add(position);
+        COPPER_CASINGS.put(playerId, List.copyOf(copperCasings));
+    }
+
+    static void removeLastCopperCasing(UUID playerId) {
+        List<BlockPos> copperCasings = new ArrayList<>(COPPER_CASINGS.getOrDefault(playerId, List.of()));
+        if (copperCasings.isEmpty()) {
+            return;
+        }
+
+        copperCasings.remove(copperCasings.size() - 1);
+        updateCopperCasings(playerId, copperCasings);
+    }
+
+    private static void updateCopperCasings(UUID playerId, List<BlockPos> copperCasings) {
+        if (copperCasings.isEmpty()) {
+            COPPER_CASINGS.remove(playerId);
+        } else {
+            COPPER_CASINGS.put(playerId, List.copyOf(copperCasings));
+        }
     }
 }

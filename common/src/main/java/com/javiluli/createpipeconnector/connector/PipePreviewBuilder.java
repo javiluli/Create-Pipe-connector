@@ -20,6 +20,23 @@ final class PipePreviewBuilder {
     }
 
     static List<PreviewPipe> buildPreview(Level level, ConnectionPlan plan, Block pipeBlock) {
+        Map<BlockPos, BlockState> connectionStates = buildConnectionStates(level, plan, pipeBlock);
+
+        List<PreviewPipe> previewPipes = new ArrayList<>(plan.placementPositions().size());
+        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
+        for (BlockPos position : plan.placementPositions()) {
+            Direction pumpFacing = plan.pumpPlacements().get(position);
+            BlockState sourceState = level.getBlockState(position);
+            BlockState connectedPipeState = connectionStates.getOrDefault(position, CreatePipeBlocks.createPipeState(pipeBlock, sourceState));
+            BlockState renderState = pumpFacing != null && pumpBlock != null
+                    ? CreatePipeBlocks.createPumpState(pumpBlock, sourceState, pumpFacing)
+                    : createPipeRenderState(connectedPipeState, sourceState, plan.copperCasingPlacements().contains(position), plan.glassPipePlacements().contains(position));
+            previewPipes.add(new PreviewPipe(position, renderState, pumpFacing));
+        }
+        return previewPipes;
+    }
+
+    static Map<BlockPos, BlockState> buildConnectionStates(Level level, ConnectionPlan plan, Block pipeBlock) {
         Map<BlockPos, BlockState> connectionStates = new HashMap<>();
         for (BlockPos position : plan.path()) {
             BlockState currentState = level.getBlockState(position);
@@ -42,17 +59,21 @@ final class PipePreviewBuilder {
                 break;
             }
         }
+        return connectionStates;
+    }
 
-        List<PreviewPipe> previewPipes = new ArrayList<>(plan.placementPositions().size());
-        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
-        for (BlockPos position : plan.placementPositions()) {
-            Direction pumpFacing = plan.pumpPlacements().get(position);
-            BlockState renderState = pumpFacing != null && pumpBlock != null
-                    ? CreatePipeBlocks.createPumpState(pumpBlock, level.getBlockState(position), pumpFacing)
-                    : connectionStates.get(position);
-            previewPipes.add(new PreviewPipe(position, renderState, pumpFacing));
+    private static BlockState createPipeRenderState(BlockState pipeState, BlockState sourceState, boolean copperCasing, boolean glassPipe) {
+        if (copperCasing) {
+            BlockState encasedState = CreatePipeBlocks.createEncasedPipeState(pipeState, sourceState);
+            return encasedState == null ? pipeState : encasedState;
         }
-        return previewPipes;
+
+        if (glassPipe) {
+            BlockState glassState = CreatePipeBlocks.createGlassPipeState(pipeState);
+            return glassState == null ? pipeState : glassState;
+        }
+
+        return pipeState;
     }
 
     static BlockAndTintGetter createPreviewWorld(Level level, Map<BlockPos, BlockState> previewStates) {

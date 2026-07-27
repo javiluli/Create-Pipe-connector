@@ -20,11 +20,12 @@ import java.util.Set;
 
 final class CreatePipeBlocks {
     static final ResourceLocation FLUID_PIPE = ResourceLocation.fromNamespaceAndPath("create", "fluid_pipe");
-    static final ResourceLocation SMART_FLUID_PIPE = ResourceLocation.fromNamespaceAndPath("create", "smart_fluid_pipe");
     static final ResourceLocation GLASS_FLUID_PIPE = ResourceLocation.fromNamespaceAndPath("create", "glass_fluid_pipe");
+    static final ResourceLocation ENCASED_FLUID_PIPE = ResourceLocation.fromNamespaceAndPath("create", "encased_fluid_pipe");
     static final ResourceLocation MECHANICAL_PUMP = ResourceLocation.fromNamespaceAndPath("create", "mechanical_pump");
+    static final ResourceLocation COPPER_CASING = ResourceLocation.fromNamespaceAndPath("create", "copper_casing");
     private static final ResourceLocation WRENCH = ResourceLocation.fromNamespaceAndPath("create", "wrench");
-    private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(FLUID_PIPE, SMART_FLUID_PIPE);
+    private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(FLUID_PIPE);
     private static final Direction[] DIRECTIONS = Direction.values();
 
     private CreatePipeBlocks() {
@@ -63,8 +64,44 @@ final class CreatePipeBlocks {
         return pumpBlock == Blocks.AIR ? null : pumpBlock;
     }
 
+    static Block getCopperCasingBlock() {
+        Block casingBlock = BuiltInRegistries.BLOCK.get(COPPER_CASING);
+        return casingBlock == Blocks.AIR ? null : casingBlock;
+    }
+
+    static Block getGlassFluidPipeBlock() {
+        Block glassPipeBlock = BuiltInRegistries.BLOCK.get(GLASS_FLUID_PIPE);
+        return glassPipeBlock == Blocks.AIR ? null : glassPipeBlock;
+    }
+
+    static Block getEncasedFluidPipeBlock() {
+        Block encasedPipeBlock = BuiltInRegistries.BLOCK.get(ENCASED_FLUID_PIPE);
+        return encasedPipeBlock == Blocks.AIR ? null : encasedPipeBlock;
+    }
+
     static BlockState createPipeState(Block pipeBlock, BlockState sourceState) {
         return copyWaterlogged(sourceState, pipeBlock.defaultBlockState());
+    }
+
+    static BlockState createEncasedPipeState(BlockState pipeState, BlockState sourceState) {
+        if (!isFluidPipe(pipeState)) {
+            return null;
+        }
+
+        Block encasedPipeBlock = getEncasedFluidPipeBlock();
+        if (encasedPipeBlock == null) {
+            return null;
+        }
+
+        BlockState encasedState = copyWaterlogged(sourceState, encasedPipeBlock.defaultBlockState());
+        for (Direction direction : DIRECTIONS) {
+            BooleanProperty sourceProperty = pipeConnectionProperty(pipeState, direction);
+            BooleanProperty targetProperty = pipeConnectionProperty(encasedState, direction);
+            if (targetProperty != null) {
+                encasedState = encasedState.setValue(targetProperty, sourceProperty != null && pipeState.getValue(sourceProperty));
+            }
+        }
+        return encasedState;
     }
 
     static BlockState createPumpState(Block pumpBlock, BlockState sourceState, Direction facing) {
@@ -85,8 +122,8 @@ final class CreatePipeBlocks {
             return null;
         }
 
-        Block glassPipeBlock = BuiltInRegistries.BLOCK.get(GLASS_FLUID_PIPE);
-        if (glassPipeBlock == Blocks.AIR) {
+        Block glassPipeBlock = getGlassFluidPipeBlock();
+        if (glassPipeBlock == null) {
             return null;
         }
 
@@ -166,8 +203,23 @@ final class CreatePipeBlocks {
         return GLASS_FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
+    static boolean isEncasedFluidPipe(BlockState state) {
+        return ENCASED_FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
+    }
+
     static boolean isMechanicalPump(BlockState state) {
         return MECHANICAL_PUMP.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
+    }
+
+    static boolean supportsCopperCasing(Block pipeBlock) {
+        return FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(pipeBlock))
+                && getCopperCasingBlock() != null
+                && getEncasedFluidPipeBlock() != null;
+    }
+
+    static boolean supportsGlassPipeStyle(Block pipeBlock) {
+        return FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(pipeBlock))
+                && getGlassFluidPipeBlock() != null;
     }
 
     static BlockState updatePipeState(BlockState state, Direction preferredDirection, BlockAndTintGetter world, BlockPos position) {
