@@ -19,16 +19,20 @@
 - Shows a ghost preview before placement
 - Supports anchor waypoints and configurable key binds
 - Lets players choose route styles from a radial selector for different axis orders
-- Can optionally insert Create Mechanical Pumps along long routes
+- Can optionally insert Create Mechanical Pumps along long routes with several pump density modes
+- Lets players mark individual straight route slots as Mechanical Pumps
 - Lets players reverse planned Mechanical Pump direction before confirming
+- Lets players mark individual regular fluid pipes as copper-cased before confirming
 - Adds a Connector Pipe mode wrench shortcut to toggle straight pipe segments between default and glass
-- Checks survival inventory before placing pipes and pumps, with missing preview pieces tinted red
+- Checks survival inventory before placing pipes, pumps, and copper casings, with missing preview pieces tinted red
 
 ## Pack integration
 
 - Include Create in the pack.
 - This addon already declares Create as a required NeoForge dependency.
 - Auto-pumps use `create:mechanical_pump`; no additional mod dependency is added.
+- Manual pump marks also use `create:mechanical_pump`; no additional mod dependency is added.
+- Copper casing marks use `create:copper_casing` and produce `create:encased_fluid_pipe`; no additional mod dependency is added.
 - Test the mod with Create pipe variants and long routes before releasing the pack.
 
 ## Not yet provided

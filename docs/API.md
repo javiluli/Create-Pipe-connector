@@ -9,8 +9,10 @@ This addon does not expose a public API yet.
 - route style can change preferred axis order before preview and placement
 - right-click again to confirm the current preview target
 - left-click cancels the current route while leaving Connector Pipe mode enabled
-- optional auto-pump mode inserts Mechanical Pumps into straight sections of the plan
+- optional pump modes insert Mechanical Pumps into straight sections of the plan with different densities
 - auto-pump direction can be reversed before confirming the route
+- optional manual pump marks insert Mechanical Pumps into chosen straight route slots
+- optional copper casing marks convert individual regular fluid pipe placements into encased fluid pipes
 - Connector Pipe mode also adds a wrench shortcut for toggling straight connected pipe segments between default and glass
 - the mod fills the shortest valid path between them
 - the client shows a ghost preview before placement, including red-tinted missing materials in survival

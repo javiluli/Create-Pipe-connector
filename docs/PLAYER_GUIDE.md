@@ -10,17 +10,18 @@
 - The mod fills the shortest valid route automatically.
 - A ghost preview shows the result before placement.
 - A control HUD appears above the hotbar while Connector Pipe mode is enabled.
-- Press `N` to open the route style radial when you want the preview to move through different axes first.
-- Press `P` to automatically place Mechanical Pumps along long routes.
-- Press `R` while auto-pumps are enabled to reverse the planned pump direction.
+- Press `N` to open the connector options radial when you want to adjust the route.
+- Press `N` to configure route style, automatic pumps, pump direction, casing, and pipe style.
+- Advanced direct shortcuts for pump/casing actions exist in Minecraft's Controls menu, but are unassigned by default.
 - With Create's wrench, double right-click a pipe to toggle a straight connected segment between default and glass.
-- The action bar shows `required/available` counts in survival.
-- Missing pipes or pumps are tinted red in the ghost preview.
+- The connector HUD shows item icons with `required/available` counts in survival.
+- Missing pipes, glass pipes, pumps, or required copper casing access are tinted red in the ghost preview.
 
 ## Supported pipes
 
 - `create:fluid_pipe`
-- `create:smart_fluid_pipe`
+
+`create:smart_fluid_pipe` is not supported as a connector pipe because it is a filtering pipe.
 
 ## How to use it
 
@@ -29,14 +30,15 @@
 3. Check the control HUD above the hotbar.
 4. Look at a reachable block or pipe face and right-click to select the start point.
 5. Move the crosshair to guide the live preview, even through open air.
-6. Press `C` to add an anchor, or `V` to remove the last anchor.
-7. Press `Left Alt` to lock or unlock the current preview target.
-8. Press `N` to open the route style radial without losing a locked preview target.
-9. Press `P` to enable or disable automatic Mechanical Pumps.
-10. Press `R` to reverse the planned Mechanical Pump direction.
-11. Right-click again to place the planned route, even if no block is targeted.
-12. Left-click during a preview to cancel only the current route.
-13. Press `B` again to disable Connector Pipe mode.
+6. Press `C` to add an anchor.
+7. Use the radial menu, or custom keybinds if assigned, for casing and pump options.
+8. Press `Left Alt` to lock or unlock the current preview target.
+9. Press `N` to open the connector options radial without losing a locked preview target.
+10. Use the radial menu to configure automatic Mechanical Pump modes for the active route.
+11. Use the radial menu to configure pump direction, casing mode, and pipe style.
+12. Right-click again to place the planned route, even if no block is targeted.
+13. Left-click during a preview to cancel only the current route.
+14. Press `B` again to disable Connector Pipe mode.
 
 ## Route styles
 
@@ -52,14 +54,22 @@
 ## Preview behavior
 
 - The preview tries to look like the final pipe line.
-- Mechanical Pumps are included in the ghost preview when auto-pumps are enabled.
+- Mechanical Pumps are included in the ghost preview when an automatic pump mode or manual pump marks are enabled.
+- Copper-cased pipe marks and full-route casing mode are included in the ghost preview before placement.
+- Glass pipe style uses glass pipes on straight sections and regular pipes on corners.
 - When no block is targeted, the preview uses the point at your normal block interaction range.
 - Anchors are highlighted with a yellow transparent box.
 - If obstacles block the path, the mod finds an alternate route.
 - If no valid route exists, nothing is placed.
 - If survival inventory is insufficient, the required count turns red and placement is cancelled.
-- Missing pipe or pump preview pieces are tinted red so you can see what cannot be afforded.
-- With auto-pumps enabled, pipe and pump requirements are shown separately.
+- Missing pipe, pump, or casing preview pieces are tinted red so you can see what cannot be afforded.
+- If you confirm without enough materials, the route stays active and the HUD shows what is missing.
+- With pump modes, glass style, or copper casing enabled, material requirements are shown separately.
+- Manual pumps use Create's `create:mechanical_pump` item and only apply to straight route slots.
+- Copper casing requires at least one Create `create:copper_casing` item in your inventory, but it is not consumed.
+- Copper casing applies to regular `create:fluid_pipe` routes, producing `create:encased_fluid_pipe`.
+- Copper casing marks stay attached to their world position during the current route and become active again if the route passes through that position.
+- If a casing mark and an automatic Mechanical Pump want the same position, the pump is placed and the casing is skipped.
 
 ## Wrench shortcut
 
