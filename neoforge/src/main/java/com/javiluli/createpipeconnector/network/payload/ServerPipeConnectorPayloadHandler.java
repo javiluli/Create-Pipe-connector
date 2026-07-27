@@ -24,6 +24,21 @@ public final class ServerPipeConnectorPayloadHandler {
         PipeConnectorLogic.setAutoPumpsEnabled(player.getUUID(), payload.enabled());
     }
 
+    public static void handlePumpMode(PumpModePayload payload, IPayloadContext context) {
+        Player player = context.player();
+        PipeConnectorLogic.setPumpMode(player.getUUID(), payload.mode());
+    }
+
+    public static void handleCopperCasingMode(CopperCasingModePayload payload, IPayloadContext context) {
+        Player player = context.player();
+        PipeConnectorLogic.setCopperCasingMode(player.getUUID(), payload.mode());
+    }
+
+    public static void handlePipeStyleMode(PipeStyleModePayload payload, IPayloadContext context) {
+        Player player = context.player();
+        PipeConnectorLogic.setPipeStyleMode(player.getUUID(), payload.mode());
+    }
+
     public static void handleReverseAutoPumpDirection(ReverseAutoPumpDirectionPayload payload, IPayloadContext context) {
         Player player = context.player();
         PipeConnectorLogic.setAutoPumpDirectionReversed(player.getUUID(), payload.reversed());
@@ -75,6 +90,44 @@ public final class ServerPipeConnectorPayloadHandler {
         if (validatedSelection(player) != null) {
             PipeConnectorLogic.removeLastAnchor(player.getUUID());
         }
+    }
+
+    public static void handleRemoveLastManualPump(RemoveLastManualPumpPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (validatedSelection(player) != null) {
+            PipeConnectorLogic.removeLastManualPump(player.getUUID());
+        }
+    }
+
+    public static void handleRemoveLastCopperCasing(RemoveLastCopperCasingPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (validatedSelection(player) != null) {
+            PipeConnectorLogic.removeLastCopperCasing(player.getUUID());
+        }
+    }
+
+    public static void handleToggleCopperCasing(ToggleCopperCasingPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (validatedSelection(player) == null) {
+            return;
+        }
+        if (!PipeConnectorLogic.isWithinInteractionRange(player, payload.position())) {
+            return;
+        }
+
+        PipeConnectorLogic.toggleCopperCasing(player.getUUID(), payload.position());
+    }
+
+    public static void handleToggleManualPump(ToggleManualPumpPayload payload, IPayloadContext context) {
+        Player player = context.player();
+        if (validatedSelection(player) == null) {
+            return;
+        }
+        if (!PipeConnectorLogic.isWithinInteractionRange(player, payload.position())) {
+            return;
+        }
+
+        PipeConnectorLogic.toggleManualPump(player.getUUID(), payload.position());
     }
 
     public static void handleWrenchPipeDisplay(WrenchPipeDisplayPayload payload, IPayloadContext context) {
