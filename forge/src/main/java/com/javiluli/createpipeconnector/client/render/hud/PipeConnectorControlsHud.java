@@ -3,11 +3,15 @@ package com.javiluli.createpipeconnector.client.render.hud;
 import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.client.input.ClientPipeConnectorKeyMappings;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
+import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState.MaterialStatus;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
@@ -21,11 +25,13 @@ import java.util.List;
 public final class PipeConnectorControlsHud {
     private static final int BACKGROUND_COLOR = 0xAA101010;
     private static final int TEXT_COLOR = 0xFFE8E8E8;
-    private static final int TITLE_COLOR = 0xFF66D9EF;
-    private static final int MAX_WIDTH_PADDING = 24;
-    private static final float TEXT_SCALE = 0.75F;
-    private static final int LINE_HEIGHT = 9;
-    private static final int HOTBAR_OFFSET = 90;
+    private static final int MISSING_TEXT_COLOR = 0xFFFF6666;
+    private static final float CONTROL_TEXT_SCALE = 0.75F;
+    private static final int CONTROL_HOTBAR_OFFSET = 90;
+    private static final int CONTROL_PANEL_PADDING = 5;
+    private static final int MATERIAL_ICON_TEXT_GAP = 4;
+    private static final int MATERIAL_ENTRY_GAP = 14;
+    private static final int MATERIAL_HOTBAR_OFFSET = 64;
 
     private PipeConnectorControlsHud() {
     }
@@ -42,30 +48,44 @@ public final class PipeConnectorControlsHud {
         }
 
         Font font = minecraft.font;
-        int maxWidth = Math.round((guiGraphics.guiWidth() - MAX_WIDTH_PADDING) / TEXT_SCALE);
-        List<String> lines = buildControlLines(minecraft, font, maxWidth);
-        if (lines.isEmpty()) {
-            return;
-        }
+        List<MaterialEntry> materialEntries = buildMaterialEntries();
+        renderMinimalControls(guiGraphics, font);
+        renderMaterialPanel(guiGraphics, font, materialEntries);
+    }
 
-        int width = Math.round(lines.stream().mapToInt(font::width).max().orElse(0) * TEXT_SCALE);
+    private static void renderMinimalControls(GuiGraphics guiGraphics, Font font) {
+        String controls = String.join("  |  ",
+                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), "hud.createpipeconnector.control.connector_mode"),
+                hint(keyName(Minecraft.getInstance().options.keyUse), "hud.createpipeconnector.control.start_confirm"),
+                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), "hud.createpipeconnector.control.cycle_route_priority"),
+                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), "hud.createpipeconnector.control.add_anchor"),
+                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), "hud.createpipeconnector.control.lock_preview")
+        );
+
+        int width = Math.round(font.width(controls) * CONTROL_TEXT_SCALE);
         int x = (guiGraphics.guiWidth() - width) / 2;
-        int y = Math.max(8, guiGraphics.guiHeight() - HOTBAR_OFFSET - (lines.size() - 1) * LINE_HEIGHT);
+        int y = Math.max(8, guiGraphics.guiHeight() - CONTROL_HOTBAR_OFFSET);
+        guiGraphics.fill(x - CONTROL_PANEL_PADDING, y - 4, x + width + CONTROL_PANEL_PADDING, y + Math.round(font.lineHeight * CONTROL_TEXT_SCALE) + 2, BACKGROUND_COLOR);
 
-        guiGraphics.fill(x - 5, y - 4, x + width + 5, y + lines.size() * LINE_HEIGHT + 2, BACKGROUND_COLOR);
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
+        guiGraphics.pose().scale(CONTROL_TEXT_SCALE, CONTROL_TEXT_SCALE, 1.0F);
         try {
-            for (int index = 0; index < lines.size(); index++) {
-                int color = index == 0 ? TITLE_COLOR : TEXT_COLOR;
-                int lineWidth = Math.round(font.width(lines.get(index)) * TEXT_SCALE);
-                int lineX = Math.round(((guiGraphics.guiWidth() - lineWidth) / 2.0F) / TEXT_SCALE);
-                int lineY = Math.round((y + index * LINE_HEIGHT) / TEXT_SCALE);
-                guiGraphics.drawString(font, lines.get(index), lineX, lineY, color, true);
-            }
+            guiGraphics.drawString(font, controls, Math.round(x / CONTROL_TEXT_SCALE), Math.round(y / CONTROL_TEXT_SCALE), TEXT_COLOR, true);
         } finally {
             guiGraphics.pose().popPose();
         }
+    }
+
+    private static void renderMaterialPanel(GuiGraphics guiGraphics, Font font, List<MaterialEntry> materialEntries) {
+        if (materialEntries.isEmpty()) {
+            return;
+        }
+
+        int materialWidth = materialEntriesWidth(font, materialEntries);
+        int x = (guiGraphics.guiWidth() - materialWidth) / 2;
+        int y = guiGraphics.guiHeight() - MATERIAL_HOTBAR_OFFSET;
+
+        renderMaterialEntries(guiGraphics, font, materialEntries, x, y + 1);
     }
 
     private static boolean shouldRender(Minecraft minecraft) {
@@ -76,39 +96,58 @@ public final class PipeConnectorControlsHud {
                 && ClientPipeConnectorState.isConnectorModeEnabled();
     }
 
-    private static List<String> buildControlLines(Minecraft minecraft, Font font, int maxWidth) {
-        List<String> lines = new ArrayList<>();
-        lines.add(Component.translatable("hud.createpipeconnector.connector_mode").getString());
+    private static List<MaterialEntry> buildMaterialEntries() {
+        MaterialStatus materialStatus = ClientPipeConnectorState.getMaterialStatus();
+        if (materialStatus == null) {
+            return List.of();
+        }
 
-        List<String> hints = List.of(
-                hint(keyName(minecraft.options.keyUse), "hud.createpipeconnector.control.start_confirm"),
-                hint(keyName(minecraft.options.keyAttack), "hud.createpipeconnector.control.cancel"),
-                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), "hud.createpipeconnector.control.add_anchor"),
-                hint(keyName(ClientPipeConnectorKeyMappings.removeLastAnchorKey()), "hud.createpipeconnector.control.remove_anchor"),
-                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), "hud.createpipeconnector.control.lock_preview"),
-                hint(keyName(ClientPipeConnectorKeyMappings.toggleAutoPumpsKey()), ClientPipeConnectorState.isAutoPumpsEnabled()
-                        ? "hud.createpipeconnector.control.auto_pumps_on"
-                        : "hud.createpipeconnector.control.auto_pumps_off"),
-                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), "hud.createpipeconnector.control.exit_mode")
-        );
+        List<MaterialEntry> entries = new ArrayList<>();
+        entries.add(new MaterialEntry(new ItemStack(materialStatus.pipeBlock().asItem()), materialStatus.requiredPipes(), materialStatus.availablePipes(), materialStatus.creative()));
 
-        String separator = "  |  ";
-        String currentLine = "";
-        for (String hint : hints) {
-            String candidate = currentLine.isEmpty() ? hint : currentLine + separator + hint;
-            if (!currentLine.isEmpty() && font.width(candidate) > maxWidth) {
-                lines.add(currentLine);
-                currentLine = hint;
-            } else {
-                currentLine = candidate;
+        Block pumpBlock = PipeConnectorLogic.getMechanicalPumpBlock();
+        if (materialStatus.requiredPumps() > 0 && pumpBlock != null) {
+            entries.add(new MaterialEntry(new ItemStack(pumpBlock.asItem()), materialStatus.requiredPumps(), materialStatus.availablePumps(), materialStatus.creative()));
+        }
+
+        Block glassPipeBlock = PipeConnectorLogic.getGlassFluidPipeBlock();
+        if (materialStatus.requiredGlassPipes() > 0 && glassPipeBlock != null) {
+            entries.add(new MaterialEntry(new ItemStack(glassPipeBlock.asItem()), materialStatus.requiredGlassPipes(), materialStatus.availableGlassPipes(), materialStatus.creative()));
+        }
+
+        Block casingBlock = PipeConnectorLogic.getCopperCasingBlock();
+        if (materialStatus.requiredCopperCasings() > 0 && casingBlock != null) {
+            entries.add(new MaterialEntry(new ItemStack(casingBlock.asItem()), materialStatus.requiredCopperCasings(), materialStatus.availableCopperCasings(), materialStatus.creative()));
+        }
+        return entries;
+    }
+
+    private static int materialEntriesWidth(Font font, List<MaterialEntry> entries) {
+        if (entries.isEmpty()) {
+            return 0;
+        }
+
+        int width = 0;
+        for (int index = 0; index < entries.size(); index++) {
+            MaterialEntry entry = entries.get(index);
+            width += 16 + MATERIAL_ICON_TEXT_GAP + font.width(entry.countText());
+            if (index + 1 < entries.size()) {
+                width += MATERIAL_ENTRY_GAP;
             }
         }
+        return width;
+    }
 
-        if (!currentLine.isEmpty()) {
-            lines.add(currentLine);
+    private static void renderMaterialEntries(GuiGraphics guiGraphics, Font font, List<MaterialEntry> entries, int x, int y) {
+        int entryX = x;
+        for (MaterialEntry entry : entries) {
+            if (!entry.stack().isEmpty()) {
+                guiGraphics.renderItem(entry.stack(), entryX, y);
+            }
+            int textX = entryX + 16 + MATERIAL_ICON_TEXT_GAP;
+            guiGraphics.drawString(font, entry.countText(), textX, y + 5, entry.hasEnough() ? TEXT_COLOR : MISSING_TEXT_COLOR, true);
+            entryX += 16 + MATERIAL_ICON_TEXT_GAP + font.width(entry.countText()) + MATERIAL_ENTRY_GAP;
         }
-
-        return lines;
     }
 
     private static String hint(String keyName, String actionTranslationKey) {
@@ -117,5 +156,15 @@ public final class PipeConnectorControlsHud {
 
     private static String keyName(KeyMapping keyMapping) {
         return keyMapping.getTranslatedKeyMessage().getString();
+    }
+
+    private record MaterialEntry(ItemStack stack, int required, int available, boolean creative) {
+        private boolean hasEnough() {
+            return creative || available >= required;
+        }
+
+        private String countText() {
+            return required + "/" + (creative ? "\u221E" : available);
+        }
     }
 }

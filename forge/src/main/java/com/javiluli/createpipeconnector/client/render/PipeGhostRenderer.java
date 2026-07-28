@@ -42,29 +42,32 @@ import net.minecraftforge.client.model.data.ModelData;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class PipeGhostRenderer {
-    private static final ModelResourceLocation MECHANICAL_PUMP_ITEM_MODEL = new ModelResourceLocation(
-            Objects.requireNonNull(ResourceLocation.tryParse("create:mechanical_pump")),
-            "inventory"
-    );
+    private static final ModelResourceLocation MECHANICAL_PUMP_ITEM_MODEL = new ModelResourceLocation(java.util.Objects.requireNonNull(ResourceLocation.tryParse("create:mechanical_pump")), "inventory");
     private static final float GHOST_RED = 1.00F;
     private static final float GHOST_GREEN = 1.00F;
     private static final float GHOST_BLUE = 1.00F;
     private static final float GHOST_ALPHA = 0.42F;
+    private static final float MISSING_GHOST_RED = 1.00F;
+    private static final float MISSING_GHOST_GREEN = 0.38F;
+    private static final float MISSING_GHOST_BLUE = 0.34F;
+    private static final float MISSING_GHOST_ALPHA = 0.16F;
     private static final float OUTLINE_RED = 0.15F;
     private static final float OUTLINE_GREEN = 0.85F;
     private static final float OUTLINE_BLUE = 1.00F;
     private static final float OUTLINE_ALPHA = 0.95F;
+    private static final float MISSING_OUTLINE_RED = 1.00F;
+    private static final float MISSING_OUTLINE_GREEN = 0.25F;
+    private static final float MISSING_OUTLINE_BLUE = 0.20F;
     private static final float PUMP_OUTLINE_RED = 1.00F;
     private static final float PUMP_OUTLINE_GREEN = 0.82F;
     private static final float PUMP_OUTLINE_BLUE = 0.18F;
     private static final ThreadLocal<ThreadLocalObjects> THREAD_LOCAL_OBJECTS = ThreadLocal.withInitial(ThreadLocalObjects::new);
     private static Level cachedLevel;
     private static int cachedPreviewVersion = -1;
-    private static Map<RenderType, SuperByteBuffer> cachedBufferCache = Map.of();
+    private static PreviewBufferCache cachedBufferCache = PreviewBufferCache.empty();
 
     private PipeGhostRenderer() {
     }
@@ -95,7 +98,7 @@ public final class PipeGhostRenderer {
             return;
         }
 
-        Map<RenderType, SuperByteBuffer> bufferCache = getBufferCache(minecraft, level, previewPipes, ClientPipeConnectorState.getPreviewVersion());
+        PreviewBufferCache bufferCache = getBufferCache(minecraft, level, previewPipes, ClientPipeConnectorState.getPreviewVersion());
         if (bufferCache.isEmpty() && anchors.isEmpty()) {
             return;
         }
@@ -125,7 +128,7 @@ public final class PipeGhostRenderer {
         }
     }
 
-    private static Map<RenderType, SuperByteBuffer> getBufferCache(Minecraft minecraft, Level level, List<PreviewPipe> previewPipes, int previewVersion) {
+    private static PreviewBufferCache getBufferCache(Minecraft minecraft, Level level, List<PreviewPipe> previewPipes, int previewVersion) {
         if (cachedLevel == level && cachedPreviewVersion == previewVersion) {
             return cachedBufferCache;
         }
@@ -140,17 +143,28 @@ public final class PipeGhostRenderer {
     private static void clearBufferCache() {
         cachedLevel = null;
         cachedPreviewVersion = -1;
-        cachedBufferCache = Map.of();
+        cachedBufferCache = PreviewBufferCache.empty();
     }
 
-    private static void renderPipeGhosts(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Level level, List<PreviewPipe> previewPipes, Map<RenderType, SuperByteBuffer> bufferCache) {
+    private static void renderPipeGhosts(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Level level, List<PreviewPipe> previewPipes, PreviewBufferCache bufferCache) {
         if (previewPipes.isEmpty()) {
+            return;
+        }
+
+        renderBufferCache(poseStack, bufferSource, bufferCache.base());
+        RenderSystem.setShaderColor(MISSING_GHOST_RED, MISSING_GHOST_GREEN, MISSING_GHOST_BLUE, MISSING_GHOST_ALPHA);
+        renderBufferCache(poseStack, bufferSource, bufferCache.missing());
+        RenderSystem.setShaderColor(GHOST_RED, GHOST_GREEN, GHOST_BLUE, GHOST_ALPHA);
+        renderPipeOutlines(poseStack, bufferSource, level, previewPipes);
+    }
+
+    private static void renderBufferCache(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Map<RenderType, SuperByteBuffer> bufferCache) {
+        if (bufferCache.isEmpty()) {
             return;
         }
 
         bufferCache.values().forEach(buffer -> buffer.renderInto(poseStack, bufferSource.getBuffer(RenderType.translucent())));
         bufferSource.endBatch(RenderType.translucent());
-        renderPipeOutlines(poseStack, bufferSource, level, previewPipes);
     }
 
     private static SchematicLevel buildPreviewWorld(Level level, List<PreviewPipe> previewPipes) {
@@ -162,8 +176,12 @@ public final class PipeGhostRenderer {
         return schematicLevel;
     }
 
-    private static Map<RenderType, SuperByteBuffer> redrawPreview(Minecraft minecraft, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes) {
-        Map<RenderType, SuperByteBuffer> bufferCache = new LinkedHashMap<>(RenderType.chunkBufferLayers().size());
+    private static PreviewBufferCache redrawPreview(Minecraft minecraft, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes) {
+        Map<RenderType, SuperByteBuffer> baseCache = new LinkedHashMap<>(RenderType.chunkBufferLayers().size());
+        boolean hasMissingMaterials = hasMissingMaterials(previewPipes);
+        Map<RenderType, SuperByteBuffer> missingCache = hasMissingMaterials
+                ? new LinkedHashMap<>(RenderType.chunkBufferLayers().size())
+                : Map.of();
         BlockRenderDispatcher dispatcher = minecraft.getBlockRenderer();
         ModelBlockRenderer renderer = dispatcher.getModelRenderer();
         BakedModel pumpModel = minecraft.getModelManager().getModel(MECHANICAL_PUMP_ITEM_MODEL);
@@ -175,7 +193,14 @@ public final class PipeGhostRenderer {
             for (RenderType layer : RenderType.chunkBufferLayers()) {
                 SuperByteBuffer buffer = drawLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects);
                 if (!buffer.isEmpty()) {
-                    bufferCache.put(layer, buffer);
+                    baseCache.put(layer, buffer);
+                }
+
+                if (hasMissingMaterials) {
+                    SuperByteBuffer missingBuffer = drawMissingLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects);
+                    if (!missingBuffer.isEmpty()) {
+                        missingCache.put(layer, missingBuffer);
+                    }
                 }
             }
         } finally {
@@ -183,10 +208,18 @@ public final class PipeGhostRenderer {
             schematicLevel.renderMode = false;
         }
 
-        return bufferCache;
+        return new PreviewBufferCache(baseCache, missingCache);
     }
 
     private static SuperByteBuffer drawLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, BakedModel pumpModel, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects) {
+        return drawLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects, false);
+    }
+
+    private static SuperByteBuffer drawMissingLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, BakedModel pumpModel, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects) {
+        return drawLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects, true);
+    }
+
+    private static SuperByteBuffer drawLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, BakedModel pumpModel, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects, boolean missingOnly) {
         PoseStack poseStack = objects.poseStack;
         RandomSource random = objects.random;
         BlockPos.MutableBlockPos mutableBlockPos = objects.mutableBlockPos;
@@ -195,6 +228,10 @@ public final class PipeGhostRenderer {
         sbbBuilder.begin();
 
         for (PreviewPipe previewPipe : previewPipes) {
+            if (missingOnly && !previewPipe.missingMaterial()) {
+                continue;
+            }
+
             BlockPos localPos = previewPipe.position();
             BlockPos worldPos = mutableBlockPos.set(localPos.getX(), localPos.getY(), localPos.getZ());
             BlockState state = schematicLevel.getBlockState(worldPos);
@@ -291,9 +328,9 @@ public final class PipeGhostRenderer {
                     position.getX(),
                     position.getY(),
                     position.getZ(),
-                    rendersMechanicalPump ? PUMP_OUTLINE_RED : OUTLINE_RED,
-                    rendersMechanicalPump ? PUMP_OUTLINE_GREEN : OUTLINE_GREEN,
-                    rendersMechanicalPump ? PUMP_OUTLINE_BLUE : OUTLINE_BLUE,
+                    outlineRed(previewPipe, rendersMechanicalPump),
+                    outlineGreen(previewPipe, rendersMechanicalPump),
+                    outlineBlue(previewPipe, rendersMechanicalPump),
                     OUTLINE_ALPHA,
                     true
             );
@@ -303,6 +340,46 @@ public final class PipeGhostRenderer {
 
     private static boolean isMechanicalPumpPreview(PreviewPipe previewPipe) {
         return previewPipe.mechanicalPumpFacing() != null;
+    }
+
+    private static boolean hasMissingMaterials(List<PreviewPipe> previewPipes) {
+        for (PreviewPipe previewPipe : previewPipes) {
+            if (previewPipe.missingMaterial()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static float outlineRed(PreviewPipe previewPipe, boolean rendersMechanicalPump) {
+        if (previewPipe.missingMaterial()) {
+            return MISSING_OUTLINE_RED;
+        }
+        return rendersMechanicalPump ? PUMP_OUTLINE_RED : OUTLINE_RED;
+    }
+
+    private static float outlineGreen(PreviewPipe previewPipe, boolean rendersMechanicalPump) {
+        if (previewPipe.missingMaterial()) {
+            return MISSING_OUTLINE_GREEN;
+        }
+        return rendersMechanicalPump ? PUMP_OUTLINE_GREEN : OUTLINE_GREEN;
+    }
+
+    private static float outlineBlue(PreviewPipe previewPipe, boolean rendersMechanicalPump) {
+        if (previewPipe.missingMaterial()) {
+            return MISSING_OUTLINE_BLUE;
+        }
+        return rendersMechanicalPump ? PUMP_OUTLINE_BLUE : OUTLINE_BLUE;
+    }
+
+    private record PreviewBufferCache(Map<RenderType, SuperByteBuffer> base, Map<RenderType, SuperByteBuffer> missing) {
+        private static PreviewBufferCache empty() {
+            return new PreviewBufferCache(Map.of(), Map.of());
+        }
+
+        private boolean isEmpty() {
+            return base.isEmpty() && missing.isEmpty();
+        }
     }
 
     private static final class ThreadLocalObjects {

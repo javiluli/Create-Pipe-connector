@@ -2,20 +2,32 @@ package com.javiluli.createpipeconnector.client.input;
 
 import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
+import com.javiluli.createpipeconnector.client.screen.ConnectorOptionsRadialScreen;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.CopperCasingMode;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeStyleMode;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PreviewPipe;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PumpMode;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
-import com.javiluli.createpipeconnector.network.CreatePipeConnectorNetwork;
 import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayload;
+import com.javiluli.createpipeconnector.network.payload.CopperCasingModePayload;
+import com.javiluli.createpipeconnector.network.payload.PipeStyleModePayload;
+import com.javiluli.createpipeconnector.network.payload.PumpModePayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
+import com.javiluli.createpipeconnector.network.payload.RemoveLastCopperCasingPayload;
+import com.javiluli.createpipeconnector.network.payload.RemoveLastManualPumpPayload;
+import com.javiluli.createpipeconnector.network.payload.ReverseAutoPumpDirectionPayload;
 import com.javiluli.createpipeconnector.network.payload.SelectPipeTargetPayload;
-import com.javiluli.createpipeconnector.network.payload.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.network.payload.ToggleConnectorModePayload;
+import com.javiluli.createpipeconnector.network.payload.ToggleCopperCasingPayload;
+import com.javiluli.createpipeconnector.network.payload.ToggleManualPumpPayload;
 import com.javiluli.createpipeconnector.network.payload.WrenchPipeDisplayPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,20 +39,26 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import com.javiluli.createpipeconnector.network.CreatePipeConnectorNetwork;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ClientPipeConnectorInputHandler {
-    private static final double AIR_PREVIEW_REACH = 5.0D;
     private static boolean showingPipeStatus;
     private static boolean previewTargetLocked;
     private static PlacementTarget lockedPreviewTarget;
+    private static RoutePlanKey cachedRoutePlanKey;
+    private static ConnectionPlan cachedRoutePlan;
+    private static boolean hasCachedRoutePlan;
 
     private ClientPipeConnectorInputHandler() {
     }
@@ -131,8 +149,22 @@ public final class ClientPipeConnectorInputHandler {
 
         event.setCanceled(true);
         event.setSwingHand(false);
-        if (currentSelection != null && ClientPipeConnectorState.getPreviewPipes().isEmpty()) {
+        if (currentSelection != null && !previewTargetLocked && !PipeConnectorLogic.isWithinInteractionRange(player, target.position())) {
+            clearCurrentConnection(player);
+            CreatePipeConnectorNetwork.sendToServer(new CancelPipeConnectionPayload());
             return;
+        }
+        if (currentSelection != null && ClientPipeConnectorState.getPreviewPipes().isEmpty()) {
+            clearCurrentConnection(player);
+            CreatePipeConnectorNetwork.sendToServer(new CancelPipeConnectionPayload());
+            return;
+        }
+        if (currentSelection != null) {
+            Component missingMaterialsMessage = missingMaterialsMessage(ClientPipeConnectorState.getMaterialStatus());
+            if (missingMaterialsMessage != null) {
+                player.displayClientMessage(missingMaterialsMessage.copy().withStyle(ChatFormatting.RED), true);
+                return;
+            }
         }
         handleClientTarget(player, heldPipeBlock, target);
     }
@@ -184,10 +216,35 @@ public final class ClientPipeConnectorInputHandler {
         }
 
         if (consumeAutoPumpsToggle(minecraft)) {
-            boolean enabled = !ClientPipeConnectorState.isAutoPumpsEnabled();
-            ClientPipeConnectorState.setAutoPumpsEnabled(enabled);
-            CreatePipeConnectorNetwork.sendToServer(new ToggleAutoPumpsPayload(enabled));
-            clearPreviewTargetLock();
+            PumpMode pumpMode = ClientPipeConnectorState.getPumpMode().next();
+            ClientPipeConnectorState.setPumpMode(pumpMode);
+            CreatePipeConnectorNetwork.sendToServer(new PumpModePayload(pumpMode));
+            clearPipeStatus(minecraft.player);
+        }
+
+        if (consumeAutoPumpDirectionReverse(minecraft) && ClientPipeConnectorState.getPumpMode().isAutomatic()) {
+            boolean reversed = !ClientPipeConnectorState.isAutoPumpDirectionReversed();
+            ClientPipeConnectorState.setAutoPumpDirectionReversed(reversed);
+            CreatePipeConnectorNetwork.sendToServer(new ReverseAutoPumpDirectionPayload(reversed));
+            clearPipeStatus(minecraft.player);
+        }
+
+        if (consumeCopperCasingModeCycle(minecraft)) {
+            CopperCasingMode mode = ClientPipeConnectorState.getCopperCasingMode().next();
+            ClientPipeConnectorState.setCopperCasingMode(mode);
+            CreatePipeConnectorNetwork.sendToServer(new CopperCasingModePayload(mode));
+            clearPipeStatus(minecraft.player);
+        }
+
+        if (consumePipeStyleModeCycle(minecraft)) {
+            PipeStyleMode mode = ClientPipeConnectorState.getPipeStyleMode().next();
+            ClientPipeConnectorState.setPipeStyleMode(mode);
+            CreatePipeConnectorNetwork.sendToServer(new PipeStyleModePayload(mode));
+            clearPipeStatus(minecraft.player);
+        }
+
+        if (consumeRoutePriorityCycle(minecraft)) {
+            minecraft.setScreen(new ConnectorOptionsRadialScreen());
             clearPipeStatus(minecraft.player);
         }
 
@@ -195,6 +252,7 @@ public final class ClientPipeConnectorInputHandler {
         if (selection == null) {
             drainRoutingKeys();
             ClientPipeConnectorState.setPreviewPipes(List.of());
+            ClientPipeConnectorState.setMaterialStatus(null);
             clearPreviewTargetLock();
             clearPipeStatus(minecraft.player);
             return;
@@ -208,6 +266,10 @@ public final class ClientPipeConnectorInputHandler {
         Block heldPipeBlock = selection.pipeBlock();
         boolean anchorPressed = consumeAddAnchor(minecraft);
         boolean removeAnchorPressed = consumeRemoveLastAnchor(minecraft);
+        boolean copperCasingPressed = consumeCopperCasing(minecraft);
+        boolean manualPumpPressed = consumeManualPump(minecraft);
+        boolean removeManualPumpPressed = consumeRemoveLastManualPump(minecraft) || manualPumpPressed && Screen.hasShiftDown();
+        boolean removeCopperCasingPressed = consumeRemoveLastCopperCasing(minecraft) || copperCasingPressed && Screen.hasShiftDown();
         if (removeAnchorPressed && ClientPipeConnectorState.removeLastAnchor()) {
             CreatePipeConnectorNetwork.sendToServer(new RemoveLastAnchorPayload());
             clearPreviewTargetLock();
@@ -216,13 +278,15 @@ public final class ClientPipeConnectorInputHandler {
         PlacementTarget target = getTrackingPreviewTarget(minecraft, heldPipeBlock);
         if (target == null || target.position().equals(selection.position())) {
             ClientPipeConnectorState.setPreviewPipes(List.of());
+            ClientPipeConnectorState.setMaterialStatus(null);
             clearPipeStatus(minecraft.player);
             return;
         }
 
-        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target);
+        ConnectionPlan plan = getBasePlacementPlan(minecraft, selection, target);
         if (plan == null) {
             ClientPipeConnectorState.setPreviewPipes(List.of());
+            ClientPipeConnectorState.setMaterialStatus(null);
             showPipeStatus(minecraft.player, Component.translatable("hud.createpipeconnector.no_route").withStyle(ChatFormatting.RED));
             return;
         }
@@ -232,16 +296,65 @@ public final class ClientPipeConnectorInputHandler {
             ClientPipeConnectorState.addAnchor(target);
             CreatePipeConnectorNetwork.sendToServer(new AddAnchorPayload(target.position(), target.face(), target.existingPipe()));
             clearPreviewTargetLock();
-            plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target);
+            plan = getBasePlacementPlan(minecraft, selection, target);
             if (plan == null) {
                 ClientPipeConnectorState.setPreviewPipes(List.of());
+                ClientPipeConnectorState.setMaterialStatus(null);
                 return;
             }
             plan = applyAutoPumps(plan);
         }
 
-        ClientPipeConnectorState.setPreviewPipes(PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock()));
-        showPipeRequirement(minecraft.player, selection, plan);
+        if (manualPumpPressed || removeManualPumpPressed) {
+            if (removeManualPumpPressed) {
+                if (ClientPipeConnectorState.removeLastManualPump()) {
+                    CreatePipeConnectorNetwork.sendToServer(new RemoveLastManualPumpPayload());
+                }
+            } else {
+                BlockPos manualPumpPosition = closestManualPumpPosition(plan, target.position());
+                if (manualPumpPosition != null) {
+                    ClientPipeConnectorState.toggleManualPump(manualPumpPosition);
+                    CreatePipeConnectorNetwork.sendToServer(new ToggleManualPumpPayload(manualPumpPosition));
+                }
+            }
+        }
+        plan = PipeConnectorLogic.withManualPumps(plan, ClientPipeConnectorState.getManualPumps());
+
+        if ((copperCasingPressed || removeCopperCasingPressed) && PipeConnectorLogic.supportsCopperCasing(selection.pipeBlock())) {
+            if (removeCopperCasingPressed) {
+                if (ClientPipeConnectorState.removeLastCopperCasing()) {
+                    CreatePipeConnectorNetwork.sendToServer(new RemoveLastCopperCasingPayload());
+                }
+            } else {
+                if (ClientPipeConnectorState.getCopperCasingMode() != CopperCasingMode.MANUAL) {
+                    ClientPipeConnectorState.setCopperCasingMode(CopperCasingMode.MANUAL);
+                    CreatePipeConnectorNetwork.sendToServer(new CopperCasingModePayload(CopperCasingMode.MANUAL));
+                }
+                BlockPos copperCasingPosition = closestCopperCasingPosition(plan, target.position());
+                if (copperCasingPosition != null) {
+                    ClientPipeConnectorState.toggleCopperCasing(copperCasingPosition);
+                    CreatePipeConnectorNetwork.sendToServer(new ToggleCopperCasingPayload(copperCasingPosition));
+                }
+            }
+        }
+        plan = PipeConnectorLogic.withCopperCasingMode(plan, ClientPipeConnectorState.getCopperCasingMode(), ClientPipeConnectorState.getCopperCasings(), selection.pipeBlock());
+        plan = PipeConnectorLogic.withPipeStyleMode(plan, ClientPipeConnectorState.getPipeStyleMode(), selection.pipeBlock());
+
+        ClientPipeConnectorState.setPreviewPipes(markMissingPreviewMaterials(minecraft.player, selection, plan, PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock())));
+        updateMaterialStatus(minecraft.player, selection, plan);
+        clearPipeStatus(minecraft.player);
+    }
+
+    private static ConnectionPlan getBasePlacementPlan(Minecraft minecraft, Selection selection, PlacementTarget target) {
+        RoutePlanKey routePlanKey = new RoutePlanKey(selection, List.copyOf(ClientPipeConnectorState.getAnchors()), target, ClientPipeConnectorState.getRoutePriority());
+        if (hasCachedRoutePlan && routePlanKey.equals(cachedRoutePlanKey)) {
+            return cachedRoutePlan;
+        }
+
+        cachedRoutePlanKey = routePlanKey;
+        cachedRoutePlan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, routePlanKey.anchors(), target, routePlanKey.routePriority());
+        hasCachedRoutePlan = true;
+        return cachedRoutePlan;
     }
 
     private static PlacementTarget getTrackingPreviewTarget(Minecraft minecraft, Block pipeBlock) {
@@ -274,12 +387,48 @@ public final class ClientPipeConnectorInputHandler {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle();
     }
 
+    private static boolean consumeAutoPumpDirectionReverse(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse();
+    }
+
+    private static boolean consumeCopperCasingModeCycle(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeCopperCasingModeCycle();
+    }
+
+    private static boolean consumePipeStyleModeCycle(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumePipeStyleModeCycle();
+    }
+
+    private static boolean consumeRoutePriorityCycle(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRoutePriorityCycle();
+    }
+
     private static boolean consumeAddAnchor(Minecraft minecraft) {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAddAnchor();
     }
 
     private static boolean consumeRemoveLastAnchor(Minecraft minecraft) {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastAnchor();
+    }
+
+    private static boolean consumeCopperCasing(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeCopperCasingToggle();
+    }
+
+    private static boolean consumeManualPump(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeManualPumpToggle();
+    }
+
+    private static boolean consumeRemoveLastManualPump(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastManualPump();
+    }
+
+    private static boolean consumeRemoveLastCopperCasing(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastCopperCasing();
+    }
+
+    public static boolean isPreviewTargetLocked() {
+        return previewTargetLocked;
     }
 
     private static boolean canAddAnchor(Selection selection, PlacementTarget target) {
@@ -292,7 +441,108 @@ public final class ClientPipeConnectorInputHandler {
     }
 
     private static ConnectionPlan applyAutoPumps(ConnectionPlan plan) {
-        return ClientPipeConnectorState.isAutoPumpsEnabled() ? PipeConnectorLogic.withAutoPumps(plan) : plan;
+        return PipeConnectorLogic.withPumpMode(plan, ClientPipeConnectorState.getPumpMode(), ClientPipeConnectorState.isAutoPumpDirectionReversed());
+    }
+
+    private static BlockPos closestCopperCasingPosition(ConnectionPlan plan, BlockPos targetPosition) {
+        BlockPos closestPosition = null;
+        int closestDistance = Integer.MAX_VALUE;
+        for (BlockPos position : plan.placementPositions()) {
+            if (plan.pumpPlacements().containsKey(position)) {
+                continue;
+            }
+
+            int distance = position.distManhattan(targetPosition);
+            if (distance < closestDistance) {
+                closestPosition = position;
+                closestDistance = distance;
+            }
+        }
+        return closestDistance <= 3 ? closestPosition : null;
+    }
+
+    private static BlockPos closestManualPumpPosition(ConnectionPlan plan, BlockPos targetPosition) {
+        if (PipeConnectorLogic.getMechanicalPumpBlock() == null) {
+            return null;
+        }
+
+        BlockPos closestPosition = null;
+        int closestDistance = Integer.MAX_VALUE;
+        for (BlockPos position : plan.placementPositions()) {
+            if (plan.pumpPlacements().containsKey(position)) {
+                continue;
+            }
+            if (PipeConnectorLogic.straightPumpFacing(plan.path(), position) == null) {
+                continue;
+            }
+
+            int distance = position.distManhattan(targetPosition);
+            if (distance < closestDistance) {
+                closestPosition = position;
+                closestDistance = distance;
+            }
+        }
+        return closestDistance <= 3 ? closestPosition : null;
+    }
+
+    private static List<PreviewPipe> markMissingPreviewMaterials(LocalPlayer player, Selection selection, ConnectionPlan plan, List<PreviewPipe> previewPipes) {
+        if (player.getAbilities().instabuild || previewPipes.isEmpty()) {
+            return previewPipes;
+        }
+
+        int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
+        int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
+        int availableGlassPipes = PipeConnectorLogic.countAvailableGlassPipes(player);
+        int availableCopperCasings = PipeConnectorLogic.countAvailableCopperCasings(player);
+        if (availablePipes >= plan.requiredPipes()
+                && availablePumps >= plan.requiredPumps()
+                && availableGlassPipes >= plan.requiredGlassPipes()
+                && availableCopperCasings >= plan.requiredCopperCasings()) {
+            return previewPipes;
+        }
+
+        Set<BlockPos> missingPositions = missingMaterialPositions(plan, availablePipes, availablePumps, availableGlassPipes, availableCopperCasings);
+        if (missingPositions.isEmpty()) {
+            return previewPipes;
+        }
+
+        List<PreviewPipe> markedPreviewPipes = new ArrayList<>(previewPipes.size());
+        for (PreviewPipe previewPipe : previewPipes) {
+            markedPreviewPipes.add(previewPipe.withMissingMaterial(missingPositions.contains(previewPipe.position())));
+        }
+        return markedPreviewPipes;
+    }
+
+    private static Set<BlockPos> missingMaterialPositions(ConnectionPlan plan, int availablePipes, int availablePumps, int availableGlassPipes, int availableCopperCasings) {
+        Set<BlockPos> missingPositions = new HashSet<>();
+        int pipeIndex = 0;
+        int pumpIndex = 0;
+        int glassPipeIndex = 0;
+        boolean missingCopperCasing = plan.requiredCopperCasings() > availableCopperCasings;
+
+        for (BlockPos position : plan.placementPositions()) {
+            if (plan.pumpPlacements().containsKey(position)) {
+                pumpIndex++;
+                if (pumpIndex > availablePumps) {
+                    missingPositions.add(position);
+                }
+            } else if (plan.glassPipePlacements().contains(position)) {
+                glassPipeIndex++;
+                if (glassPipeIndex > availableGlassPipes) {
+                    missingPositions.add(position);
+                }
+            } else {
+                pipeIndex++;
+                if (pipeIndex > availablePipes) {
+                    missingPositions.add(position);
+                }
+                if (missingCopperCasing && plan.copperCasingPlacements().contains(position)) {
+                    missingPositions.add(position);
+                }
+            }
+        }
+
+        return missingPositions;
     }
 
     private static PlacementTarget getPreviewTarget(Minecraft minecraft, Block pipeBlock) {
@@ -341,8 +591,9 @@ public final class ClientPipeConnectorInputHandler {
             return null;
         }
 
+        double reach = PipeConnectorLogic.getInteractionRange(player);
         Vec3 lookVector = player.getViewVector(1.0F);
-        BlockPos targetPosition = BlockPos.containing(player.getEyePosition().add(lookVector.scale(AIR_PREVIEW_REACH)));
+        BlockPos targetPosition = BlockPos.containing(player.getEyePosition().add(lookVector.scale(reach)));
         if (!PipeConnectorLogic.canPlacePipeAt(minecraft.level, targetPosition)) {
             return null;
         }
@@ -351,32 +602,78 @@ public final class ClientPipeConnectorInputHandler {
         return new PlacementTarget(targetPosition, face, false);
     }
 
-    private static void showPipeRequirement(LocalPlayer player, Selection selection, ConnectionPlan plan) {
+    private static void updateMaterialStatus(LocalPlayer player, Selection selection, ConnectionPlan plan) {
         int requiredPipes = plan.requiredPipes();
         int requiredPumps = plan.requiredPumps();
+        int requiredGlassPipes = plan.requiredGlassPipes();
+        int requiredCopperCasings = plan.requiredCopperCasings();
         if (player.getAbilities().instabuild) {
-            MutableComponent creativeMessage = Component.literal("Pipes " + requiredPipes + "/∞").withStyle(ChatFormatting.WHITE);
-            if (requiredPumps > 0) {
-                creativeMessage.append(Component.literal(" | Pumps " + requiredPumps + "/∞").withStyle(ChatFormatting.WHITE));
-            }
-            showPipeStatus(player, creativeMessage);
+            ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
+                    selection.pipeBlock(),
+                    requiredPipes,
+                    Integer.MAX_VALUE,
+                    requiredPumps,
+                    Integer.MAX_VALUE,
+                    requiredGlassPipes,
+                    Integer.MAX_VALUE,
+                    requiredCopperCasings,
+                    Integer.MAX_VALUE,
+                    true
+            ));
             return;
         }
 
         int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
-        boolean hasEnoughPipes = availablePipes >= requiredPipes;
-        MutableComponent message = Component.literal("Pipes ")
-                .withStyle(ChatFormatting.WHITE)
-                .append(Component.literal(String.valueOf(requiredPipes)).withStyle(hasEnoughPipes ? ChatFormatting.WHITE : ChatFormatting.RED))
-                .append(Component.literal("/" + availablePipes).withStyle(ChatFormatting.WHITE));
-        if (requiredPumps > 0) {
-            int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
-            boolean hasEnoughPumps = availablePumps >= requiredPumps;
-            message.append(Component.literal(" | Pumps ").withStyle(ChatFormatting.WHITE))
-                    .append(Component.literal(String.valueOf(requiredPumps)).withStyle(hasEnoughPumps ? ChatFormatting.WHITE : ChatFormatting.RED))
-                    .append(Component.literal("/" + availablePumps).withStyle(ChatFormatting.WHITE));
+        int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
+        int availableGlassPipes = PipeConnectorLogic.countAvailableGlassPipes(player);
+        int availableCopperCasings = PipeConnectorLogic.countAvailableCopperCasings(player);
+        ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
+                selection.pipeBlock(),
+                requiredPipes,
+                availablePipes,
+                requiredPumps,
+                availablePumps,
+                requiredGlassPipes,
+                availableGlassPipes,
+                requiredCopperCasings,
+                availableCopperCasings,
+                false
+        ));
+    }
+
+    private static Component missingMaterialsMessage(ClientPipeConnectorState.MaterialStatus materialStatus) {
+        if (materialStatus == null || materialStatus.creative()) {
+            return null;
         }
-        showPipeStatus(player, message);
+
+        List<Component> missingMaterials = new ArrayList<>();
+        addMissingMaterial(missingMaterials, materialStatus.requiredPipes(), materialStatus.availablePipes(), "hud.createpipeconnector.missing_pipes");
+        addMissingMaterial(missingMaterials, materialStatus.requiredPumps(), materialStatus.availablePumps(), "hud.createpipeconnector.missing_pumps");
+        addMissingMaterial(missingMaterials, materialStatus.requiredGlassPipes(), materialStatus.availableGlassPipes(), "hud.createpipeconnector.missing_glass_pipes");
+        addMissingMaterial(missingMaterials, materialStatus.requiredCopperCasings(), materialStatus.availableCopperCasings(), "hud.createpipeconnector.missing_casings");
+        if (missingMaterials.isEmpty()) {
+            return null;
+        }
+
+        return Component.translatable("hud.createpipeconnector.missing_materials", joinComponents(missingMaterials));
+    }
+
+    private static void addMissingMaterial(List<Component> missingMaterials, int required, int available, String translationKey) {
+        int missing = required - available;
+        if (missing > 0) {
+            missingMaterials.add(Component.translatable(translationKey, missing));
+        }
+    }
+
+    private static MutableComponent joinComponents(List<Component> components) {
+        MutableComponent joined = Component.empty();
+        for (int index = 0; index < components.size(); index++) {
+            if (index > 0) {
+                joined.append(", ");
+            }
+            joined.append(components.get(index));
+        }
+        return joined;
     }
 
     private static void showPipeStatus(LocalPlayer player, Component message) {
@@ -400,8 +697,15 @@ public final class ClientPipeConnectorInputHandler {
 
     private static void clearCurrentConnection(LocalPlayer player) {
         ClientPipeConnectorState.clearSelection();
+        clearRoutePlanCache();
         clearPreviewTargetLock();
         clearPipeStatus(player);
+    }
+
+    private static void clearRoutePlanCache() {
+        cachedRoutePlanKey = null;
+        cachedRoutePlan = null;
+        hasCachedRoutePlan = false;
     }
 
     private static void drainRoutingKeys() {
@@ -411,7 +715,26 @@ public final class ClientPipeConnectorInputHandler {
         }
         while (ClientPipeConnectorKeyMappings.consumeRemoveLastAnchor()) {
         }
+        while (ClientPipeConnectorKeyMappings.consumeCopperCasingToggle()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeRemoveLastCopperCasing()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeManualPumpToggle()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeRemoveLastManualPump()) {
+        }
         while (ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle()) {
         }
+        while (ClientPipeConnectorKeyMappings.consumeCopperCasingModeCycle()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumePipeStyleModeCycle()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeRoutePriorityCycle()) {
+        }
+    }
+
+    private record RoutePlanKey(Selection selection, List<PlacementTarget> anchors, PlacementTarget target, PipeConnectorLogic.RoutePriority routePriority) {
     }
 }
