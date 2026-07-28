@@ -27,6 +27,9 @@ import java.util.UUID;
 
 public final class PipeConnectorLogic {
     private static final Direction[] DIRECTIONS = Direction.values();
+    private static final int MIN_ASTAR_VISITED_NODES = 2_048;
+    private static final int MAX_ASTAR_VISITED_NODES = 20_000;
+    private static final int ASTAR_VISITED_NODES_PER_BLOCK = 160;
 
     private PipeConnectorLogic() {
     }
@@ -386,11 +389,13 @@ public final class PipeConnectorLogic {
         }
 
         Set<BlockPos> glassPipePlacements = new LinkedHashSet<>();
+        Map<BlockPos, Integer> pathIndices = pathIndexMap(plan.path());
         for (BlockPos position : plan.placementPositions()) {
             if (plan.pumpPlacements().containsKey(position) || plan.copperCasingPlacements().contains(position)) {
                 continue;
             }
-            if (straightPumpFacing(plan.path(), position) != null) {
+            Integer pathIndex = pathIndices.get(position);
+            if (pathIndex != null && straightPumpFacingAt(plan.path(), pathIndex) != null) {
                 glassPipePlacements.add(position);
             }
         }
@@ -700,6 +705,7 @@ public final class PipeConnectorLogic {
     private static List<BlockPos> findAStarPath(Level level, BlockPos startPos, BlockPos endPos, RoutePriority routePriority) {
         int manhattanDistance = startPos.distManhattan(endPos);
         int padding = Math.max(8, Math.min(32, manhattanDistance / 2));
+        int maxVisitedNodes = Math.max(MIN_ASTAR_VISITED_NODES, Math.min(MAX_ASTAR_VISITED_NODES, (manhattanDistance + 1) * ASTAR_VISITED_NODES_PER_BLOCK));
 
         int minX = Math.min(startPos.getX(), endPos.getX()) - padding;
         int minY = Math.min(startPos.getY(), endPos.getY()) - padding;
@@ -720,12 +726,15 @@ public final class PipeConnectorLogic {
 
         gScore.put(startPos, 0);
         turnScore.put(startPos, 0);
-        openSet.add(new PathNode(startPos, null, 0, 0, heuristic(startPos, endPos)));
+        openSet.add(new PathNode(startPos, null, 0, 0, heuristic(startPos, endPos, routePriority)));
 
         while (!openSet.isEmpty()) {
             PathNode current = openSet.poll();
             if (!closedSet.add(current.position())) {
                 continue;
+            }
+            if (closedSet.size() > maxVisitedNodes) {
+                return null;
             }
 
             if (current.position().equals(endPos)) {
@@ -754,7 +763,7 @@ public final class PipeConnectorLogic {
                 cameFrom.put(nextPos, current.position());
                 gScore.put(nextPos, tentativeScore);
                 turnScore.put(nextPos, tentativeTurns);
-                openSet.add(new PathNode(nextPos, direction, tentativeScore, tentativeTurns, tentativeScore + heuristic(nextPos, endPos)));
+                openSet.add(new PathNode(nextPos, direction, tentativeScore, tentativeTurns, tentativeScore + heuristic(nextPos, endPos, routePriority)));
             }
         }
 
@@ -817,8 +826,10 @@ public final class PipeConnectorLogic {
         return PipePreviewBuilder.createPreviewWorld(level, previewStates);
     }
 
-    private static int heuristic(BlockPos firstPos, BlockPos secondPos) {
-        return firstPos.distManhattan(secondPos);
+    private static int heuristic(BlockPos firstPos, BlockPos secondPos, RoutePriority routePriority) {
+        return Math.abs(firstPos.getX() - secondPos.getX())
+                + Math.abs(firstPos.getZ() - secondPos.getZ())
+                + Math.abs(firstPos.getY() - secondPos.getY()) * normalizePriority(routePriority).verticalCost();
     }
 
     private static int movementCost(Direction direction, RoutePriority routePriority) {
@@ -920,9 +931,14 @@ public final class PipeConnectorLogic {
 
     public static Direction straightPumpFacing(List<BlockPos> path, BlockPos position) {
         int index = path.indexOf(position);
+        return straightPumpFacingAt(path, index);
+    }
+
+    private static Direction straightPumpFacingAt(List<BlockPos> path, int index) {
         if (index < 0 || path.size() < 2) {
             return null;
         }
+        BlockPos position = path.get(index);
         if (index == 0) {
             return directionBetween(position, path.get(1));
         }
@@ -933,6 +949,14 @@ public final class PipeConnectorLogic {
         Direction fromPrevious = directionBetween(path.get(index - 1), position);
         Direction toNext = directionBetween(position, path.get(index + 1));
         return fromPrevious.getAxis() == toNext.getAxis() ? toNext : null;
+    }
+
+    private static Map<BlockPos, Integer> pathIndexMap(List<BlockPos> path) {
+        Map<BlockPos, Integer> pathIndices = new HashMap<>(path.size());
+        for (int index = 0; index < path.size(); index++) {
+            pathIndices.put(path.get(index), index);
+        }
+        return pathIndices;
     }
 
     private static BlockState createPlacementPipeState(BlockState pipeState, BlockState sourceState, boolean copperCasing, boolean glassPipe) {

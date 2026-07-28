@@ -56,6 +56,9 @@ public final class ClientPipeConnectorInputHandler {
     private static boolean showingPipeStatus;
     private static boolean previewTargetLocked;
     private static PlacementTarget lockedPreviewTarget;
+    private static RoutePlanKey cachedRoutePlanKey;
+    private static ConnectionPlan cachedRoutePlan;
+    private static boolean hasCachedRoutePlan;
 
     private ClientPipeConnectorInputHandler() {
     }
@@ -276,7 +279,7 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
-        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target, ClientPipeConnectorState.getRoutePriority());
+        ConnectionPlan plan = getBasePlacementPlan(minecraft, selection, target);
         if (plan == null) {
             ClientPipeConnectorState.setPreviewPipes(List.of());
             ClientPipeConnectorState.setMaterialStatus(null);
@@ -289,7 +292,7 @@ public final class ClientPipeConnectorInputHandler {
             ClientPipeConnectorState.addAnchor(target);
             PacketDistributor.sendToServer(new AddAnchorPayload(target.position(), target.face(), target.existingPipe()));
             clearPreviewTargetLock();
-            plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target, ClientPipeConnectorState.getRoutePriority());
+            plan = getBasePlacementPlan(minecraft, selection, target);
             if (plan == null) {
                 ClientPipeConnectorState.setPreviewPipes(List.of());
                 ClientPipeConnectorState.setMaterialStatus(null);
@@ -336,6 +339,18 @@ public final class ClientPipeConnectorInputHandler {
         ClientPipeConnectorState.setPreviewPipes(markMissingPreviewMaterials(minecraft.player, selection, plan, PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock())));
         updateMaterialStatus(minecraft.player, selection, plan);
         clearPipeStatus(minecraft.player);
+    }
+
+    private static ConnectionPlan getBasePlacementPlan(Minecraft minecraft, Selection selection, PlacementTarget target) {
+        RoutePlanKey routePlanKey = new RoutePlanKey(selection, List.copyOf(ClientPipeConnectorState.getAnchors()), target, ClientPipeConnectorState.getRoutePriority());
+        if (hasCachedRoutePlan && routePlanKey.equals(cachedRoutePlanKey)) {
+            return cachedRoutePlan;
+        }
+
+        cachedRoutePlanKey = routePlanKey;
+        cachedRoutePlan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, routePlanKey.anchors(), target, routePlanKey.routePriority());
+        hasCachedRoutePlan = true;
+        return cachedRoutePlan;
     }
 
     private static PlacementTarget getTrackingPreviewTarget(Minecraft minecraft, Block pipeBlock) {
@@ -678,8 +693,15 @@ public final class ClientPipeConnectorInputHandler {
 
     private static void clearCurrentConnection(LocalPlayer player) {
         ClientPipeConnectorState.clearSelection();
+        clearRoutePlanCache();
         clearPreviewTargetLock();
         clearPipeStatus(player);
+    }
+
+    private static void clearRoutePlanCache() {
+        cachedRoutePlanKey = null;
+        cachedRoutePlan = null;
+        hasCachedRoutePlan = false;
     }
 
     private static void drainRoutingKeys() {
@@ -707,5 +729,8 @@ public final class ClientPipeConnectorInputHandler {
         }
         while (ClientPipeConnectorKeyMappings.consumeRoutePriorityCycle()) {
         }
+    }
+
+    private record RoutePlanKey(Selection selection, List<PlacementTarget> anchors, PlacementTarget target, PipeConnectorLogic.RoutePriority routePriority) {
     }
 }

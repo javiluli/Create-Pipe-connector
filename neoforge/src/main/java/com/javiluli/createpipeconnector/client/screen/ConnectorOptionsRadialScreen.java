@@ -1,6 +1,7 @@
 package com.javiluli.createpipeconnector.client.screen;
 
 import com.javiluli.createpipeconnector.client.input.ClientPipeConnectorKeyMappings;
+import com.javiluli.createpipeconnector.client.render.gui.GuiPixelBatch;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.CopperCasingMode;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeStyleMode;
@@ -53,6 +54,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static final float MECHANIC_LABEL_SCALE = 0.68F;
     private static final float OPTION_LABEL_SCALE = 0.62F;
     private static final float SMALL_TEXT_SCALE = 0.68F;
+    private static final Mechanic[] MECHANICS = Mechanic.values();
 
     private Mechanic selectedMechanic = Mechanic.ROUTE_STYLE;
     private Mechanic hoveredMechanic;
@@ -109,23 +111,25 @@ public final class ConnectorOptionsRadialScreen extends Screen {
 
     private void renderPixelatedMechanicRing(GuiGraphics guiGraphics, int centerX, int centerY) {
         int radius = MECHANIC_OUTER_RADIUS + PIXEL_RING_CELL_SIZE;
-        for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
-            for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
-                float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
-                float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
-                double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
-                if (distance < MECHANIC_INNER_RADIUS || distance > MECHANIC_OUTER_RADIUS) {
-                    continue;
-                }
+        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
+            for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
+                for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
+                    float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
+                    float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
+                    double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
+                    if (distance < MECHANIC_INNER_RADIUS || distance > MECHANIC_OUTER_RADIUS) {
+                        continue;
+                    }
 
-                double angle = angleAtOffset(cellCenterX, cellCenterY);
-                int sectorIndex = sectorIndexAtAngle(angle, Mechanic.values().length, MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS);
-                if (sectorIndex < 0) {
-                    continue;
-                }
+                    double angle = angleAtOffset(cellCenterX, cellCenterY);
+                    int sectorIndex = sectorIndexAtAngle(angle, MECHANICS.length, MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS);
+                    if (sectorIndex < 0) {
+                        continue;
+                    }
 
-                int color = pixelatedMechanicCellColor(Mechanic.values()[sectorIndex], sectorIndex, angle, distance);
-                guiGraphics.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                    int color = pixelatedMechanicCellColor(MECHANICS[sectorIndex], sectorIndex, angle, distance);
+                    pixelBatch.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                }
             }
         }
     }
@@ -138,29 +142,31 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     }
 
     private static boolean isPixelatedMechanicBorder(int sectorIndex, double angle, double distance) {
-        return isPixelatedSectorBorder(sectorIndex, Mechanic.values().length, MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS, angle, distance);
+        return isPixelatedSectorBorder(sectorIndex, MECHANICS.length, MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS, angle, distance);
     }
 
     private void renderPixelatedOptionRing(GuiGraphics guiGraphics, int centerX, int centerY) {
         RadialOption[] options = selectedMechanic.options();
         int radius = OPTION_OUTER_RADIUS + PIXEL_RING_CELL_SIZE;
-        for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
-            for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
-                float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
-                float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
-                double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
-                if (distance < OPTION_INNER_RADIUS || distance > OPTION_OUTER_RADIUS) {
-                    continue;
-                }
+        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
+            for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
+                for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
+                    float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
+                    float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
+                    double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
+                    if (distance < OPTION_INNER_RADIUS || distance > OPTION_OUTER_RADIUS) {
+                        continue;
+                    }
 
-                double angle = angleAtOffset(cellCenterX, cellCenterY);
-                int sectorIndex = sectorIndexAtAngle(angle, options.length, OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS);
-                if (sectorIndex < 0) {
-                    continue;
-                }
+                    double angle = angleAtOffset(cellCenterX, cellCenterY);
+                    int sectorIndex = sectorIndexAtAngle(angle, options.length, OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS);
+                    if (sectorIndex < 0) {
+                        continue;
+                    }
 
-                int color = pixelatedOptionCellColor(options[sectorIndex], sectorIndex, options.length, angle, distance);
-                guiGraphics.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                    int color = pixelatedOptionCellColor(options[sectorIndex], sectorIndex, options.length, angle, distance);
+                    pixelBatch.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                }
             }
         }
     }
@@ -203,8 +209,8 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     }
 
     private void renderLabels(GuiGraphics guiGraphics, Font font, int centerX, int centerY) {
-        for (Mechanic mechanic : Mechanic.values()) {
-            double angle = sectorCenterAngle(mechanic.ordinal(), Mechanic.values().length);
+        for (Mechanic mechanic : MECHANICS) {
+            double angle = sectorCenterAngle(mechanic.ordinal(), MECHANICS.length);
             int labelX = Math.round(centerX + (float) Math.sin(angle) * MECHANIC_LABEL_RADIUS);
             int labelY = Math.round(centerY - (float) Math.cos(angle) * MECHANIC_LABEL_RADIUS);
             int color = mechanic == selectedMechanic ? ACCENT_COLOR : TEXT_COLOR;
@@ -244,19 +250,21 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static void renderPixelatedMechanicOutline(GuiGraphics guiGraphics, int centerX, int centerY, Mechanic mechanic, int color) {
         int radius = MECHANIC_OUTER_RADIUS + PIXEL_RING_CELL_SIZE;
         int sectorIndex = mechanic.ordinal();
-        for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
-            for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
-                float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
-                float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
-                double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
-                if (distance < MECHANIC_INNER_RADIUS || distance > MECHANIC_OUTER_RADIUS) {
-                    continue;
-                }
+        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
+            for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
+                for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
+                    float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
+                    float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
+                    double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
+                    if (distance < MECHANIC_INNER_RADIUS || distance > MECHANIC_OUTER_RADIUS) {
+                        continue;
+                    }
 
-                double angle = angleAtOffset(cellCenterX, cellCenterY);
-                if (sectorIndexAtAngle(angle, Mechanic.values().length, MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS) == sectorIndex
-                        && isPixelatedMechanicBorder(sectorIndex, angle, distance)) {
-                    guiGraphics.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                    double angle = angleAtOffset(cellCenterX, cellCenterY);
+                    if (sectorIndexAtAngle(angle, MECHANICS.length, MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS) == sectorIndex
+                            && isPixelatedMechanicBorder(sectorIndex, angle, distance)) {
+                        pixelBatch.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                    }
                 }
             }
         }
@@ -270,19 +278,21 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private void renderPixelatedOptionOutline(GuiGraphics guiGraphics, int centerX, int centerY, int sectorIndex, int color) {
         RadialOption[] options = selectedMechanic.options();
         int radius = OPTION_OUTER_RADIUS + PIXEL_RING_CELL_SIZE;
-        for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
-            for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
-                float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
-                float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
-                double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
-                if (distance < OPTION_INNER_RADIUS || distance > OPTION_OUTER_RADIUS) {
-                    continue;
-                }
+        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
+            for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
+                for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
+                    float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
+                    float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
+                    double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
+                    if (distance < OPTION_INNER_RADIUS || distance > OPTION_OUTER_RADIUS) {
+                        continue;
+                    }
 
-                double angle = angleAtOffset(cellCenterX, cellCenterY);
-                if (sectorIndexAtAngle(angle, options.length, OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS) == sectorIndex
-                        && isPixelatedSectorBorder(sectorIndex, options.length, OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS, angle, distance)) {
-                    guiGraphics.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                    double angle = angleAtOffset(cellCenterX, cellCenterY);
+                    if (sectorIndexAtAngle(angle, options.length, OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS) == sectorIndex
+                            && isPixelatedSectorBorder(sectorIndex, options.length, OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS, angle, distance)) {
+                        pixelBatch.fill(centerX + x, centerY + y, centerX + x + PIXEL_RING_CELL_SIZE, centerY + y + PIXEL_RING_CELL_SIZE, color);
+                    }
                 }
             }
         }
@@ -310,7 +320,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     }
 
     private static Mechanic mechanicAtOffset(int x, int y) {
-        return Mechanic.values()[sectorIndexAtOffset(x, y, Mechanic.values().length)];
+        return MECHANICS[sectorIndexAtOffset(x, y, MECHANICS.length)];
     }
 
     private RadialOption optionAtOffset(int x, int y) {
@@ -499,12 +509,12 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         ROUTE_STYLE("route_style") {
             @Override
             RadialOption[] options() {
-                return RouteStyleOption.values();
+                return RouteStyleOption.VALUES;
             }
 
             @Override
             RadialOption activeOption() {
-                for (RouteStyleOption option : RouteStyleOption.values()) {
+                for (RouteStyleOption option : RouteStyleOption.VALUES) {
                     if (option.priority == ClientPipeConnectorState.getRoutePriority()) {
                         return option;
                     }
@@ -515,12 +525,12 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         AUTO_PUMPS("auto_pumps") {
             @Override
             RadialOption[] options() {
-                return PumpModeOption.values();
+                return PumpModeOption.VALUES;
             }
 
             @Override
             RadialOption activeOption() {
-                for (PumpModeOption option : PumpModeOption.values()) {
+                for (PumpModeOption option : PumpModeOption.VALUES) {
                     if (option.mode == ClientPipeConnectorState.getPumpMode()) {
                         return option;
                     }
@@ -531,7 +541,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         PUMP_DIRECTION("pump_direction") {
             @Override
             RadialOption[] options() {
-                return PumpDirectionOption.values();
+                return PumpDirectionOption.VALUES;
             }
 
             @Override
@@ -542,12 +552,12 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         COPPER_CASING("copper_casing") {
             @Override
             RadialOption[] options() {
-                return CopperCasingModeOption.values();
+                return CopperCasingModeOption.VALUES;
             }
 
             @Override
             RadialOption activeOption() {
-                for (CopperCasingModeOption option : CopperCasingModeOption.values()) {
+                for (CopperCasingModeOption option : CopperCasingModeOption.VALUES) {
                     if (option.mode == ClientPipeConnectorState.getCopperCasingMode()) {
                         return option;
                     }
@@ -558,12 +568,12 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         PIPE_STYLE("pipe_style") {
             @Override
             RadialOption[] options() {
-                return PipeStyleModeOption.values();
+                return PipeStyleModeOption.VALUES;
             }
 
             @Override
             RadialOption activeOption() {
-                for (PipeStyleModeOption option : PipeStyleModeOption.values()) {
+                for (PipeStyleModeOption option : PipeStyleModeOption.VALUES) {
                     if (option.mode == ClientPipeConnectorState.getPipeStyleMode()) {
                         return option;
                     }
@@ -583,13 +593,11 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         abstract RadialOption activeOption();
 
         Mechanic next() {
-            Mechanic[] values = values();
-            return values[(ordinal() + 1) % values.length];
+            return MECHANICS[(ordinal() + 1) % MECHANICS.length];
         }
 
         Mechanic previous() {
-            Mechanic[] values = values();
-            return values[(ordinal() - 1 + values.length) % values.length];
+            return MECHANICS[(ordinal() - 1 + MECHANICS.length) % MECHANICS.length];
         }
 
         RadialOption nextOption() {
@@ -642,6 +650,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         Z_FIRST(RoutePriority.Z_FIRST),
         AVOID_VERTICAL(RoutePriority.AVOID_VERTICAL);
 
+        private static final RouteStyleOption[] VALUES = values();
         private final RoutePriority priority;
 
         RouteStyleOption(RoutePriority priority) {
@@ -671,6 +680,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         EFFICIENT(PumpMode.EFFICIENT),
         SAFE(PumpMode.SAFE);
 
+        private static final PumpModeOption[] VALUES = values();
         private final PumpMode mode;
 
         PumpModeOption(PumpMode mode) {
@@ -699,6 +709,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         NORMAL(false),
         REVERSED(true);
 
+        private static final PumpDirectionOption[] VALUES = values();
         private final boolean reversed;
 
         PumpDirectionOption(boolean reversed) {
@@ -728,6 +739,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         MANUAL(CopperCasingMode.MANUAL),
         ALL(CopperCasingMode.ALL);
 
+        private static final CopperCasingModeOption[] VALUES = values();
         private final CopperCasingMode mode;
 
         CopperCasingModeOption(CopperCasingMode mode) {
@@ -756,6 +768,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         DEFAULT(PipeStyleMode.DEFAULT),
         GLASS(PipeStyleMode.GLASS);
 
+        private static final PipeStyleModeOption[] VALUES = values();
         private final PipeStyleMode mode;
 
         PipeStyleModeOption(PipeStyleMode mode) {
