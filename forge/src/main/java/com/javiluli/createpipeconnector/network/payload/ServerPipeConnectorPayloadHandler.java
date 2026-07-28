@@ -4,6 +4,7 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
+import com.javiluli.createpipeconnector.connector.ServerPipeConnectorEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
@@ -55,6 +56,47 @@ public final class ServerPipeConnectorPayloadHandler {
             }
 
             PipeConnectorLogic.removeLastAnchor(player.getUUID());
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleToggleConnectorMode(ToggleConnectorModePayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player == null) {
+                return;
+            }
+
+            PipeConnectorLogic.setConnectorModeEnabled(player.getUUID(), payload.enabled());
+            if (!payload.enabled()) {
+                ServerPipeConnectorEvents.cancelPipeConnection(player);
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleSelectPipeTarget(SelectPipeTargetPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player == null || !(player.level() instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            PlacementTarget target = new PlacementTarget(payload.position(), payload.face(), payload.existingPipe());
+            ServerPipeConnectorEvents.handlePipeTarget(player, serverLevel, target);
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleCancelPipeConnection(CancelPipeConnectionPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null) {
+                ServerPipeConnectorEvents.cancelPipeConnection(player);
+            }
         });
         context.setPacketHandled(true);
     }

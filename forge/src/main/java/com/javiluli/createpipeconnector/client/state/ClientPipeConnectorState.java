@@ -8,12 +8,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class ClientPipeConnectorState {
+    private static boolean connectorModeEnabled;
     private static Selection selection;
     private static List<PlacementTarget> anchors = List.of();
     private static List<PreviewPipe> previewPipes = List.of();
     private static int previewVersion;
 
     private ClientPipeConnectorState() {
+    }
+
+    public static boolean isConnectorModeEnabled() {
+        return connectorModeEnabled;
+    }
+
+    public static void setConnectorModeEnabled(boolean enabled) {
+        connectorModeEnabled = enabled;
+        if (!enabled) {
+            clearSelection();
+        }
     }
 
     public static Selection getSelection() {

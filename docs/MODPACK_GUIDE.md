@@ -3,8 +3,8 @@
 ## Requirements
 
 - Minecraft `1.20.1`
-- Forge `47.x`
-- Create `6.0.8` or compatible `6.0.x`
+- Forge `47.4.20` or compatible `47.x`
+- Create `6.0.8-289` or compatible `6.0.x`
 - Java `17`
 
 ## Runtime dependencies
@@ -16,9 +16,11 @@
 ## What the addon does
 
 - Connects Create fluid pipes automatically.
-- Finds the shortest valid route around obstacles.
+- Finds a valid route around obstacles.
 - Shows a ghost preview before placement.
-- Supports anchor waypoints and configurable key binds.
+- Adds Connector Pipe mode with a configurable `B` key.
+- Allows route confirmation while looking at air after a route has started.
+- Supports anchor waypoints and preview locking.
 - Checks survival inventory before placing pipes.
 
 ## Pack integration
@@ -28,18 +30,12 @@
 - The addon declares Create as a required Forge dependency.
 - Test long routes, anchor-heavy routes, and obstacle-heavy routes before releasing a pack update.
 
-## Not yet provided
-
-- No public config screen beyond vanilla key binding options.
-- No public API guarantee yet.
-- No compatibility promise with every render, shader, or optimization mod.
-
 ## Recommended versions
 
 - Minecraft `1.20.1`
-- Forge `47.4.10` or newer `47.x`
+- Forge `47.4.20` or newer `47.x`
 - Create `6.0.8-289`
-- Create: Pipe Connector `0.2.0-beta`
+- Create: Pipe Connector `0.3.0-beta`
 
 ## For modders
 

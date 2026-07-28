@@ -4,9 +4,9 @@ This addon does not expose a public API yet.
 
 ## Current gameplay surface
 
-- pipe in off-hand + empty main-hand sneak right-click to start
+- Connector Pipe mode + pipe in either hand + right-click a reachable block to start
 - crosshair target plus optional anchors define the route
-- sneak right-click again to confirm placement
+- right-click again to confirm placement, even while looking at air
 - the mod fills the shortest valid path between them
 - the client shows a ghost preview before placement
 

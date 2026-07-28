@@ -3,62 +3,51 @@
 
 # Create: Pipe Connector
 
-⚡ **Connect Create pipes faster. Build less by hand.**
+**Connect Create fluid pipes faster with a live preview and one-click placement.**
 
-A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Minecraft `1.20.1` with Forge.
-
-<!-- Optional badges: remove this block if CurseForge does not allow shields.io -->
+Forge build for Minecraft `1.20.1`.
 
 ![Create](https://img.shields.io/badge/Create-6.0.8-7B4F1D?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
 ![Loader](https://img.shields.io/badge/Loader-Forge-E65100?style=for-the-badge&logo=forge&logoColor=white)
-![Version](https://img.shields.io/badge/Version-0.2.0--beta-455A64?style=for-the-badge)
-
-<!-- End optional badges -->
-
+![Version](https://img.shields.io/badge/Version-0.3.0--beta-455A64?style=for-the-badge)
 </div>
 
 ---
 
-## 🚀 What Is This Mod?
+## What Is It?
 
-Building large factories in **Create** is fun, but placing long fluid pipe routes block by block can get repetitive fast.
+**Create: Pipe Connector** adds a Connector Pipe mode for Create fluid pipes.
 
-**Create: Pipe Connector** lets you plan a pipe route, preview it, and place the whole line at once. It is designed to make pipe building faster while still giving you control over the final path.
+Enable the mode, choose a start point, preview the route, adjust it with anchors, and confirm once to place the whole pipe line. It is built to remove repetitive manual pipe placement while keeping survival item checks and a clear ghost preview.
 
----
+## Main Features
 
-## ✨ Main Features
+- **Connector Pipe mode:** Press `B` to enable or disable the addon workflow.
+- **Live ghost preview:** See the planned pipe route before placement.
+- **Air confirmation:** Start on a block, then confirm the route even while looking at air.
+- **Anchor waypoints:** Press `C` to add an anchor and `V` to undo the last one.
+- **Preview lock:** Press `Left Alt` to freeze the current preview target while moving.
+- **Survival checks:** Shows `required/available` pipe counts and blocks placement if you do not have enough.
+- **Configurable controls:** Rebind connector keys from Minecraft's Controls menu.
 
-- **Automatic Pipe Routing:** Quickly connect Create fluid pipes through a valid path.
-- **Smart Pathfinding:** Routes around obstacles when possible.
-- **Live Ghost Preview:** See where pipes will be placed before confirming.
-- **Anchor Waypoints:** Press `C` to force the route through a point.
-- **Undo Last Anchor:** Press `V` to remove the last anchor.
-- **Preview Lock:** Press `Left Alt` to freeze/unfreeze the current preview target.
-- **Survival Friendly:** Shows `required/available` pipes and blocks placement if you do not have enough.
-- **Configurable Controls:** Rebind connector keys from Minecraft's Controls menu.
-- **Create Integration:** Refreshes Create pipe networks after placement.
-
----
-
-## 📦 Supported Pipes
+## Supported Pipes
 
 - `create:fluid_pipe`
 - `create:smart_fluid_pipe`
 
----
+## How To Use
 
-## 🎮 How To Use
-
-1. Put a supported Create pipe in your **off-hand**.
-2. Keep your **main hand empty**.
-3. Sneak + right-click to start the connection.
-4. Move your crosshair to preview the route.
+1. Press `B` to enable **Connector Pipe** mode.
+2. Hold a supported Create pipe in either hand.
+3. Right-click a reachable block or pipe face to start the route.
+4. Move your crosshair to guide the preview.
 5. Optional: press `C` to add an anchor.
 6. Optional: press `V` to remove the last anchor.
-7. Optional: press `Left Alt` to lock/unlock the preview target.
-8. Sneak + right-click again to place the planned pipe line.
+7. Optional: press `Left Alt` to lock or unlock the preview target.
+8. Right-click again to place the route, even if you are looking at air.
+9. Left-click during preview to cancel only the current route.
+10. Press `B` again to return to normal gameplay.
 
 In survival, the action bar shows:
 
@@ -66,85 +55,39 @@ In survival, the action bar shows:
 required/available
 ```
 
-Example:
-
-```txt
-10/32
-```
-
 If you do not have enough pipes, the required number turns red and placement is cancelled.
 
----
-
-## 📋 Requirements
+## Requirements
 
 - **Minecraft:** `1.20.1`
 - **Loader:** `Forge`
-- **Forge:** `47.x`
-- **Create:** `6.0.8` or compatible `6.0.x`
+- **Forge:** `47.4.20` or compatible `47.x`
+- **Create:** `6.0.8-289` or compatible `6.0.x`
 - **Java:** `17`
 
----
-
-## 📦 For Modpacks
+## For Modpacks
 
 - Required on both client and server.
 - Requires `Create`.
-- No extra runtime mods are required beyond `Minecraft`, `Forge`, and `Create`.
-- Current recommended version: **Create `6.0.8-289`**.
-- Current addon version: **Create: Pipe Connector `0.2.0-beta`**.
+- No extra runtime mods are required beyond Minecraft, Forge, and Create.
+- Current addon version: **`0.3.0-beta`**.
 
----
+## Beta Notice
 
-## 🌱 Beta Notice
+This Forge build is catching up with the NeoForge feature set in stages. Please report route issues with screenshots when possible.
 
-This project is currently in **Beta**.
+## For Developers
 
-You may still encounter minor bugs, edge cases, or visuals that need more polish. Feedback is very welcome, especially with screenshots or short descriptions of routes that behave strangely.
+This branch is **Forge-only** for Minecraft `1.20.1`. Shared placement logic lives in `common`, while Forge-specific input, networking, events, and rendering live in `forge`.
 
----
+- Core logic: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
+- Forge client input: `forge/src/main/java/com/javiluli/createpipeconnector/client/input`
+- Forge networking: `forge/src/main/java/com/javiluli/createpipeconnector/network`
+- Ghost preview renderer: `forge/src/main/java/com/javiluli/createpipeconnector/client/render/PipeGhostRenderer.java`
+- Controls HUD: `forge/src/main/java/com/javiluli/createpipeconnector/client/render/hud/PipeConnectorControlsHud.java`
 
-## 💬 Feedback & Contributions
-
-This project is built around player and modpack feedback.
-
-You can help by:
-
-- Reporting bugs
-- Suggesting features
-- Sharing screenshots or videos of issues
-- Testing long or complex routes in real Create factories
-- Opening pull requests for fixes or improvements
-
-Thanks for helping make Create pipe building smoother!
-
----
-
-## 💻 For Developers
-
-> This branch is **Forge-only** for Minecraft `1.20.1`. Shared placement logic lives in `common`, while the active runtime implementation lives in `forge`.
-
-### Project Structure
-
-- **Core Logic (`/common`):**
-  Shared backend logic lives in `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`.
-
-- **Forge Implementation (`/forge`):**
-  Handles entrypoints, events, networking, keybinds, server-side placement, and client preview rendering.
-
-- **Rendering (`/forge/.../client/render`):**
-  The ghost preview system is managed by `PipeGhostRenderer.java`, with anchor highlights in the `overlay` package.
-
-### Building
+Build commands:
 
 - Run the Forge dev client: `./gradlew :forge:Client`
 - Build the Forge artifact: `./gradlew :forge:build`
 - Build and copy the release jar: `./gradlew buildAll`
-
-### Documentation
-
-- `docs/PLAYER_GUIDE.md` - In-depth player usage
-- `docs/MODPACK_GUIDE.md` - Packmaker notes and integration
-- `docs/DEV_GUIDE.md` - Implementation details and architecture
-- `docs/API.md` - Cross-mod integration notes
-- `docs/CURSEFORGE_RELEASE.md` - Forge release upload checklist

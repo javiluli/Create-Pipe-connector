@@ -30,7 +30,7 @@ Keep the Forge branch focused on Minecraft `1.20.1` while preserving shared logi
 
 ## Feature flow
 
-1. Player enters pipe mode with a pipe in the off-hand and an empty main hand.
+1. Player enables Connector Pipe mode with `B` and holds a supported pipe in either hand.
 2. Client stores the selection.
 3. Crosshair target and optional anchors drive preview generation.
 4. The preview world is built from the computed placement plan.
@@ -47,7 +47,7 @@ Keep the Forge branch focused on Minecraft `1.20.1` while preserving shared logi
 ## Release checklist
 
 1. Run `./gradlew buildAll`.
-2. Upload `out_jars/createpipeconnector-forge-1.20.1-0.2.0-beta.jar` to CurseForge.
+2. Upload `out_jars/createpipeconnector-forge-1.20.1-0.3.0-beta.jar` to CurseForge.
 3. Mark Minecraft `1.20.1`, Forge, and Java `17`.
 4. Add Create as a required dependency.
 5. Mark the environment as both client and server.

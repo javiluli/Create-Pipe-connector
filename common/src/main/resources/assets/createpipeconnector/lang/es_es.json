@@ -1,6 +1,14 @@
 {
   "key.categories.createpipeconnector": "Create: Pipe Connector",
+  "key.createpipeconnector.toggle_connector_mode": "Activar modo Connector Pipe",
   "key.createpipeconnector.toggle_preview_lock": "Bloquear preview de tuberías",
   "key.createpipeconnector.add_anchor": "Añadir ancla de tuberías",
-  "key.createpipeconnector.remove_last_anchor": "Quitar última ancla de tuberías"
+  "key.createpipeconnector.remove_last_anchor": "Quitar última ancla de tuberías",
+  "hud.createpipeconnector.connector_mode": "Modo Connector Pipe",
+  "hud.createpipeconnector.control.start_confirm": "Iniciar/confirmar",
+  "hud.createpipeconnector.control.cancel": "Cancelar ruta",
+  "hud.createpipeconnector.control.add_anchor": "Crear ancla",
+  "hud.createpipeconnector.control.remove_anchor": "Quitar ancla",
+  "hud.createpipeconnector.control.lock_preview": "Fijar preview",
+  "hud.createpipeconnector.control.exit_mode": "Salir del modo"
 }

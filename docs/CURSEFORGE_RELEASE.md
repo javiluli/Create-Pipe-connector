@@ -2,12 +2,12 @@
 
 ## File
 
-- Upload `out_jars/createpipeconnector-forge-1.20.1-0.2.0-beta.jar`.
+- Upload `out_jars/createpipeconnector-forge-1.20.1-0.3.0-beta.jar`.
 
 ## Project metadata
 
 - Name: `Create: Pipe Connector`
-- Version: `0.2.0-beta`
+- Version: `0.3.0-beta`
 - Game version: `Minecraft 1.20.1`
 - Mod loader: `Forge`
 - Java version: `Java 17`
@@ -21,7 +21,7 @@
 
 ## Release notes
 
-Use the existing `0.2.0-beta` notes:
+Use the existing `0.3.0-beta` notes:
 
 - Live ghost preview while routing pipes
 - Anchor waypoints with `C` and undo with `V`

@@ -1,6 +1,14 @@
 {
   "key.categories.createpipeconnector": "Create: Pipe Connector",
+  "key.createpipeconnector.toggle_connector_mode": "Toggle Connector Pipe Mode",
   "key.createpipeconnector.toggle_preview_lock": "Lock Pipe Preview",
   "key.createpipeconnector.add_anchor": "Add Pipe Anchor",
-  "key.createpipeconnector.remove_last_anchor": "Remove Last Pipe Anchor"
+  "key.createpipeconnector.remove_last_anchor": "Remove Last Pipe Anchor",
+  "hud.createpipeconnector.connector_mode": "Connector Pipe Mode",
+  "hud.createpipeconnector.control.start_confirm": "Start/Confirm",
+  "hud.createpipeconnector.control.cancel": "Cancel route",
+  "hud.createpipeconnector.control.add_anchor": "Add anchor",
+  "hud.createpipeconnector.control.remove_anchor": "Undo anchor",
+  "hud.createpipeconnector.control.lock_preview": "Lock preview",
+  "hud.createpipeconnector.control.exit_mode": "Exit mode"
 }

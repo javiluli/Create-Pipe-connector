@@ -8,17 +8,24 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTa
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
 import com.javiluli.createpipeconnector.network.CreatePipeConnectorNetwork;
 import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
+import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
+import com.javiluli.createpipeconnector.network.payload.SelectPipeTargetPayload;
+import com.javiluli.createpipeconnector.network.payload.ToggleConnectorModePayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -28,6 +35,7 @@ import java.util.List;
 
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ClientPipeConnectorInputHandler {
+    private static final double AIR_PREVIEW_REACH = 5.0D;
     private static boolean showingPipeStatus;
     private static boolean previewTargetLocked;
     private static PlacementTarget lockedPreviewTarget;
@@ -41,40 +49,88 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null || !player.isShiftKeyDown() || !player.getMainHandItem().isEmpty()) {
+        if (!ClientPipeConnectorState.isConnectorModeEnabled()) {
             return;
         }
 
-        Block heldPipeBlock = PipeConnectorLogic.getPipeBlock(player.getOffhandItem());
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            return;
+        }
+
+        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
         if (heldPipeBlock == null) {
             return;
         }
 
-        PlacementTarget clickedTarget = PipeConnectorLogic.resolvePlacementTarget(event.getLevel(), event.getPos(), event.getFace(), heldPipeBlock);
-        if (clickedTarget == null) {
+        if (PipeConnectorLogic.resolvePlacementTarget(event.getLevel(), event.getPos(), event.getFace(), heldPipeBlock) == null) {
             return;
         }
 
         event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public static void onInteractionKeyMappingTriggered(InputEvent.InteractionKeyMappingTriggered event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.screen != null || event.getHand() != InteractionHand.MAIN_HAND || !ClientPipeConnectorState.isConnectorModeEnabled()) {
+            return;
+        }
+
+        LocalPlayer player = minecraft.player;
+        if (player == null) {
+            return;
+        }
+
+        Selection currentSelection = ClientPipeConnectorState.getSelection();
+        if (event.isAttack()) {
+            if (currentSelection != null) {
+                event.setCanceled(true);
+                event.setSwingHand(false);
+                clearCurrentConnection(player);
+                CreatePipeConnectorNetwork.sendToServer(new CancelPipeConnectionPayload());
+            }
+            return;
+        }
+
+        if (!event.isUseItem()) {
+            return;
+        }
+
+        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
+        if (heldPipeBlock == null) {
+            return;
+        }
+
+        PlacementTarget target = currentSelection == null
+                ? getBlockPreviewTarget(minecraft, heldPipeBlock)
+                : getActivePreviewTarget(minecraft, heldPipeBlock);
+        if (target == null) {
+            return;
+        }
+
+        event.setCanceled(true);
+        event.setSwingHand(false);
+        handleClientTarget(player, heldPipeBlock, target);
+    }
+
+    private static void handleClientTarget(LocalPlayer player, Block heldPipeBlock, PlacementTarget target) {
+        CreatePipeConnectorNetwork.sendToServer(new SelectPipeTargetPayload(target.position(), target.face(), target.existingPipe()));
+
         Selection currentSelection = ClientPipeConnectorState.getSelection();
         if (currentSelection == null) {
-            ClientPipeConnectorState.setSelection(new Selection(clickedTarget.position(), heldPipeBlock, clickedTarget.face(), clickedTarget.existingPipe()));
+            ClientPipeConnectorState.setSelection(new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
             clearPreviewTargetLock();
             clearPipeStatus(player);
             return;
         }
 
-        if (currentSelection.position().equals(clickedTarget.position()) || currentSelection.pipeBlock() != heldPipeBlock) {
-            ClientPipeConnectorState.clearSelection();
-            clearPreviewTargetLock();
-            clearPipeStatus(player);
+        if (currentSelection.position().equals(target.position()) || currentSelection.pipeBlock() != heldPipeBlock) {
+            clearCurrentConnection(player);
             return;
         }
 
-        ClientPipeConnectorState.clearSelection();
-        clearPreviewTargetLock();
-        clearPipeStatus(player);
+        clearCurrentConnection(player);
     }
 
     @SubscribeEvent
@@ -85,15 +141,28 @@ public final class ClientPipeConnectorInputHandler {
 
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null) {
-            ClientPipeConnectorState.clearSelection();
+            ClientPipeConnectorState.setConnectorModeEnabled(false);
+            clearCurrentConnection(minecraft.player);
+            return;
+        }
+
+        if (consumeConnectorModeToggle(minecraft)) {
+            boolean enabled = !ClientPipeConnectorState.isConnectorModeEnabled();
+            ClientPipeConnectorState.setConnectorModeEnabled(enabled);
+            CreatePipeConnectorNetwork.sendToServer(new ToggleConnectorModePayload(enabled));
             clearPreviewTargetLock();
             clearPipeStatus(minecraft.player);
+        }
+
+        if (!ClientPipeConnectorState.isConnectorModeEnabled()) {
+            ClientPipeConnectorKeyMappings.drainPlacementClicks();
+            clearCurrentConnection(minecraft.player);
             return;
         }
 
         Selection selection = ClientPipeConnectorState.getSelection();
         if (selection == null) {
-            ClientPipeConnectorKeyMappings.drainPlacementClicks();
+            drainRoutingKeys();
             ClientPipeConnectorState.setPreviewPipes(List.of());
             clearPreviewTargetLock();
             clearPipeStatus(minecraft.player);
@@ -101,9 +170,7 @@ public final class ClientPipeConnectorInputHandler {
         }
 
         if (!PipeConnectorLogic.isPlayerInPipeMode(minecraft.player, selection)) {
-            ClientPipeConnectorState.clearSelection();
-            clearPreviewTargetLock();
-            clearPipeStatus(minecraft.player);
+            clearCurrentConnection(minecraft.player);
             return;
         }
 
@@ -158,8 +225,16 @@ public final class ClientPipeConnectorInputHandler {
         return previewTargetLocked ? lockedPreviewTarget : hoveredTarget;
     }
 
+    private static PlacementTarget getActivePreviewTarget(Minecraft minecraft, Block pipeBlock) {
+        return previewTargetLocked ? lockedPreviewTarget : getPreviewTarget(minecraft, pipeBlock);
+    }
+
     private static boolean consumePreviewLockToggle(Minecraft minecraft) {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumePreviewLockToggle();
+    }
+
+    private static boolean consumeConnectorModeToggle(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeConnectorModeToggle();
     }
 
     private static boolean consumeAddAnchor(Minecraft minecraft) {
@@ -180,18 +255,51 @@ public final class ClientPipeConnectorInputHandler {
     }
 
     private static PlacementTarget getPreviewTarget(Minecraft minecraft, Block pipeBlock) {
+        if (minecraft.level == null || minecraft.player == null) {
+            return null;
+        }
+
+        PlacementTarget blockTarget = getBlockPreviewTarget(minecraft, pipeBlock);
+        if (blockTarget != null) {
+            return blockTarget;
+        }
+
+        return getAirPreviewTarget(minecraft);
+    }
+
+    private static PlacementTarget getBlockPreviewTarget(Minecraft minecraft, Block pipeBlock) {
+        if (minecraft.level == null) {
+            return null;
+        }
+
         HitResult hitResult = minecraft.hitResult;
-        if (!(hitResult instanceof BlockHitResult blockHitResult)) {
+        if (!(hitResult instanceof BlockHitResult blockHitResult) || hitResult.getType() != HitResult.Type.BLOCK) {
             return null;
         }
 
         return PipeConnectorLogic.resolvePlacementTarget(minecraft.level, blockHitResult.getBlockPos(), blockHitResult.getDirection(), pipeBlock);
     }
 
+    private static PlacementTarget getAirPreviewTarget(Minecraft minecraft) {
+        LocalPlayer player = minecraft.player;
+        if (minecraft.level == null || player == null) {
+            return null;
+        }
+
+        Vec3 lookVector = player.getViewVector(1.0F);
+        BlockPos targetPosition = BlockPos.containing(player.getEyePosition().add(lookVector.scale(AIR_PREVIEW_REACH)));
+        if (!PipeConnectorLogic.canPlacePipeAt(minecraft.level, targetPosition)) {
+            return null;
+        }
+
+        Direction face = Direction.getNearest(lookVector.x(), lookVector.y(), lookVector.z());
+        return new PlacementTarget(targetPosition, face, false);
+    }
+
     private static void showPipeRequirement(LocalPlayer player, Selection selection, ConnectionPlan plan) {
         int requiredPipes = plan.requiredPipes();
         if (player.getAbilities().instabuild) {
-            showPipeStatus(player, Component.literal(requiredPipes + "/∞").withStyle(ChatFormatting.WHITE));
+            showPipeStatus(player, Component.literal(requiredPipes + "/8").withStyle(ChatFormatting.WHITE));
             return;
         }
 
@@ -220,5 +328,20 @@ public final class ClientPipeConnectorInputHandler {
     private static void clearPreviewTargetLock() {
         previewTargetLocked = false;
         lockedPreviewTarget = null;
+    }
+
+    private static void clearCurrentConnection(LocalPlayer player) {
+        ClientPipeConnectorState.clearSelection();
+        clearPreviewTargetLock();
+        clearPipeStatus(player);
+    }
+
+    private static void drainRoutingKeys() {
+        while (ClientPipeConnectorKeyMappings.consumePreviewLockToggle()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeAddAnchor()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeRemoveLastAnchor()) {
+        }
     }
 }

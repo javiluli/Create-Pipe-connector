@@ -2,11 +2,14 @@
 
 ## What it does
 
-- Hold a Create pipe in the off-hand and keep the main hand empty.
-- Sneak + right-click to start a connection from the targeted face or block.
-- Sneak + right-click again to confirm the route.
-- The mod fills the shortest valid route automatically.
+- Press `B` to enable Connector Pipe mode.
+- Hold a supported Create pipe in either hand.
+- Right-click a reachable block or pipe face to start a connection.
+- Right-click again to confirm the current preview, even while looking at air.
+- Left-click during a preview to cancel the current route without disabling Connector Pipe mode.
+- The mod fills a valid route automatically.
 - A ghost preview shows the result before placement.
+- A control HUD appears above the hotbar while Connector Pipe mode is enabled.
 - The action bar shows `required/available` pipe counts in survival.
 
 ## Supported pipes
@@ -16,12 +19,15 @@
 
 ## How to use it
 
-1. Put a supported Create pipe in the off-hand.
-2. Keep the main hand empty, sneak, and right-click to select the start point.
-3. Move the crosshair to guide the live preview.
-4. Press `C` to add an anchor, or `V` to remove the last anchor.
-5. Press `Left Alt` to lock or unlock the current preview target.
-6. Sneak + right-click again to place the planned route.
+1. Press `B` to enable Connector Pipe mode.
+2. Hold a supported Create pipe in either hand.
+3. Look at a reachable block or pipe face and right-click to select the start point.
+4. Move the crosshair to guide the live preview, even through open air.
+5. Press `C` to add an anchor, or `V` to remove the last anchor.
+6. Press `Left Alt` to lock or unlock the current preview target.
+7. Right-click again to place the planned route, even if no block is targeted.
+8. Left-click during a preview to cancel only the current route.
+9. Press `B` again to disable Connector Pipe mode.
 
 ## Preview behavior
 
@@ -33,6 +39,5 @@
 
 ## Beta status
 
-- This addon is in beta.
-- The name and visuals may still change later.
-- If something looks wrong, report it with a screenshot and the approximate location.
+- This Forge build is in beta.
+- If something looks wrong, report it with a screenshot and the approximate route.
