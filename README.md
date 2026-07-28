@@ -3,85 +3,89 @@
 
 # Create: Pipe Connector
 
-**Plan Create pipe routes, preview them, and place the whole line at once.**
+**Build Create fluid pipe routes faster: preview the path, adjust it, and place it in one action.**
 
-A utility addon for [Create](https://github.com/Creators-of-Create/Create) on Minecraft `1.21.1`.
+A utility addon for [Create](https://github.com/Creators-of-Create/Create). Available builds are listed below.
 
+![Version](https://img.shields.io/badge/Version-1.0.0-2E7D32?style=for-the-badge)
+<a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
+<img src="https://img.shields.io/curseforge/dt/1610354?style=for-the-badge&color=242629&labelColor=F16436&logo=curseforge&logoColor=white&label=" alt="CurseForge">
+</a>
 ![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
-![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
-![Loader](https://img.shields.io/badge/Loader-NeoForge-E65100?style=for-the-badge&logo=forge&logoColor=white)
-![Version](https://img.shields.io/badge/Version-0.4.0--beta-455A64?style=for-the-badge)
+![NeoForge](https://img.shields.io/badge/NeoForge-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
+![Forge](https://img.shields.io/badge/Forge-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
+![Fabric](https://img.shields.io/badge/Fabric-not%20available-757575?style=for-the-badge)
 </div>
 
 ---
 
-## What It Does
+## What Is It?
 
-Create factories are fun; placing long fluid pipe runs block by block is not.
+**Create: Pipe Connector** adds a dedicated pipe-connection mode for Create fluid pipes.
 
-**Create: Pipe Connector** adds a connector mode that lets you choose a start point, preview a route, adjust it with anchors or radial options, and place the full pipe line in one action.
+Instead of placing long pipe lines block by block, you select a start point, aim where the route should go, preview the result, and confirm once. The addon can also add pumps, casing, and glass pipe styling while showing material requirements before placement.
 
-## Highlights
+## Main Features
 
-- **Live ghost preview:** See pipes, pumps, glass sections, and casing before placement.
-- **Obstacle-aware routing:** The route searches for a valid path around blocked spaces.
-- **Anchor support:** Add route waypoints when you want a specific turn or support point.
-- **Radial options menu:** Configure route style, pump mode, pump direction, casing, and pipe style.
-- **Survival checks:** Required/available materials are shown and missing parts are tinted red.
-- **Create integration:** Placement refreshes Create pipe networks and supports Create's wrench for pipe style toggles.
+- **Ghost preview:** See the route before spending items.
+- **Smart routing:** Finds a valid path around obstacles.
+- **Anchors:** Add waypoints to force turns or guide the route.
+- **Radial menu:** Change route style, pumps, flow direction, casing, and pipe style.
+- **Survival checks:** Shows required/available materials and blocks placement if items are missing.
+- **Create wrench shortcut:** Toggle straight pipe segments between default and glass style.
 
-## Supported Blocks
+## Supported Create Blocks
 
-Pipe routing starts from and places:
+The connector places and routes:
 
 - `create:fluid_pipe`
 
-Optional route features use Create blocks only:
+Optional features use:
 
 - `create:mechanical_pump`
 - `create:glass_fluid_pipe`
 - `create:copper_casing`
 - `create:encased_fluid_pipe`
 
-`create:smart_fluid_pipe` is intentionally not used as a connector pipe because it is a filtering pipe, not a normal routing pipe.
+`create:smart_fluid_pipe` is intentionally not used as a route pipe because it is a filtering pipe, not a normal connector pipe.
 
 ## Default Controls
 
-Only the core controls are assigned by default:
+Only the most important controls are bound by default:
 
 | Action | Default |
 | --- | --- |
 | Toggle Connector Pipe mode | `B` |
 | Start / confirm route | Right-click |
-| Open radial options | `N` |
+| Open radial menu | `N` |
 | Add anchor | `C` |
-| Lock / unlock preview target | `Left Alt` |
+| Lock preview target / freecam-style planning | `Left Alt` |
 | Cancel current route | Left-click |
 
-Advanced actions, such as undo anchor, manual pump marks, casing marks, pump cycling, pipe style cycling, and pump direction reversal, are available in Minecraft's Controls menu but are **unassigned by default**. Use the radial menu for those options, or bind keys if you prefer direct shortcuts.
+Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps, and undo actions are available in Minecraft's Controls menu but are **unassigned by default**. You can use the radial menu instead, or bind them yourself.
 
-## How To Use
+## Quick Start
 
 1. Press `B` to enable **Connector Pipe** mode.
-2. Hold `create:fluid_pipe` in either hand.
-3. Right-click a reachable block or pipe face to start a route.
-4. Move your crosshair to guide the live preview.
-5. Optional: press `C` to add an anchor.
-6. Optional: press `Left Alt` to lock the preview target while you move.
-7. Optional: press `N` to open the radial menu and adjust route options.
-8. Right-click again to place the route, even if you are looking at air.
+2. Hold a `create:fluid_pipe` in either hand.
+3. Right-click a reachable block or pipe face to start.
+4. Move your crosshair to preview the route.
+5. Optional: press `C` to add anchors.
+6. Optional: press `Left Alt` to lock the preview target while moving.
+7. Optional: press `N` to open the radial menu.
+8. Right-click again to place the route.
 9. Left-click during preview to cancel only the current route.
-10. Press `B` again to return to normal gameplay.
+10. Press `B` again to leave Connector Pipe mode.
 
-## Radial Options
-
-The radial menu keeps advanced settings in one place:
+## Radial Menu Options
 
 - **Route:** Auto, horizontal first, vertical first, X first, Z first, or avoid vertical.
 - **Pumps:** Off, efficient spacing, or safer shorter spacing.
 - **Flow:** Normal or reversed automatic pump direction.
-- **Casing:** No casing, manual marks, or full-route casing.
-- **Style:** Default fluid pipes or glass straight sections with regular elbows.
+- **Casing:** No casing, manual casing marks, or full-route casing.
+- **Style:** Default pipes or glass straight sections.
+
+Tip: `Avoid vertical` is useful for natural terrain, but very long or complex routes can be heavier than the other route modes.
 
 ## Survival Materials
 
@@ -91,36 +95,41 @@ The HUD shows material counts as:
 required/available
 ```
 
-If a route needs more items than you have, the missing preview pieces are tinted red and placement is blocked. Copper casing only requires at least one `create:copper_casing` in inventory to unlock casing placement; it is not consumed.
+If a route needs more items than you have, missing preview pieces are tinted red and placement is blocked.
 
-## Wrench Shortcut
-
-With Connector Pipe mode enabled, double right-click a straight connected pipe segment with Create's wrench to toggle it between default and glass style. The shortcut stops at mechanical pumps and leaves elbows as regular fluid pipes when glass cannot represent the shape.
+Copper casing works like Create: you only need at least one `create:copper_casing` in your inventory to apply casing. It is not consumed per pipe.
 
 ## Requirements
 
-- **Minecraft:** `1.21.1`
-- **Loader:** `NeoForge`
-- **NeoForge:** `21.1.219` or compatible
-- **Create:** `6.0.10-280` or compatible
 - **Java:** `21`
 
-## For Modpacks
+| Loader | Minecraft | Mod Version | Status |
+| --- | --- | --- | --- |
+| NeoForge | `1.21.1` | `1.0.0` | Main supported build |
+| Forge | `1.20.1` | `0.2.0-beta` | Separate Forge branch/build |
+| Fabric | - | - | Not available yet |
 
-- Required on both client and server.
-- Requires `Create`.
-- No runtime dependencies beyond Minecraft, NeoForge, and Create.
-- Current addon version: **`0.4.0-beta`**.
-- This is a beta: please report route issues with screenshots when possible.
+For the NeoForge build:
 
-## For Developers
+- **NeoForge:** `21.1.219` or compatible
+- **Create:** `6.0.10-280` or compatible
 
-This branch is **NeoForge-only**. Shared logic lives in `common`; loader-specific input, networking, events, and rendering live in `neoforge`.
+## Modpack Notes
 
-- Core logic: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
-- Create block helpers: `common/src/main/java/com/javiluli/createpipeconnector/connector/CreatePipeBlocks.java`
+- Install on both client and server.
+- Requires Create at runtime.
+- No extra runtime dependencies beyond Minecraft, the selected loader, and Create.
+- Current NeoForge version: **`1.0.0`**.
+- This is still beta software, so route edge cases can happen. Screenshots help a lot when reporting bugs.
+
+## Developer Notes
+
+This branch is NeoForge-only. Shared connector logic lives in `common`; NeoForge input, networking, events, HUD, and rendering live in `neoforge`.
+
+- Core routing: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
+- Preview state building: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipePreviewBuilder.java`
 - NeoForge client input: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/input`
-- Ghost preview rendering: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/render`
+- Ghost preview renderer: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/render/PipeGhostRenderer.java`
 - Radial menu: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/screen/ConnectorOptionsRadialScreen.java`
 
 Build commands:
@@ -129,7 +138,7 @@ Build commands:
 - Build jar: `./gradlew :neoforge:build`
 - Build release copy: `./gradlew buildAll`
 
-Additional docs:
+More docs:
 
 - `docs/PLAYER_GUIDE.md`
 - `docs/MODPACK_GUIDE.md`
