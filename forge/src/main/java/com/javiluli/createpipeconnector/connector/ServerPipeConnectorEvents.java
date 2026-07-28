@@ -5,18 +5,22 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTa
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeDisplayToggleResult;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
 import net.minecraft.core.BlockPos;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.TickEvent;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -129,14 +133,18 @@ public final class ServerPipeConnectorEvents {
         }
 
         Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
-        if (heldPipeBlock == null || !isTargetValid(player, serverLevel, heldPipeBlock, target)) {
+        Selection currentSelection = PipeConnectorLogic.getSelection(player.getUUID());
+        if (heldPipeBlock == null || !isTargetValid(player, serverLevel, heldPipeBlock, target, currentSelection == null)) {
+            if (currentSelection != null) {
+                PipeConnectorLogic.clearSelection(player.getUUID());
+                clearActionBar(player);
+            }
             return false;
         }
 
-        Selection currentSelection = PipeConnectorLogic.getSelection(player.getUUID());
         if (currentSelection == null) {
             PipeConnectorLogic.setSelection(player.getUUID(), new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
-            player.displayClientMessage(Component.literal("Primer punto seleccionado. Ahora marca el segundo."), true);
+            player.displayClientMessage(Component.translatable("hud.createpipeconnector.first_point_selected"), true);
             return true;
         }
 
@@ -152,19 +160,20 @@ public final class ServerPipeConnectorEvents {
             return true;
         }
 
-        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, currentSelection, PipeConnectorLogic.getAnchors(player.getUUID()), target);
+        ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, currentSelection, PipeConnectorLogic.getAnchors(player.getUUID()), target, PipeConnectorLogic.getRoutePriority(player.getUUID()));
         if (plan == null) {
             PipeConnectorLogic.clearSelection(player.getUUID());
             clearActionBar(player);
             return true;
         }
-        if (PipeConnectorLogic.isAutoPumpsEnabled(player.getUUID())) {
-            plan = PipeConnectorLogic.withAutoPumps(plan);
-        }
+        PipeConnectorLogic.PumpMode pumpMode = PipeConnectorLogic.getPumpMode(player.getUUID());
+        plan = PipeConnectorLogic.withPumpMode(plan, pumpMode, PipeConnectorLogic.isAutoPumpDirectionReversed(player.getUUID()));
+        plan = PipeConnectorLogic.withManualPumps(plan, PipeConnectorLogic.getManualPumps(player.getUUID()));
+        plan = PipeConnectorLogic.withCopperCasingMode(plan, PipeConnectorLogic.getCopperCasingMode(player.getUUID()), PipeConnectorLogic.getCopperCasings(player.getUUID()), currentSelection.pipeBlock());
+        plan = PipeConnectorLogic.withPipeStyleMode(plan, PipeConnectorLogic.getPipeStyleMode(player.getUUID()), currentSelection.pipeBlock());
 
         if (!PipeConnectorLogic.hasEnoughItems(player, currentSelection.pipeBlock(), plan)) {
-            PipeConnectorLogic.clearSelection(player.getUUID());
-            clearActionBar(player);
+            player.displayClientMessage(missingMaterialsMessage(player, currentSelection.pipeBlock(), plan).copy().withStyle(ChatFormatting.RED), true);
             return true;
         }
 
@@ -183,8 +192,8 @@ public final class ServerPipeConnectorEvents {
         clearActionBar(player);
     }
 
-    private static boolean isTargetValid(Player player, ServerLevel level, Block pipeBlock, PlacementTarget target) {
-        if (!PipeConnectorLogic.isWithinInteractionRange(player, target.position())) {
+    private static boolean isTargetValid(Player player, ServerLevel level, Block pipeBlock, PlacementTarget target, boolean requireReach) {
+        if (requireReach && !PipeConnectorLogic.isWithinInteractionRange(player, target.position())) {
             return false;
         }
 
@@ -200,6 +209,36 @@ public final class ServerPipeConnectorEvents {
 
     private static void clearActionBar(Player player) {
         player.displayClientMessage(Component.empty(), true);
+    }
+
+    private static Component missingMaterialsMessage(Player player, Block pipeBlock, ConnectionPlan plan) {
+        List<Component> missingMaterials = new ArrayList<>();
+        addMissingMaterial(missingMaterials, plan.requiredPipes(), PipeConnectorLogic.countAvailablePipes(player, pipeBlock), "hud.createpipeconnector.missing_pipes");
+        addMissingMaterial(missingMaterials, plan.requiredPumps(), PipeConnectorLogic.countAvailablePumps(player), "hud.createpipeconnector.missing_pumps");
+        addMissingMaterial(missingMaterials, plan.requiredGlassPipes(), PipeConnectorLogic.countAvailableGlassPipes(player), "hud.createpipeconnector.missing_glass_pipes");
+        addMissingMaterial(missingMaterials, plan.requiredCopperCasings(), PipeConnectorLogic.countAvailableCopperCasings(player), "hud.createpipeconnector.missing_casings");
+        if (missingMaterials.isEmpty()) {
+            return Component.translatable("hud.createpipeconnector.missing_materials", Component.literal("?"));
+        }
+        return Component.translatable("hud.createpipeconnector.missing_materials", joinComponents(missingMaterials));
+    }
+
+    private static void addMissingMaterial(List<Component> missingMaterials, int required, int available, String translationKey) {
+        int missing = required - available;
+        if (missing > 0) {
+            missingMaterials.add(Component.translatable(translationKey, missing));
+        }
+    }
+
+    private static MutableComponent joinComponents(List<Component> components) {
+        MutableComponent joined = Component.empty();
+        for (int index = 0; index < components.size(); index++) {
+            if (index > 0) {
+                joined.append(", ");
+            }
+            joined.append(components.get(index));
+        }
+        return joined;
     }
 
     private static void clearExpiredWrenchClicks(long gameTime) {

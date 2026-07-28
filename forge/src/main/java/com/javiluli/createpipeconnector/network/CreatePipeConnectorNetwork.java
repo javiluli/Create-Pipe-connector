@@ -3,11 +3,20 @@ package com.javiluli.createpipeconnector.network;
 import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayload;
+import com.javiluli.createpipeconnector.network.payload.CopperCasingModePayload;
+import com.javiluli.createpipeconnector.network.payload.PipeStyleModePayload;
+import com.javiluli.createpipeconnector.network.payload.PumpModePayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
+import com.javiluli.createpipeconnector.network.payload.RemoveLastCopperCasingPayload;
+import com.javiluli.createpipeconnector.network.payload.RemoveLastManualPumpPayload;
+import com.javiluli.createpipeconnector.network.payload.ReverseAutoPumpDirectionPayload;
+import com.javiluli.createpipeconnector.network.payload.RoutePriorityPayload;
 import com.javiluli.createpipeconnector.network.payload.SelectPipeTargetPayload;
 import com.javiluli.createpipeconnector.network.payload.ServerPipeConnectorPayloadHandler;
 import com.javiluli.createpipeconnector.network.payload.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.network.payload.ToggleConnectorModePayload;
+import com.javiluli.createpipeconnector.network.payload.ToggleCopperCasingPayload;
+import com.javiluli.createpipeconnector.network.payload.ToggleManualPumpPayload;
 import com.javiluli.createpipeconnector.network.payload.WrenchPipeDisplayPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
@@ -53,6 +62,41 @@ public final class CreatePipeConnectorNetwork {
         );
         CHANNEL.registerMessage(
                 nextMessageId(),
+                PumpModePayload.class,
+                PumpModePayload::encode,
+                PumpModePayload::decode,
+                ServerPipeConnectorPayloadHandler::handlePumpMode
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                CopperCasingModePayload.class,
+                CopperCasingModePayload::encode,
+                CopperCasingModePayload::decode,
+                ServerPipeConnectorPayloadHandler::handleCopperCasingMode
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                PipeStyleModePayload.class,
+                PipeStyleModePayload::encode,
+                PipeStyleModePayload::decode,
+                ServerPipeConnectorPayloadHandler::handlePipeStyleMode
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                ReverseAutoPumpDirectionPayload.class,
+                ReverseAutoPumpDirectionPayload::encode,
+                ReverseAutoPumpDirectionPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleReverseAutoPumpDirection
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                RoutePriorityPayload.class,
+                RoutePriorityPayload::encode,
+                RoutePriorityPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleRoutePriority
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
                 SelectPipeTargetPayload.class,
                 SelectPipeTargetPayload::encode,
                 SelectPipeTargetPayload::decode,
@@ -71,6 +115,34 @@ public final class CreatePipeConnectorNetwork {
                 ToggleAutoPumpsPayload::encode,
                 ToggleAutoPumpsPayload::decode,
                 ServerPipeConnectorPayloadHandler::handleToggleAutoPumps
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                RemoveLastManualPumpPayload.class,
+                RemoveLastManualPumpPayload::encode,
+                RemoveLastManualPumpPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleRemoveLastManualPump
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                RemoveLastCopperCasingPayload.class,
+                RemoveLastCopperCasingPayload::encode,
+                RemoveLastCopperCasingPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleRemoveLastCopperCasing
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                ToggleCopperCasingPayload.class,
+                ToggleCopperCasingPayload::encode,
+                ToggleCopperCasingPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleToggleCopperCasing
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                ToggleManualPumpPayload.class,
+                ToggleManualPumpPayload::encode,
+                ToggleManualPumpPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleToggleManualPump
         );
         CHANNEL.registerMessage(
                 nextMessageId(),
@@ -93,6 +165,26 @@ public final class CreatePipeConnectorNetwork {
         CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
     }
 
+    public static void sendToServer(PumpModePayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(CopperCasingModePayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(PipeStyleModePayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(ReverseAutoPumpDirectionPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(RoutePriorityPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
     public static void sendToServer(SelectPipeTargetPayload payload) {
         CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
     }
@@ -102,6 +194,22 @@ public final class CreatePipeConnectorNetwork {
     }
 
     public static void sendToServer(ToggleAutoPumpsPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(RemoveLastManualPumpPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(RemoveLastCopperCasingPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(ToggleCopperCasingPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(ToggleManualPumpPayload payload) {
         CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
     }
 

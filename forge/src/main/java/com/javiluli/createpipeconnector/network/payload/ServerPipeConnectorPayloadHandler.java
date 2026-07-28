@@ -16,50 +16,6 @@ public final class ServerPipeConnectorPayloadHandler {
     private ServerPipeConnectorPayloadHandler() {
     }
 
-    public static void handleAddAnchor(AddAnchorPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
-            if (player == null || !(player.level() instanceof ServerLevel serverLevel)) {
-                return;
-            }
-
-            Selection selection = PipeConnectorLogic.getSelection(player.getUUID());
-            if (selection == null || !PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
-                return;
-            }
-
-            PlacementTarget anchor = new PlacementTarget(payload.position(), payload.face(), payload.existingPipe());
-            if (!isAnchorValid(serverLevel, selection, anchor)) {
-                return;
-            }
-
-            ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, selection, PipeConnectorLogic.getAnchors(player.getUUID()), anchor);
-            if (plan != null) {
-                PipeConnectorLogic.addAnchor(player.getUUID(), anchor);
-            }
-        });
-        context.setPacketHandled(true);
-    }
-
-    public static void handleRemoveLastAnchor(RemoveLastAnchorPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
-            if (player == null) {
-                return;
-            }
-
-            Selection selection = PipeConnectorLogic.getSelection(player.getUUID());
-            if (selection == null || !PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
-                return;
-            }
-
-            PipeConnectorLogic.removeLastAnchor(player.getUUID());
-        });
-        context.setPacketHandled(true);
-    }
-
     public static void handleToggleConnectorMode(ToggleConnectorModePayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
@@ -82,6 +38,61 @@ public final class ServerPipeConnectorPayloadHandler {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 PipeConnectorLogic.setAutoPumpsEnabled(player.getUUID(), payload.enabled());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handlePumpMode(PumpModePayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null) {
+                PipeConnectorLogic.setPumpMode(player.getUUID(), payload.mode());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleCopperCasingMode(CopperCasingModePayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null) {
+                PipeConnectorLogic.setCopperCasingMode(player.getUUID(), payload.mode());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handlePipeStyleMode(PipeStyleModePayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null) {
+                PipeConnectorLogic.setPipeStyleMode(player.getUUID(), payload.mode());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleReverseAutoPumpDirection(ReverseAutoPumpDirectionPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null) {
+                PipeConnectorLogic.setAutoPumpDirectionReversed(player.getUUID(), payload.reversed());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleRoutePriority(RoutePriorityPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null) {
+                PipeConnectorLogic.setRoutePriority(player.getUUID(), payload.priority());
             }
         });
         context.setPacketHandled(true);
@@ -112,6 +123,97 @@ public final class ServerPipeConnectorPayloadHandler {
         context.setPacketHandled(true);
     }
 
+    public static void handleAddAnchor(AddAnchorPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player == null || !(player.level() instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            Selection selection = validatedSelection(player);
+            if (selection == null) {
+                return;
+            }
+
+            PlacementTarget anchor = new PlacementTarget(payload.position(), payload.face(), payload.existingPipe());
+            if (!isAnchorValid(player, serverLevel, selection, anchor)) {
+                return;
+            }
+
+            ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(serverLevel, selection, PipeConnectorLogic.getAnchors(player.getUUID()), anchor, PipeConnectorLogic.getRoutePriority(player.getUUID()));
+            if (plan != null) {
+                PipeConnectorLogic.addAnchor(player.getUUID(), anchor);
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleRemoveLastAnchor(RemoveLastAnchorPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null && validatedSelection(player) != null) {
+                PipeConnectorLogic.removeLastAnchor(player.getUUID());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleRemoveLastManualPump(RemoveLastManualPumpPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null && validatedSelection(player) != null) {
+                PipeConnectorLogic.removeLastManualPump(player.getUUID());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleRemoveLastCopperCasing(RemoveLastCopperCasingPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null && validatedSelection(player) != null) {
+                PipeConnectorLogic.removeLastCopperCasing(player.getUUID());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleToggleCopperCasing(ToggleCopperCasingPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player == null || validatedSelection(player) == null) {
+                return;
+            }
+            if (!PipeConnectorLogic.isWithinInteractionRange(player, payload.position())) {
+                return;
+            }
+
+            PipeConnectorLogic.toggleCopperCasing(player.getUUID(), payload.position());
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleToggleManualPump(ToggleManualPumpPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player == null || validatedSelection(player) == null) {
+                return;
+            }
+            if (!PipeConnectorLogic.isWithinInteractionRange(player, payload.position())) {
+                return;
+            }
+
+            PipeConnectorLogic.toggleManualPump(player.getUUID(), payload.position());
+        });
+        context.setPacketHandled(true);
+    }
+
     public static void handleWrenchPipeDisplay(WrenchPipeDisplayPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
@@ -125,8 +227,26 @@ public final class ServerPipeConnectorPayloadHandler {
         context.setPacketHandled(true);
     }
 
-    private static boolean isAnchorValid(ServerLevel level, Selection selection, PlacementTarget anchor) {
+    private static Selection validatedSelection(ServerPlayer player) {
+        if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
+            PipeConnectorLogic.clearSelection(player.getUUID());
+            return null;
+        }
+
+        Selection selection = PipeConnectorLogic.getSelection(player.getUUID());
+        if (selection != null && PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
+            return selection;
+        }
+
+        PipeConnectorLogic.clearSelection(player.getUUID());
+        return null;
+    }
+
+    private static boolean isAnchorValid(ServerPlayer player, ServerLevel level, Selection selection, PlacementTarget anchor) {
         if (selection.position().equals(anchor.position())) {
+            return false;
+        }
+        if (!PipeConnectorLogic.isWithinInteractionRange(player, anchor.position())) {
             return false;
         }
 
