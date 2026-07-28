@@ -5,11 +5,15 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PreviewPipe
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.lighting.LevelLightEngine;
+import net.minecraft.world.level.material.FluidState;
 
-import java.lang.reflect.Proxy;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +24,23 @@ final class PipePreviewBuilder {
     }
 
     static List<PreviewPipe> buildPreview(Level level, ConnectionPlan plan, Block pipeBlock) {
+        Map<BlockPos, BlockState> connectionStates = buildConnectionStates(level, plan, pipeBlock);
+
+        List<PreviewPipe> previewPipes = new ArrayList<>(plan.placementPositions().size());
+        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
+        for (BlockPos position : plan.placementPositions()) {
+            Direction pumpFacing = plan.pumpPlacements().get(position);
+            BlockState sourceState = level.getBlockState(position);
+            BlockState connectedPipeState = connectionStates.getOrDefault(position, CreatePipeBlocks.createPipeState(pipeBlock, sourceState));
+            BlockState renderState = pumpFacing != null && pumpBlock != null
+                    ? CreatePipeBlocks.createPumpState(pumpBlock, sourceState, pumpFacing)
+                    : createPipeRenderState(connectedPipeState, sourceState, plan.copperCasingPlacements().contains(position), plan.glassPipePlacements().contains(position));
+            previewPipes.add(new PreviewPipe(position, renderState, pumpFacing));
+        }
+        return previewPipes;
+    }
+
+    static Map<BlockPos, BlockState> buildConnectionStates(Level level, ConnectionPlan plan, Block pipeBlock) {
         Map<BlockPos, BlockState> connectionStates = new HashMap<>();
         for (BlockPos position : plan.path()) {
             BlockState currentState = level.getBlockState(position);
@@ -42,58 +63,25 @@ final class PipePreviewBuilder {
                 break;
             }
         }
+        return connectionStates;
+    }
 
-        List<PreviewPipe> previewPipes = new ArrayList<>(plan.placementPositions().size());
-        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
-        for (BlockPos position : plan.placementPositions()) {
-            Direction pumpFacing = plan.pumpPlacements().get(position);
-            BlockState renderState = pumpFacing != null && pumpBlock != null
-                    ? CreatePipeBlocks.createPumpState(pumpBlock, level.getBlockState(position), pumpFacing)
-                    : connectionStates.get(position);
-            previewPipes.add(new PreviewPipe(position, renderState, pumpFacing));
+    private static BlockState createPipeRenderState(BlockState pipeState, BlockState sourceState, boolean copperCasing, boolean glassPipe) {
+        if (copperCasing) {
+            BlockState encasedState = CreatePipeBlocks.createEncasedPipeState(pipeState, sourceState);
+            return encasedState == null ? pipeState : encasedState;
         }
-        return previewPipes;
+
+        if (glassPipe) {
+            BlockState glassState = CreatePipeBlocks.createGlassPipeState(pipeState);
+            return glassState == null ? pipeState : glassState;
+        }
+
+        return pipeState;
     }
 
     static BlockAndTintGetter createPreviewWorld(Level level, Map<BlockPos, BlockState> previewStates) {
-        ClassLoader classLoader = PipePreviewBuilder.class.getClassLoader();
-        return (BlockAndTintGetter) Proxy.newProxyInstance(classLoader, new Class<?>[]{BlockAndTintGetter.class}, (proxy, method, args) -> {
-            String methodName = method.getName();
-            if ("getBlockState".equals(methodName) && args != null && args.length == 1 && args[0] instanceof BlockPos blockPos) {
-                return previewStates.getOrDefault(blockPos, level.getBlockState(blockPos));
-            }
-            if ("getBlockEntity".equals(methodName) && args != null && args.length == 1 && args[0] instanceof BlockPos blockPos) {
-                return level.getBlockEntity(blockPos);
-            }
-            if ("toString".equals(methodName)) {
-                return "PreviewWorldProxy";
-            }
-            if ("hashCode".equals(methodName)) {
-                return System.identityHashCode(proxy);
-            }
-            if ("equals".equals(methodName)) {
-                return proxy == args[0];
-            }
-
-            try {
-                return method.invoke(level, args);
-            } catch (ReflectiveOperationException exception) {
-                Class<?> returnType = method.getReturnType();
-                if (returnType == boolean.class) {
-                    return false;
-                }
-                if (returnType == int.class || returnType == short.class || returnType == byte.class || returnType == long.class) {
-                    return 0;
-                }
-                if (returnType == float.class || returnType == double.class) {
-                    return 0.0;
-                }
-                if (returnType == char.class) {
-                    return '\0';
-                }
-                return null;
-            }
-        });
+        return new PreviewWorld(level, previewStates);
     }
 
     private static Map<BlockPos, Direction> preferredDirectionsForPath(List<BlockPos> path) {
@@ -113,5 +101,57 @@ final class PipePreviewBuilder {
             }
         }
         return preferredDirections;
+    }
+
+    private static final class PreviewWorld implements BlockAndTintGetter {
+        private final Level level;
+        private final Map<BlockPos, BlockState> previewStates;
+
+        private PreviewWorld(Level level, Map<BlockPos, BlockState> previewStates) {
+            this.level = level;
+            this.previewStates = previewStates;
+        }
+
+        @Nullable
+        @Override
+        public BlockEntity getBlockEntity(BlockPos position) {
+            return level.getBlockEntity(position);
+        }
+
+        @Override
+        public BlockState getBlockState(BlockPos position) {
+            return previewStates.getOrDefault(position, level.getBlockState(position));
+        }
+
+        @Override
+        public FluidState getFluidState(BlockPos position) {
+            BlockState previewState = previewStates.get(position);
+            return previewState == null ? level.getFluidState(position) : previewState.getFluidState();
+        }
+
+        @Override
+        public int getHeight() {
+            return level.getHeight();
+        }
+
+        @Override
+        public int getMinBuildHeight() {
+            return level.getMinBuildHeight();
+        }
+
+        @Override
+        public float getShade(Direction direction, boolean shade) {
+            return level.getShade(direction, shade);
+        }
+
+        @Override
+        public LevelLightEngine getLightEngine() {
+            return level.getLightEngine();
+        }
+
+        @Override
+        public int getBlockTint(BlockPos position, ColorResolver colorResolver) {
+            return level.getBlockTint(position, colorResolver);
+        }
     }
 }
