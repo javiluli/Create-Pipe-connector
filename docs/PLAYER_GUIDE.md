@@ -3,45 +3,45 @@
 ## What it does
 
 - Press `B` to enable Connector Pipe mode.
-- Hold a supported Create pipe in either hand.
+- Hold `create:fluid_pipe` in either hand.
 - Right-click a reachable block or pipe face to start a connection.
 - Right-click again to confirm the current preview, even while looking at air.
 - Left-click during a preview to cancel the current route without disabling Connector Pipe mode.
-- The mod fills a valid route automatically.
-- A ghost preview shows the result before placement.
-- Automatic mechanical pumps can be previewed and placed with the route.
-- Create's wrench can toggle straight pipe segments between default and glass style.
-- A control HUD appears above the hotbar while Connector Pipe mode is enabled.
-- The action bar shows `required/available` pipe and pump counts in survival.
+- Use anchors, preview lock, and the radial menu to shape the route before placing.
+- The mod can place automatic/manual mechanical pumps, copper casing, and glass straight pipe sections.
+- The HUD shows required/available materials in survival and blocks placement if something is missing.
 
-## Supported pipes
+## Supported route pipe
 
 - `create:fluid_pipe`
-- `create:smart_fluid_pipe`
 
-## How to use it
+`create:smart_fluid_pipe` is not used as a route pipe because it is a filtering pipe.
+
+## Quick use
 
 1. Press `B` to enable Connector Pipe mode.
-2. Hold a supported Create pipe in either hand.
-3. Look at a reachable block or pipe face and right-click to select the start point.
-4. Move the crosshair to guide the live preview, even through open air.
-5. Press `C` to add an anchor, or `V` to remove the last anchor.
+2. Hold a `create:fluid_pipe`.
+3. Right-click a reachable block or pipe face to select the start point.
+4. Move the crosshair to guide the live preview.
+5. Press `C` to add anchors.
 6. Press `Left Alt` to lock or unlock the current preview target.
-7. Press `P` to enable or disable automatic mechanical pumps.
-8. Right-click again to place the planned route, even if no block is targeted.
-9. Left-click during a preview to cancel only the current route.
+7. Press `N` to open the radial options menu.
+8. Right-click again to place the planned route.
+9. Left-click during preview to cancel only the current route.
 10. Press `B` again to disable Connector Pipe mode.
+
+## Radial menu
+
+- Route priority: Auto, horizontal first, vertical first, X first, Z first, avoid vertical.
+- Pumps: Off, efficient spacing, safe spacing.
+- Flow: Normal or reversed pump direction.
+- Casing: None, manual marks, or full route.
+- Style: Default or glass straight sections.
 
 ## Preview behavior
 
-- The preview tries to look like the final pipe line.
+- The preview tries to match the final placed route.
+- Missing materials are tinted red.
+- Anchors are highlighted.
 - Automatic pumps are included in the preview when enabled.
-- Anchors are highlighted with a yellow transparent box.
-- If obstacles block the path, the mod finds an alternate route.
-- If no valid route exists, nothing is placed.
-- If survival inventory is insufficient, the required pipe or pump count turns red and placement is cancelled.
-
-## Beta status
-
-- This Forge build is in beta.
-- If something looks wrong, report it with a screenshot and the approximate route.
+- Copper casing requires at least one `create:copper_casing` in inventory, but it is not consumed per pipe.
