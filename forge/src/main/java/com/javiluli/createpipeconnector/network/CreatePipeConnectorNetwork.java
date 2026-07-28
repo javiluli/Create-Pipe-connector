@@ -6,7 +6,9 @@ import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayl
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.SelectPipeTargetPayload;
 import com.javiluli.createpipeconnector.network.payload.ServerPipeConnectorPayloadHandler;
+import com.javiluli.createpipeconnector.network.payload.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.network.payload.ToggleConnectorModePayload;
+import com.javiluli.createpipeconnector.network.payload.WrenchPipeDisplayPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
@@ -63,6 +65,20 @@ public final class CreatePipeConnectorNetwork {
                 CancelPipeConnectionPayload::decode,
                 ServerPipeConnectorPayloadHandler::handleCancelPipeConnection
         );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                ToggleAutoPumpsPayload.class,
+                ToggleAutoPumpsPayload::encode,
+                ToggleAutoPumpsPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleToggleAutoPumps
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                WrenchPipeDisplayPayload.class,
+                WrenchPipeDisplayPayload::encode,
+                WrenchPipeDisplayPayload::decode,
+                ServerPipeConnectorPayloadHandler::handleWrenchPipeDisplay
+        );
     }
 
     public static void sendToServer(AddAnchorPayload payload) {
@@ -82,6 +98,14 @@ public final class CreatePipeConnectorNetwork {
     }
 
     public static void sendToServer(CancelPipeConnectionPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(ToggleAutoPumpsPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(WrenchPipeDisplayPayload payload) {
         CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
     }
 

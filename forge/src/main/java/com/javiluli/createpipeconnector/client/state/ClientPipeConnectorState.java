@@ -9,6 +9,7 @@ import java.util.List;
 
 public final class ClientPipeConnectorState {
     private static boolean connectorModeEnabled;
+    private static boolean autoPumpsEnabled;
     private static Selection selection;
     private static List<PlacementTarget> anchors = List.of();
     private static List<PreviewPipe> previewPipes = List.of();
@@ -26,6 +27,15 @@ public final class ClientPipeConnectorState {
         if (!enabled) {
             clearSelection();
         }
+    }
+
+    public static boolean isAutoPumpsEnabled() {
+        return autoPumpsEnabled;
+    }
+
+    public static void setAutoPumpsEnabled(boolean enabled) {
+        autoPumpsEnabled = enabled;
+        setPreviewPipes(List.of());
     }
 
     public static Selection getSelection() {

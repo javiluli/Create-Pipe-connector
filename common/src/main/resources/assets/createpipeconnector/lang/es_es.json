@@ -4,11 +4,20 @@
   "key.createpipeconnector.toggle_preview_lock": "Bloquear preview de tuberías",
   "key.createpipeconnector.add_anchor": "Añadir ancla de tuberías",
   "key.createpipeconnector.remove_last_anchor": "Quitar última ancla de tuberías",
+  "key.createpipeconnector.toggle_auto_pumps": "Activar mechanical pumps automáticas",
   "hud.createpipeconnector.connector_mode": "Modo Connector Pipe",
   "hud.createpipeconnector.control.start_confirm": "Iniciar/confirmar",
   "hud.createpipeconnector.control.cancel": "Cancelar ruta",
   "hud.createpipeconnector.control.add_anchor": "Crear ancla",
   "hud.createpipeconnector.control.remove_anchor": "Quitar ancla",
   "hud.createpipeconnector.control.lock_preview": "Fijar preview",
-  "hud.createpipeconnector.control.exit_mode": "Salir del modo"
+  "hud.createpipeconnector.control.auto_pumps_on": "Auto pumps ON",
+  "hud.createpipeconnector.control.auto_pumps_off": "Auto pumps OFF",
+  "hud.createpipeconnector.control.exit_mode": "Salir del modo",
+  "hud.createpipeconnector.no_route": "No hay recorrido libre.",
+  "hud.createpipeconnector.first_point_selected": "Primer punto seleccionado. Marca el segundo punto.",
+  "hud.createpipeconnector.pipe_style_click_again": "Haz click derecho otra vez para cambiar este tramo.",
+  "hud.createpipeconnector.pipe_style_to_glass": "Cambiadas %s tuberías a cristal.",
+  "hud.createpipeconnector.pipe_style_to_default": "Cambiadas %s tuberías a modo normal.",
+  "hud.createpipeconnector.pipe_style_no_changes": "No hay tuberías rectas que cambiar."
 }

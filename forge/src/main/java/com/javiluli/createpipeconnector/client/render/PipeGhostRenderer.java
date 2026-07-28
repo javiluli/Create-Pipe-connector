@@ -9,6 +9,7 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.createmod.catnip.levelWrappers.SchematicLevel;
 import net.createmod.catnip.render.ShadedBlockSbbBuilder;
 import net.createmod.catnip.render.SuperByteBuffer;
@@ -20,7 +21,10 @@ import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.RenderShape;
@@ -38,9 +42,14 @@ import net.minecraftforge.client.model.data.ModelData;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class PipeGhostRenderer {
+    private static final ModelResourceLocation MECHANICAL_PUMP_ITEM_MODEL = new ModelResourceLocation(
+            Objects.requireNonNull(ResourceLocation.tryParse("create:mechanical_pump")),
+            "inventory"
+    );
     private static final float GHOST_RED = 1.00F;
     private static final float GHOST_GREEN = 1.00F;
     private static final float GHOST_BLUE = 1.00F;
@@ -49,6 +58,9 @@ public final class PipeGhostRenderer {
     private static final float OUTLINE_GREEN = 0.85F;
     private static final float OUTLINE_BLUE = 1.00F;
     private static final float OUTLINE_ALPHA = 0.95F;
+    private static final float PUMP_OUTLINE_RED = 1.00F;
+    private static final float PUMP_OUTLINE_GREEN = 0.82F;
+    private static final float PUMP_OUTLINE_BLUE = 0.18F;
     private static final ThreadLocal<ThreadLocalObjects> THREAD_LOCAL_OBJECTS = ThreadLocal.withInitial(ThreadLocalObjects::new);
     private static Level cachedLevel;
     private static int cachedPreviewVersion = -1;
@@ -154,13 +166,14 @@ public final class PipeGhostRenderer {
         Map<RenderType, SuperByteBuffer> bufferCache = new LinkedHashMap<>(RenderType.chunkBufferLayers().size());
         BlockRenderDispatcher dispatcher = minecraft.getBlockRenderer();
         ModelBlockRenderer renderer = dispatcher.getModelRenderer();
+        BakedModel pumpModel = minecraft.getModelManager().getModel(MECHANICAL_PUMP_ITEM_MODEL);
         ThreadLocalObjects objects = THREAD_LOCAL_OBJECTS.get();
 
         schematicLevel.renderMode = true;
         ModelBlockRenderer.enableCaching();
         try {
             for (RenderType layer : RenderType.chunkBufferLayers()) {
-                SuperByteBuffer buffer = drawLayer(layer, dispatcher, renderer, schematicLevel, previewPipes, objects);
+                SuperByteBuffer buffer = drawLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects);
                 if (!buffer.isEmpty()) {
                     bufferCache.put(layer, buffer);
                 }
@@ -173,7 +186,7 @@ public final class PipeGhostRenderer {
         return bufferCache;
     }
 
-    private static SuperByteBuffer drawLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects) {
+    private static SuperByteBuffer drawLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, BakedModel pumpModel, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects) {
         PoseStack poseStack = objects.poseStack;
         RandomSource random = objects.random;
         BlockPos.MutableBlockPos mutableBlockPos = objects.mutableBlockPos;
@@ -190,9 +203,15 @@ public final class PipeGhostRenderer {
                 continue;
             }
 
-            BakedModel model = dispatcher.getBlockModel(state);
-            BlockEntity blockEntity = schematicLevel.getBlockEntity(worldPos);
-            ModelData modelData = blockEntity != null ? blockEntity.getModelData() : ModelData.EMPTY;
+            boolean rendersMechanicalPump = isMechanicalPumpPreview(previewPipe);
+            BakedModel model = rendersMechanicalPump ? pumpModel : dispatcher.getBlockModel(state);
+            ModelData modelData = ModelData.EMPTY;
+            if (!rendersMechanicalPump) {
+                BlockEntity blockEntity = schematicLevel.getBlockEntity(worldPos);
+                if (blockEntity != null) {
+                    modelData = blockEntity.getModelData();
+                }
+            }
             modelData = model.getModelData(schematicLevel, worldPos, state, modelData);
 
             long seed = state.getSeed(worldPos);
@@ -203,24 +222,55 @@ public final class PipeGhostRenderer {
 
             poseStack.pushPose();
             poseStack.translate(localPos.getX(), localPos.getY(), localPos.getZ());
-            renderer.tesselateBlock(
-                    schematicLevel,
-                    model,
-                    state,
-                    worldPos,
-                    poseStack,
-                    sbbBuilder,
-                    true,
-                    random,
-                    seed,
-                    OverlayTexture.NO_OVERLAY,
-                    modelData,
-                    layer
-            );
+            if (rendersMechanicalPump) {
+                applyPumpFacingTransform(poseStack, previewPipe.mechanicalPumpFacing().getOpposite());
+                renderer.renderModel(
+                        poseStack.last(),
+                        sbbBuilder,
+                        state,
+                        model,
+                        1.0F,
+                        1.0F,
+                        1.0F,
+                        LevelRenderer.getLightColor(schematicLevel, worldPos),
+                        OverlayTexture.NO_OVERLAY,
+                        modelData,
+                        layer
+                );
+            } else {
+                renderer.tesselateBlock(
+                        schematicLevel,
+                        model,
+                        state,
+                        worldPos,
+                        poseStack,
+                        sbbBuilder,
+                        true,
+                        random,
+                        seed,
+                        OverlayTexture.NO_OVERLAY,
+                        modelData,
+                        layer
+                );
+            }
             poseStack.popPose();
         }
 
         return sbbBuilder.end();
+    }
+
+    private static void applyPumpFacingTransform(PoseStack poseStack, Direction facing) {
+        poseStack.translate(0.5D, 0.5D, 0.5D);
+        switch (facing) {
+            case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            case NORTH -> poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
+            case SOUTH -> poseStack.mulPose(Axis.YP.rotationDegrees(-90.0F));
+            case UP -> poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
+            case DOWN -> poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0F));
+            case EAST -> {
+            }
+        }
+        poseStack.translate(-0.5D, -0.5D, -0.5D);
     }
 
     private static void renderPipeOutlines(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Level level, List<PreviewPipe> previewPipes) {
@@ -228,6 +278,7 @@ public final class PipeGhostRenderer {
         for (PreviewPipe previewPipe : previewPipes) {
             BlockPos position = previewPipe.position();
             BlockState state = previewPipe.state();
+            boolean rendersMechanicalPump = isMechanicalPumpPreview(previewPipe);
             VoxelShape shape = state.getShape(level, position, CollisionContext.empty());
             if (shape.isEmpty()) {
                 continue;
@@ -240,14 +291,18 @@ public final class PipeGhostRenderer {
                     position.getX(),
                     position.getY(),
                     position.getZ(),
-                    OUTLINE_RED,
-                    OUTLINE_GREEN,
-                    OUTLINE_BLUE,
+                    rendersMechanicalPump ? PUMP_OUTLINE_RED : OUTLINE_RED,
+                    rendersMechanicalPump ? PUMP_OUTLINE_GREEN : OUTLINE_GREEN,
+                    rendersMechanicalPump ? PUMP_OUTLINE_BLUE : OUTLINE_BLUE,
                     OUTLINE_ALPHA,
                     true
             );
         }
         bufferSource.endBatch(RenderType.lines());
+    }
+
+    private static boolean isMechanicalPumpPreview(PreviewPipe previewPipe) {
+        return previewPipe.mechanicalPumpFacing() != null;
     }
 
     private static final class ThreadLocalObjects {
@@ -257,4 +312,3 @@ public final class PipeGhostRenderer {
         private final ShadedBlockSbbBuilder sbbBuilder = ShadedBlockSbbBuilder.create();
     }
 }
-

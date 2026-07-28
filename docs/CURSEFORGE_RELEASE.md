@@ -2,12 +2,12 @@
 
 ## File
 
-- Upload `out_jars/createpipeconnector-forge-1.20.1-0.3.0-beta.jar`.
+- Upload `out_jars/createpipeconnector-forge-1.20.1-0.4.0-beta.jar`.
 
 ## Project metadata
 
 - Name: `Create: Pipe Connector`
-- Version: `0.3.0-beta`
+- Version: `0.4.0-beta`
 - Game version: `Minecraft 1.20.1`
 - Mod loader: `Forge`
 - Java version: `Java 17`
@@ -21,13 +21,16 @@
 
 ## Release notes
 
-Use the existing `0.3.0-beta` notes:
+Use the existing `0.4.0-beta` notes:
 
 - Live ghost preview while routing pipes
 - Anchor waypoints with `C` and undo with `V`
 - Preview lock with `Left Alt`
+- Automatic mechanical pump placement with `P`
+- Mechanical pump preview and inventory validation
+- Wrench double-click action to toggle straight pipe segments between default and glass style
 - Configurable key binds
-- Survival pipe counter and inventory validation
+- Survival pipe/pump counter and inventory validation
 - Forge `1.20.1` port
 
 ## Validation

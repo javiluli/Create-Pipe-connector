@@ -86,6 +86,9 @@ public final class PipeConnectorControlsHud {
                 hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), "hud.createpipeconnector.control.add_anchor"),
                 hint(keyName(ClientPipeConnectorKeyMappings.removeLastAnchorKey()), "hud.createpipeconnector.control.remove_anchor"),
                 hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), "hud.createpipeconnector.control.lock_preview"),
+                hint(keyName(ClientPipeConnectorKeyMappings.toggleAutoPumpsKey()), ClientPipeConnectorState.isAutoPumpsEnabled()
+                        ? "hud.createpipeconnector.control.auto_pumps_on"
+                        : "hud.createpipeconnector.control.auto_pumps_off"),
                 hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), "hud.createpipeconnector.control.exit_mode")
         );
 

@@ -15,6 +15,8 @@ Keep the Forge branch focused on Minecraft `1.20.1` while preserving shared logi
 - `common/.../connector/PipeConnectorLogic.java`
   - pathfinding
   - pipe state creation
+  - auto-pump planning
+  - pipe display toggling helpers
   - preview pipe generation
 - `forge/.../client/input/ClientPipeConnectorInputHandler.java`
   - first selection
@@ -24,7 +26,7 @@ Keep the Forge branch focused on Minecraft `1.20.1` while preserving shared logi
   - blueprint-style preview rendering
   - Forge-adapted version of the NeoForge renderer
 - `forge/.../network/CreatePipeConnectorNetwork.java`
-  - client-to-server anchor sync
+  - client-to-server mode, anchor, target, auto-pump, and wrench sync
 - `forge/.../connector/ServerPipeConnectorEvents.java`
   - server-side placement and pipe refresh
 
@@ -34,8 +36,9 @@ Keep the Forge branch focused on Minecraft `1.20.1` while preserving shared logi
 2. Client stores the selection.
 3. Crosshair target and optional anchors drive preview generation.
 4. The preview world is built from the computed placement plan.
-5. Server validates anchors, inventory, and placement before consuming pipes.
-6. Server placement fills the path and refreshes Create connections.
+5. Optional auto-pumps are added to the plan before preview and placement.
+6. Server validates anchors, inventory, and placement before consuming items.
+7. Server placement fills the path and refreshes Create connections.
 
 ## Useful commands
 
@@ -47,7 +50,7 @@ Keep the Forge branch focused on Minecraft `1.20.1` while preserving shared logi
 ## Release checklist
 
 1. Run `./gradlew buildAll`.
-2. Upload `out_jars/createpipeconnector-forge-1.20.1-0.3.0-beta.jar` to CurseForge.
+2. Upload `out_jars/createpipeconnector-forge-1.20.1-0.4.0-beta.jar` to CurseForge.
 3. Mark Minecraft `1.20.1`, Forge, and Java `17`.
 4. Add Create as a required dependency.
 5. Mark the environment as both client and server.

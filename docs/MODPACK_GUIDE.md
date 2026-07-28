@@ -21,7 +21,9 @@
 - Adds Connector Pipe mode with a configurable `B` key.
 - Allows route confirmation while looking at air after a route has started.
 - Supports anchor waypoints and preview locking.
-- Checks survival inventory before placing pipes.
+- Can place automatic mechanical pumps along planned routes.
+- Can switch straight pipe segments between default and glass style with Create's wrench.
+- Checks survival inventory before placing pipes or pumps.
 
 ## Pack integration
 
@@ -35,7 +37,7 @@
 - Minecraft `1.20.1`
 - Forge `47.4.20` or newer `47.x`
 - Create `6.0.8-289`
-- Create: Pipe Connector `0.3.0-beta`
+- Create: Pipe Connector `0.4.0-beta`
 
 ## For modders
 

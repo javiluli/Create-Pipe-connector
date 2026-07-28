@@ -2,7 +2,9 @@ package com.javiluli.createpipeconnector.connector;
 
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
+import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeDisplayToggleResult;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -13,7 +15,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
+
 public final class ServerPipeConnectorEvents {
+    private static final int WRENCH_DOUBLE_CLICK_TICKS = 10;
+    private static final Map<UUID, WrenchPipeClick> WRENCH_PIPE_CLICKS = new HashMap<>();
+
     private ServerPipeConnectorEvents() {
     }
 
@@ -26,6 +36,8 @@ public final class ServerPipeConnectorEvents {
         if (player.level().isClientSide()) {
             return;
         }
+
+        clearExpiredWrenchClicks(player.level().getGameTime());
 
         Selection selection = PipeConnectorLogic.getSelection(player.getUUID());
         if (selection == null) {
@@ -44,6 +56,44 @@ public final class ServerPipeConnectorEvents {
 
         PipeConnectorLogic.clearSelection(player.getUUID());
         clearActionBar(player);
+    }
+
+    public static void handleWrenchPipeDisplayClick(Player player, ServerLevel serverLevel, BlockPos position) {
+        if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
+            return;
+        }
+        if (!PipeConnectorLogic.isCreateWrench(player.getMainHandItem())) {
+            return;
+        }
+        if (!PipeConnectorLogic.isWithinInteractionRange(player, position)) {
+            return;
+        }
+        if (!PipeConnectorLogic.isPipeDisplayToggleTarget(serverLevel.getBlockState(position))) {
+            return;
+        }
+
+        long gameTime = serverLevel.getGameTime();
+        UUID playerId = player.getUUID();
+        WrenchPipeClick previousClick = WRENCH_PIPE_CLICKS.get(playerId);
+        if (previousClick == null
+                || !previousClick.position().equals(position)
+                || gameTime - previousClick.gameTime() > WRENCH_DOUBLE_CLICK_TICKS) {
+            WRENCH_PIPE_CLICKS.put(playerId, new WrenchPipeClick(position, gameTime));
+            player.displayClientMessage(Component.translatable("hud.createpipeconnector.pipe_style_click_again"), true);
+            return;
+        }
+
+        WRENCH_PIPE_CLICKS.remove(playerId);
+        PipeDisplayToggleResult result = PipeConnectorLogic.togglePipeDisplaySegment(serverLevel, position);
+        if (result.changed() <= 0) {
+            player.displayClientMessage(Component.translatable("hud.createpipeconnector.pipe_style_no_changes"), true);
+            return;
+        }
+
+        String translationKey = result.glassMode()
+                ? "hud.createpipeconnector.pipe_style_to_glass"
+                : "hud.createpipeconnector.pipe_style_to_default";
+        player.displayClientMessage(Component.translatable(translationKey, result.changed()), true);
     }
 
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
@@ -108,9 +158,11 @@ public final class ServerPipeConnectorEvents {
             clearActionBar(player);
             return true;
         }
+        if (PipeConnectorLogic.isAutoPumpsEnabled(player.getUUID())) {
+            plan = PipeConnectorLogic.withAutoPumps(plan);
+        }
 
-        int requiredPipes = plan.requiredPipes();
-        if (!PipeConnectorLogic.hasEnoughPipes(player, currentSelection.pipeBlock(), requiredPipes)) {
+        if (!PipeConnectorLogic.hasEnoughItems(player, currentSelection.pipeBlock(), plan)) {
             PipeConnectorLogic.clearSelection(player.getUUID());
             clearActionBar(player);
             return true;
@@ -118,7 +170,7 @@ public final class ServerPipeConnectorEvents {
 
         boolean connected = PipeConnectorLogic.connect(serverLevel, plan, currentSelection.pipeBlock());
         if (connected) {
-            PipeConnectorLogic.consumePipes(player, currentSelection.pipeBlock(), requiredPipes);
+            PipeConnectorLogic.consumeItems(player, currentSelection.pipeBlock(), plan);
         }
 
         PipeConnectorLogic.clearSelection(player.getUUID());
@@ -148,5 +200,18 @@ public final class ServerPipeConnectorEvents {
 
     private static void clearActionBar(Player player) {
         player.displayClientMessage(Component.empty(), true);
+    }
+
+    private static void clearExpiredWrenchClicks(long gameTime) {
+        Iterator<Map.Entry<UUID, WrenchPipeClick>> iterator = WRENCH_PIPE_CLICKS.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, WrenchPipeClick> entry = iterator.next();
+            if (gameTime - entry.getValue().gameTime() > WRENCH_DOUBLE_CLICK_TICKS) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private record WrenchPipeClick(BlockPos position, long gameTime) {
     }
 }

@@ -32,6 +32,11 @@ public final class ClientPipeConnectorKeyMappings {
             GLFW.GLFW_KEY_V,
             CATEGORY
     );
+    private static final KeyMapping TOGGLE_AUTO_PUMPS = new KeyMapping(
+            "key.createpipeconnector.toggle_auto_pumps",
+            GLFW.GLFW_KEY_P,
+            CATEGORY
+    );
 
     private ClientPipeConnectorKeyMappings() {
     }
@@ -42,6 +47,7 @@ public final class ClientPipeConnectorKeyMappings {
         event.register(TOGGLE_PREVIEW_LOCK);
         event.register(ADD_ANCHOR);
         event.register(REMOVE_LAST_ANCHOR);
+        event.register(TOGGLE_AUTO_PUMPS);
     }
 
     public static boolean consumeConnectorModeToggle() {
@@ -60,6 +66,10 @@ public final class ClientPipeConnectorKeyMappings {
         return REMOVE_LAST_ANCHOR.consumeClick();
     }
 
+    public static boolean consumeAutoPumpsToggle() {
+        return TOGGLE_AUTO_PUMPS.consumeClick();
+    }
+
     public static KeyMapping toggleConnectorModeKey() {
         return TOGGLE_CONNECTOR_MODE;
     }
@@ -76,6 +86,10 @@ public final class ClientPipeConnectorKeyMappings {
         return REMOVE_LAST_ANCHOR;
     }
 
+    public static KeyMapping toggleAutoPumpsKey() {
+        return TOGGLE_AUTO_PUMPS;
+    }
+
     public static void drainPlacementClicks() {
         while (consumeConnectorModeToggle()) {
         }
@@ -84,6 +98,8 @@ public final class ClientPipeConnectorKeyMappings {
         while (consumeAddAnchor()) {
         }
         while (consumeRemoveLastAnchor()) {
+        }
+        while (consumeAutoPumpsToggle()) {
         }
     }
 }

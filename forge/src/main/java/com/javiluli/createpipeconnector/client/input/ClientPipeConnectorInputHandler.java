@@ -11,7 +11,9 @@ import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.SelectPipeTargetPayload;
+import com.javiluli.createpipeconnector.network.payload.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.network.payload.ToggleConnectorModePayload;
+import com.javiluli.createpipeconnector.network.payload.WrenchPipeDisplayPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -58,6 +60,12 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
+        if (PipeConnectorLogic.isCreateWrench(player.getMainHandItem())
+                && PipeConnectorLogic.isPipeDisplayToggleTarget(event.getLevel().getBlockState(event.getPos()))) {
+            event.setCanceled(true);
+            return;
+        }
+
         Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
         if (heldPipeBlock == null) {
             return;
@@ -97,6 +105,14 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
+        BlockPos wrenchPipeDisplayTarget = getWrenchPipeDisplayTarget(minecraft);
+        if (wrenchPipeDisplayTarget != null) {
+            event.setCanceled(true);
+            event.setSwingHand(false);
+            CreatePipeConnectorNetwork.sendToServer(new WrenchPipeDisplayPayload(wrenchPipeDisplayTarget));
+            return;
+        }
+
         Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
         if (heldPipeBlock == null) {
             return;
@@ -106,11 +122,18 @@ public final class ClientPipeConnectorInputHandler {
                 ? getBlockPreviewTarget(minecraft, heldPipeBlock)
                 : getActivePreviewTarget(minecraft, heldPipeBlock);
         if (target == null) {
+            if (currentSelection != null) {
+                event.setCanceled(true);
+                event.setSwingHand(false);
+            }
             return;
         }
 
         event.setCanceled(true);
         event.setSwingHand(false);
+        if (currentSelection != null && ClientPipeConnectorState.getPreviewPipes().isEmpty()) {
+            return;
+        }
         handleClientTarget(player, heldPipeBlock, target);
     }
 
@@ -160,6 +183,14 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
+        if (consumeAutoPumpsToggle(minecraft)) {
+            boolean enabled = !ClientPipeConnectorState.isAutoPumpsEnabled();
+            ClientPipeConnectorState.setAutoPumpsEnabled(enabled);
+            CreatePipeConnectorNetwork.sendToServer(new ToggleAutoPumpsPayload(enabled));
+            clearPreviewTargetLock();
+            clearPipeStatus(minecraft.player);
+        }
+
         Selection selection = ClientPipeConnectorState.getSelection();
         if (selection == null) {
             drainRoutingKeys();
@@ -192,9 +223,10 @@ public final class ClientPipeConnectorInputHandler {
         ConnectionPlan plan = PipeConnectorLogic.buildPlacementPlan(minecraft.level, selection, ClientPipeConnectorState.getAnchors(), target);
         if (plan == null) {
             ClientPipeConnectorState.setPreviewPipes(List.of());
-            showPipeStatus(minecraft.player, Component.literal("No hay recorrido libre.").withStyle(ChatFormatting.RED));
+            showPipeStatus(minecraft.player, Component.translatable("hud.createpipeconnector.no_route").withStyle(ChatFormatting.RED));
             return;
         }
+        plan = applyAutoPumps(plan);
 
         if (anchorPressed && canAddAnchor(selection, target)) {
             ClientPipeConnectorState.addAnchor(target);
@@ -205,6 +237,7 @@ public final class ClientPipeConnectorInputHandler {
                 ClientPipeConnectorState.setPreviewPipes(List.of());
                 return;
             }
+            plan = applyAutoPumps(plan);
         }
 
         ClientPipeConnectorState.setPreviewPipes(PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock()));
@@ -237,6 +270,10 @@ public final class ClientPipeConnectorInputHandler {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeConnectorModeToggle();
     }
 
+    private static boolean consumeAutoPumpsToggle(Minecraft minecraft) {
+        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle();
+    }
+
     private static boolean consumeAddAnchor(Minecraft minecraft) {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAddAnchor();
     }
@@ -252,6 +289,10 @@ public final class ClientPipeConnectorInputHandler {
 
         List<PlacementTarget> anchors = ClientPipeConnectorState.getAnchors();
         return anchors.isEmpty() || !anchors.get(anchors.size() - 1).position().equals(target.position());
+    }
+
+    private static ConnectionPlan applyAutoPumps(ConnectionPlan plan) {
+        return ClientPipeConnectorState.isAutoPumpsEnabled() ? PipeConnectorLogic.withAutoPumps(plan) : plan;
     }
 
     private static PlacementTarget getPreviewTarget(Minecraft minecraft, Block pipeBlock) {
@@ -280,6 +321,20 @@ public final class ClientPipeConnectorInputHandler {
         return PipeConnectorLogic.resolvePlacementTarget(minecraft.level, blockHitResult.getBlockPos(), blockHitResult.getDirection(), pipeBlock);
     }
 
+    private static BlockPos getWrenchPipeDisplayTarget(Minecraft minecraft) {
+        if (minecraft.level == null || minecraft.player == null || !PipeConnectorLogic.isCreateWrench(minecraft.player.getMainHandItem())) {
+            return null;
+        }
+
+        HitResult hitResult = minecraft.hitResult;
+        if (!(hitResult instanceof BlockHitResult blockHitResult) || hitResult.getType() != HitResult.Type.BLOCK) {
+            return null;
+        }
+
+        BlockPos position = blockHitResult.getBlockPos();
+        return PipeConnectorLogic.isPipeDisplayToggleTarget(minecraft.level.getBlockState(position)) ? position : null;
+    }
+
     private static PlacementTarget getAirPreviewTarget(Minecraft minecraft) {
         LocalPlayer player = minecraft.player;
         if (minecraft.level == null || player == null) {
@@ -298,16 +353,29 @@ public final class ClientPipeConnectorInputHandler {
 
     private static void showPipeRequirement(LocalPlayer player, Selection selection, ConnectionPlan plan) {
         int requiredPipes = plan.requiredPipes();
+        int requiredPumps = plan.requiredPumps();
         if (player.getAbilities().instabuild) {
-            showPipeStatus(player, Component.literal(requiredPipes + "/8").withStyle(ChatFormatting.WHITE));
+            MutableComponent creativeMessage = Component.literal("Pipes " + requiredPipes + "/∞").withStyle(ChatFormatting.WHITE);
+            if (requiredPumps > 0) {
+                creativeMessage.append(Component.literal(" | Pumps " + requiredPumps + "/∞").withStyle(ChatFormatting.WHITE));
+            }
+            showPipeStatus(player, creativeMessage);
             return;
         }
 
         int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
-        boolean hasEnough = availablePipes >= requiredPipes;
-        MutableComponent message = Component.literal(String.valueOf(requiredPipes))
-                .withStyle(hasEnough ? ChatFormatting.WHITE : ChatFormatting.RED)
+        boolean hasEnoughPipes = availablePipes >= requiredPipes;
+        MutableComponent message = Component.literal("Pipes ")
+                .withStyle(ChatFormatting.WHITE)
+                .append(Component.literal(String.valueOf(requiredPipes)).withStyle(hasEnoughPipes ? ChatFormatting.WHITE : ChatFormatting.RED))
                 .append(Component.literal("/" + availablePipes).withStyle(ChatFormatting.WHITE));
+        if (requiredPumps > 0) {
+            int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
+            boolean hasEnoughPumps = availablePumps >= requiredPumps;
+            message.append(Component.literal(" | Pumps ").withStyle(ChatFormatting.WHITE))
+                    .append(Component.literal(String.valueOf(requiredPumps)).withStyle(hasEnoughPumps ? ChatFormatting.WHITE : ChatFormatting.RED))
+                    .append(Component.literal("/" + availablePumps).withStyle(ChatFormatting.WHITE));
+        }
         showPipeStatus(player, message);
     }
 
@@ -342,6 +410,8 @@ public final class ClientPipeConnectorInputHandler {
         while (ClientPipeConnectorKeyMappings.consumeAddAnchor()) {
         }
         while (ClientPipeConnectorKeyMappings.consumeRemoveLastAnchor()) {
+        }
+        while (ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle()) {
         }
     }
 }

@@ -76,6 +76,17 @@ public final class ServerPipeConnectorPayloadHandler {
         context.setPacketHandled(true);
     }
 
+    public static void handleToggleAutoPumps(ToggleAutoPumpsPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player != null) {
+                PipeConnectorLogic.setAutoPumpsEnabled(player.getUUID(), payload.enabled());
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
     public static void handleSelectPipeTarget(SelectPipeTargetPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
@@ -97,6 +108,19 @@ public final class ServerPipeConnectorPayloadHandler {
             if (player != null) {
                 ServerPipeConnectorEvents.cancelPipeConnection(player);
             }
+        });
+        context.setPacketHandled(true);
+    }
+
+    public static void handleWrenchPipeDisplay(WrenchPipeDisplayPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player == null || !(player.level() instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            ServerPipeConnectorEvents.handleWrenchPipeDisplayClick(player, serverLevel, payload.position());
         });
         context.setPacketHandled(true);
     }
