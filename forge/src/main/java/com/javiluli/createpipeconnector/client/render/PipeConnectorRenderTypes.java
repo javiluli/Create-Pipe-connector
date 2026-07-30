@@ -6,12 +6,11 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderType;
 
 public final class PipeConnectorRenderTypes extends RenderType {
-    private static final int GHOST_BUFFER_SIZE = 2_097_152;
     private static final RenderType GHOST_TRANSLUCENT = RenderType.create(
-            Constants.MOD_ID + "_ghost_translucent",
+            Constants.GHOST_RENDER_TYPE,
             DefaultVertexFormat.BLOCK,
             VertexFormat.Mode.QUADS,
-            GHOST_BUFFER_SIZE,
+            Constants.GHOST_BUFFER_SIZE,
             true,
             true,
             CompositeState.builder()
@@ -25,10 +24,10 @@ public final class PipeConnectorRenderTypes extends RenderType {
                     .createCompositeState(true)
     );
     private static final RenderType ANCHOR_FILLED_BOX = RenderType.create(
-            Constants.MOD_ID + "_anchor_filled_box",
+            Constants.ANCHOR_RENDER_TYPE,
             DefaultVertexFormat.POSITION_COLOR,
             VertexFormat.Mode.TRIANGLE_STRIP,
-            1536,
+            Constants.ANCHOR_BUFFER_SIZE,
             false,
             false,
             CompositeState.builder()

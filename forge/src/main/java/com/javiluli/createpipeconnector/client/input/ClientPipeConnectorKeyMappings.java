@@ -10,72 +10,70 @@ import org.lwjgl.glfw.GLFW;
 
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ClientPipeConnectorKeyMappings {
-    private static final String CATEGORY = "key.categories.createpipeconnector";
-
     private static final KeyMapping TOGGLE_CONNECTOR_MODE = new KeyMapping(
-            "key.createpipeconnector.toggle_connector_mode",
+            Constants.TOGGLE_CONNECTOR_MODE,
             GLFW.GLFW_KEY_B,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping TOGGLE_PREVIEW_LOCK = new KeyMapping(
-            "key.createpipeconnector.toggle_preview_lock",
+            Constants.TOGGLE_PREVIEW_LOCK,
             GLFW.GLFW_KEY_LEFT_ALT,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping ADD_ANCHOR = new KeyMapping(
-            "key.createpipeconnector.add_anchor",
+            Constants.ADD_ANCHOR,
             GLFW.GLFW_KEY_C,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping REMOVE_LAST_ANCHOR = new KeyMapping(
-            "key.createpipeconnector.remove_last_anchor",
+            Constants.REMOVE_LAST_ANCHOR,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping TOGGLE_COPPER_CASING = new KeyMapping(
-            "key.createpipeconnector.toggle_copper_casing",
+            Constants.TOGGLE_COPPER_CASING,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping REMOVE_LAST_COPPER_CASING = new KeyMapping(
-            "key.createpipeconnector.remove_last_copper_casing",
+            Constants.REMOVE_LAST_COPPER_CASING,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping TOGGLE_MANUAL_PUMP = new KeyMapping(
-            "key.createpipeconnector.toggle_manual_pump",
+            Constants.TOGGLE_MANUAL_PUMP,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping REMOVE_LAST_MANUAL_PUMP = new KeyMapping(
-            "key.createpipeconnector.remove_last_manual_pump",
+            Constants.REMOVE_LAST_MANUAL_PUMP,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping TOGGLE_AUTO_PUMPS = new KeyMapping(
-            "key.createpipeconnector.toggle_auto_pumps",
+            Constants.TOGGLE_AUTO_PUMPS,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping CYCLE_COPPER_CASING_MODE = new KeyMapping(
-            "key.createpipeconnector.cycle_copper_casing_mode",
+            Constants.CYCLE_COPPER_CASING_MODE,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping CYCLE_PIPE_STYLE_MODE = new KeyMapping(
-            "key.createpipeconnector.cycle_pipe_style_mode",
+            Constants.CYCLE_PIPE_STYLE_MODE,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping REVERSE_AUTO_PUMP_DIRECTION = new KeyMapping(
-            "key.createpipeconnector.reverse_auto_pump_direction",
+            Constants.REVERSE_AUTO_PUMP_DIRECTION,
             GLFW.GLFW_KEY_UNKNOWN,
-            CATEGORY
+            Constants.CATEGORY
     );
     private static final KeyMapping CYCLE_ROUTE_PRIORITY = new KeyMapping(
-            "key.createpipeconnector.cycle_route_priority",
+            Constants.CYCLE_ROUTE_PRIORITY,
             GLFW.GLFW_KEY_N,
-            CATEGORY
+            Constants.CATEGORY
     );
     private ClientPipeConnectorKeyMappings() {
     }

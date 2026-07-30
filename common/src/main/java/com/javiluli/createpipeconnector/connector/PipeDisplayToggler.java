@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeDisplayToggleResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -99,16 +100,16 @@ final class PipeDisplayToggler {
     }
 
     private static void cacheFluidFlows(LevelAccessor level, BlockPos position) {
-        invokeFluidTransportMethod("cacheFlows", level, position);
+        invokeFluidTransportMethod(Constants.CACHE_FLOWS, level, position);
     }
 
     private static void loadFluidFlows(LevelAccessor level, BlockPos position) {
-        invokeFluidTransportMethod("loadFlows", level, position);
+        invokeFluidTransportMethod(Constants.LOAD_FLOWS, level, position);
     }
 
     private static void invokeFluidTransportMethod(String methodName, LevelAccessor level, BlockPos position) {
         try {
-            Class<?> fluidTransport = Class.forName("com.simibubi.create.content.fluids.FluidTransportBehaviour");
+            Class<?> fluidTransport = Class.forName(Constants.CREATE_FLUID_TRANSPORT);
             Method method = fluidTransport.getMethod(methodName, LevelAccessor.class, BlockPos.class);
             method.invoke(null, level, position);
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {

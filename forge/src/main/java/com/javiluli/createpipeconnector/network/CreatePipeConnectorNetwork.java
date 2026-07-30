@@ -24,13 +24,12 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class CreatePipeConnectorNetwork {
-    private static final String NETWORK_VERSION = "1";
     private static int messageId;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(Constants.MOD_ID, "main"),
-            () -> NETWORK_VERSION,
-            NETWORK_VERSION::equals,
-            NETWORK_VERSION::equals
+            new ResourceLocation(Constants.MOD_ID, Constants.CHANNEL_PATH),
+            () -> Constants.PROTOCOL_VERSION,
+            Constants.PROTOCOL_VERSION::equals,
+            Constants.PROTOCOL_VERSION::equals
     );
 
     private CreatePipeConnectorNetwork() {

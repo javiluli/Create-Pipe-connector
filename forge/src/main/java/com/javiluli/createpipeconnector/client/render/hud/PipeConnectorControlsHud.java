@@ -38,7 +38,11 @@ public final class PipeConnectorControlsHud {
 
     @SubscribeEvent
     public static void register(RegisterGuiOverlaysEvent event) {
-        event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "pipe_connector_controls", (gui, guiGraphics, partialTick, screenWidth, screenHeight) -> render(guiGraphics));
+        event.registerAbove(
+                VanillaGuiOverlay.HOTBAR.id(),
+                Constants.CONTROLS_OVERLAY,
+                (gui, guiGraphics, partialTick, screenWidth, screenHeight) -> render(guiGraphics)
+        );
     }
 
     private static void render(GuiGraphics guiGraphics) {
@@ -55,11 +59,11 @@ public final class PipeConnectorControlsHud {
 
     private static void renderMinimalControls(GuiGraphics guiGraphics, Font font) {
         String controls = String.join("  |  ",
-                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), "hud.createpipeconnector.control.connector_mode"),
-                hint(keyName(Minecraft.getInstance().options.keyUse), "hud.createpipeconnector.control.start_confirm"),
-                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), "hud.createpipeconnector.control.cycle_route_priority"),
-                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), "hud.createpipeconnector.control.add_anchor"),
-                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), "hud.createpipeconnector.control.lock_preview")
+                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), Constants.HUD_CONTROL_CONNECTOR_MODE),
+                hint(keyName(Minecraft.getInstance().options.keyUse), Constants.HUD_CONTROL_START_CONFIRM),
+                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), Constants.HUD_CONTROL_ROUTE_PRIORITY),
+                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), Constants.HUD_CONTROL_ADD_ANCHOR),
+                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), Constants.HUD_CONTROL_LOCK_PREVIEW)
         );
 
         int width = Math.round(font.width(controls) * CONTROL_TEXT_SCALE);

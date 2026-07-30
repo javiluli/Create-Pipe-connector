@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.player.Player;
 
@@ -12,7 +13,6 @@ import java.lang.reflect.Method;
  * and Forge APIs.
  */
 final class PlayerInteractionRange {
-    private static final double DEFAULT_BLOCK_REACH = 5.0D;
     private static final Method MODERN_RANGE_METHOD = findModernRangeMethod();
     private static final Attribute FORGE_BLOCK_REACH_ATTRIBUTE = findForgeBlockReachAttribute();
 
@@ -29,7 +29,7 @@ final class PlayerInteractionRange {
             return modernRange;
         }
         return FORGE_BLOCK_REACH_ATTRIBUTE == null
-                ? DEFAULT_BLOCK_REACH
+                ? Constants.DEFAULT_BLOCK_REACH
                 : player.getAttributeValue(FORGE_BLOCK_REACH_ATTRIBUTE);
     }
 
@@ -47,7 +47,7 @@ final class PlayerInteractionRange {
 
     private static Method findModernRangeMethod() {
         try {
-            return Player.class.getMethod("blockInteractionRange");
+            return Player.class.getMethod(Constants.BLOCK_INTERACTION_RANGE);
         } catch (NoSuchMethodException ignored) {
             return null;
         }
@@ -60,12 +60,12 @@ final class PlayerInteractionRange {
      */
     private static Attribute findForgeBlockReachAttribute() {
         try {
-            Class<?> forgeMod = Class.forName("net.minecraftforge.common.ForgeMod");
+            Class<?> forgeMod = Class.forName(Constants.FORGE_MOD);
             Object registryObject = forgeRegistryObject(forgeMod);
             if (registryObject == null) {
                 return null;
             }
-            Method get = registryObject.getClass().getMethod("get");
+            Method get = registryObject.getClass().getMethod(Constants.GET);
             Object attribute = get.invoke(registryObject);
             return attribute instanceof Attribute blockReachAttribute ? blockReachAttribute : null;
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
@@ -76,10 +76,10 @@ final class PlayerInteractionRange {
     private static Object forgeRegistryObject(Class<?> forgeMod)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         try {
-            Field blockReach = forgeMod.getField("BLOCK_REACH");
+            Field blockReach = forgeMod.getField(Constants.BLOCK_REACH);
             return blockReach.get(null);
         } catch (NoSuchFieldException ignored) {
-            Method blockReach = forgeMod.getMethod("BLOCK_REACH");
+            Method blockReach = forgeMod.getMethod(Constants.BLOCK_REACH);
             return blockReach.invoke(null);
         }
     }

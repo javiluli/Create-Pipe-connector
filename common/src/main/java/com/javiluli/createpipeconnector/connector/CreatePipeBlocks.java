@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -20,12 +21,12 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 final class CreatePipeBlocks {
-    static final ResourceLocation FLUID_PIPE = new ResourceLocation("create", "fluid_pipe");
-    static final ResourceLocation GLASS_FLUID_PIPE = new ResourceLocation("create", "glass_fluid_pipe");
-    static final ResourceLocation ENCASED_FLUID_PIPE = new ResourceLocation("create", "encased_fluid_pipe");
-    static final ResourceLocation MECHANICAL_PUMP = new ResourceLocation("create", "mechanical_pump");
-    static final ResourceLocation COPPER_CASING = new ResourceLocation("create", "copper_casing");
-    private static final ResourceLocation WRENCH = new ResourceLocation("create", "wrench");
+    static final ResourceLocation FLUID_PIPE = createId(Constants.FLUID_PIPE);
+    static final ResourceLocation GLASS_FLUID_PIPE = createId(Constants.GLASS_FLUID_PIPE);
+    static final ResourceLocation ENCASED_FLUID_PIPE = createId(Constants.ENCASED_FLUID_PIPE);
+    static final ResourceLocation MECHANICAL_PUMP = createId(Constants.MECHANICAL_PUMP);
+    static final ResourceLocation COPPER_CASING = createId(Constants.COPPER_CASING);
+    private static final ResourceLocation WRENCH = createId(Constants.WRENCH);
     private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(FLUID_PIPE);
     private static final Direction[] DIRECTIONS = Direction.values();
 
@@ -226,7 +227,7 @@ final class CreatePipeBlocks {
     static BlockState updatePipeState(BlockState state, Direction preferredDirection, BlockAndTintGetter world, BlockPos position) {
         try {
             Method updateBlockState = state.getBlock().getClass().getMethod(
-                    "updateBlockState",
+                    Constants.UPDATE_BLOCK_STATE,
                     BlockState.class,
                     Direction.class,
                     Direction.class,
@@ -244,5 +245,9 @@ final class CreatePipeBlocks {
             return targetState.setValue(BlockStateProperties.WATERLOGGED, sourceState.getFluidState().is(FluidTags.WATER));
         }
         return targetState;
+    }
+
+    private static ResourceLocation createId(String path) {
+        return new ResourceLocation(Constants.NAMESPACE, path);
     }
 }

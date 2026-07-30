@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -659,7 +660,7 @@ public final class PipeConnectorLogic {
         try {
             Object block = state.getBlock();
             Method updateBlockState = block.getClass().getMethod(
-                    "updateBlockState",
+                    Constants.UPDATE_BLOCK_STATE,
                     BlockState.class,
                     Direction.class,
                     Direction.class,

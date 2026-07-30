@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -141,8 +142,8 @@ final class AutoPumpPlanner {
         }
 
         try {
-            Class<?> fluidPropagator = Class.forName("com.simibubi.create.content.fluids.FluidPropagator");
-            Method getPumpRange = fluidPropagator.getMethod("getPumpRange");
+            Class<?> fluidPropagator = Class.forName(Constants.CREATE_FLUID_PROPAGATOR);
+            Method getPumpRange = fluidPropagator.getMethod(Constants.GET_PUMP_RANGE);
             Object range = getPumpRange.invoke(null);
             if (range instanceof Integer pumpRange) {
                 cachedPumpSuctionPipeGap = Math.max(1, pumpRange - 1);

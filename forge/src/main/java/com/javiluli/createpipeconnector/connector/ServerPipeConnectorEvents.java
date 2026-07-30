@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionPlan;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeDisplayToggleResult;
@@ -25,7 +26,6 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class ServerPipeConnectorEvents {
-    private static final int WRENCH_DOUBLE_CLICK_TICKS = 10;
     private static final Map<UUID, WrenchPipeClick> WRENCH_PIPE_CLICKS = new HashMap<>();
 
     private ServerPipeConnectorEvents() {
@@ -81,22 +81,22 @@ public final class ServerPipeConnectorEvents {
         WrenchPipeClick previousClick = WRENCH_PIPE_CLICKS.get(playerId);
         if (previousClick == null
                 || !previousClick.position().equals(position)
-                || gameTime - previousClick.gameTime() > WRENCH_DOUBLE_CLICK_TICKS) {
+                || gameTime - previousClick.gameTime() > Constants.WRENCH_DOUBLE_CLICK_TICKS) {
             WRENCH_PIPE_CLICKS.put(playerId, new WrenchPipeClick(position, gameTime));
-            player.displayClientMessage(Component.translatable("hud.createpipeconnector.pipe_style_click_again"), true);
+            player.displayClientMessage(Component.translatable(Constants.HUD_PIPE_STYLE_CLICK_AGAIN), true);
             return;
         }
 
         WRENCH_PIPE_CLICKS.remove(playerId);
         PipeDisplayToggleResult result = PipeConnectorLogic.togglePipeDisplaySegment(serverLevel, position);
         if (result.changed() <= 0) {
-            player.displayClientMessage(Component.translatable("hud.createpipeconnector.pipe_style_no_changes"), true);
+            player.displayClientMessage(Component.translatable(Constants.HUD_PIPE_STYLE_NO_CHANGES), true);
             return;
         }
 
         String translationKey = result.glassMode()
-                ? "hud.createpipeconnector.pipe_style_to_glass"
-                : "hud.createpipeconnector.pipe_style_to_default";
+                ? Constants.HUD_PIPE_STYLE_TO_GLASS
+                : Constants.HUD_PIPE_STYLE_TO_DEFAULT;
         player.displayClientMessage(Component.translatable(translationKey, result.changed()), true);
     }
 
@@ -144,7 +144,7 @@ public final class ServerPipeConnectorEvents {
 
         if (currentSelection == null) {
             PipeConnectorLogic.setSelection(player.getUUID(), new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
-            player.displayClientMessage(Component.translatable("hud.createpipeconnector.first_point_selected"), true);
+            player.displayClientMessage(Component.translatable(Constants.HUD_FIRST_POINT_SELECTED), true);
             return true;
         }
 
@@ -213,13 +213,13 @@ public final class ServerPipeConnectorEvents {
 
     private static Component missingMaterialsMessage(Player player, Block pipeBlock, ConnectionPlan plan) {
         List<Component> missingMaterials = new ArrayList<>();
-        addMissingMaterial(missingMaterials, plan.requiredPipes(), PipeConnectorLogic.countAvailablePipes(player, pipeBlock), "hud.createpipeconnector.missing_pipes");
-        addMissingMaterial(missingMaterials, plan.requiredPumps(), PipeConnectorLogic.countAvailablePumps(player), "hud.createpipeconnector.missing_pumps");
-        addMissingMaterial(missingMaterials, plan.requiredCopperCasings(), PipeConnectorLogic.countAvailableCopperCasings(player), "hud.createpipeconnector.missing_casings");
+        addMissingMaterial(missingMaterials, plan.requiredPipes(), PipeConnectorLogic.countAvailablePipes(player, pipeBlock), Constants.HUD_MISSING_PIPES);
+        addMissingMaterial(missingMaterials, plan.requiredPumps(), PipeConnectorLogic.countAvailablePumps(player), Constants.HUD_MISSING_PUMPS);
+        addMissingMaterial(missingMaterials, plan.requiredCopperCasings(), PipeConnectorLogic.countAvailableCopperCasings(player), Constants.HUD_MISSING_CASINGS);
         if (missingMaterials.isEmpty()) {
-            return Component.translatable("hud.createpipeconnector.missing_materials", Component.literal("?"));
+            return Component.translatable(Constants.HUD_MISSING_MATERIALS, Component.literal("?"));
         }
-        return Component.translatable("hud.createpipeconnector.missing_materials", joinComponents(missingMaterials));
+        return Component.translatable(Constants.HUD_MISSING_MATERIALS, joinComponents(missingMaterials));
     }
 
     private static void addMissingMaterial(List<Component> missingMaterials, int required, int available, String translationKey) {
@@ -244,7 +244,7 @@ public final class ServerPipeConnectorEvents {
         Iterator<Map.Entry<UUID, WrenchPipeClick>> iterator = WRENCH_PIPE_CLICKS.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<UUID, WrenchPipeClick> entry = iterator.next();
-            if (gameTime - entry.getValue().gameTime() > WRENCH_DOUBLE_CLICK_TICKS) {
+            if (gameTime - entry.getValue().gameTime() > Constants.WRENCH_DOUBLE_CLICK_TICKS) {
                 iterator.remove();
             }
         }

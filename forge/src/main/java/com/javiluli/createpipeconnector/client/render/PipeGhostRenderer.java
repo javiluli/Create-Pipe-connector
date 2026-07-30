@@ -1,6 +1,7 @@
 package com.javiluli.createpipeconnector.client.render;
 
 import com.javiluli.createpipeconnector.Constants;
+import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.client.render.overlay.AnchorOverlayRenderer;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
@@ -49,7 +50,10 @@ import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class PipeGhostRenderer {
-    private static final ModelResourceLocation MECHANICAL_PUMP_ITEM_MODEL = new ModelResourceLocation(new ResourceLocation("create", "mechanical_pump"), "inventory");
+    private static final ModelResourceLocation MECHANICAL_PUMP_ITEM_MODEL = new ModelResourceLocation(
+            new ResourceLocation(Constants.NAMESPACE, Constants.MECHANICAL_PUMP),
+            Constants.ITEM_MODEL_VARIANT
+    );
     private static final RenderType GHOST_RENDER_TYPE = PipeConnectorRenderTypes.ghostTranslucent();
     private static final float GHOST_RED = 1.00F;
     private static final float GHOST_GREEN = 1.00F;
@@ -269,7 +273,11 @@ public final class PipeGhostRenderer {
         SchematicLevel schematicLevel = new SchematicLevel(BlockPos.ZERO, level);
         schematicLevel.renderMode = true;
         for (PreviewPipe previewPipe : previewPipes) {
-            schematicLevel.setBlock(previewPipe.position(), previewPipe.state(), 3);
+            schematicLevel.setBlock(
+                    previewPipe.position(),
+                    previewPipe.state(),
+                    Constants.PREVIEW_BLOCK_UPDATE_FLAGS
+            );
         }
         return schematicLevel;
     }
