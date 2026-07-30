@@ -11,10 +11,14 @@ A utility addon for [Create](https://github.com/Creators-of-Create/Create). Avai
 <a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
 <img src="https://img.shields.io/curseforge/dt/1610354?style=for-the-badge&color=242629&labelColor=F16436&logo=curseforge&logoColor=white&label=" alt="CurseForge">
 </a>
+<a href="https://modrinth.com/mod/create-pipe-connector">
+<img src="https://img.shields.io/modrinth/dt/create-pipe-connector?logo=modrinth&label=&suffix=%20&style=for-the-badge&color=242629&labelColor=5CA424&logoColor=1C1C1C" alt="Modrinth">
+</a>
 ![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
 ![NeoForge](https://img.shields.io/badge/NeoForge-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
 ![Forge](https://img.shields.io/badge/Forge-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
 ![Fabric](https://img.shields.io/badge/Fabric-not%20available-757575?style=for-the-badge)
+
 </div>
 
 ---
@@ -53,14 +57,14 @@ Optional features use:
 
 Only the most important controls are bound by default:
 
-| Action | Default |
-| --- | --- |
-| Toggle Connector Pipe mode | `B` |
-| Start / confirm route | Right-click |
-| Open radial menu | `N` |
-| Add anchor | `C` |
-| Lock preview target / freecam-style planning | `Left Alt` |
-| Cancel current route | Left-click |
+| Action                                       | Default     |
+| -------------------------------------------- | ----------- |
+| Toggle Connector Pipe mode                   | `B`         |
+| Start / confirm route                        | Right-click |
+| Open radial menu                             | `N`         |
+| Add anchor                                   | `C`         |
+| Lock preview target / freecam-style planning | `Left Alt`  |
+| Cancel current route                         | Left-click  |
 
 Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps, and undo actions are available in Minecraft's Controls menu but are **unassigned by default**. You can use the radial menu instead, or bind them yourself.
 
@@ -103,11 +107,11 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 
 - **Java:** `21`
 
-| Loader | Minecraft | Mod Version | Status |
-| --- | --- | --- | --- |
-| NeoForge | `1.21.1` | `1.0.0` | Main supported build |
-| Forge | `1.20.1` | `0.2.0-beta` | Separate Forge branch/build |
-| Fabric | - | - | Not available yet |
+| Loader   | Minecraft | Mod Version  | Status                      |
+| -------- | --------- | ------------ | --------------------------- |
+| NeoForge | `1.21.1`  | `1.0.0`      | Main supported build        |
+| Forge    | `1.20.1`  | `0.2.0-beta` | Separate Forge branch/build |
+| Fabric   | -         | -            | Not available yet           |
 
 For the NeoForge build:
 
