@@ -9,8 +9,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
- * Resolves the player's block interaction range across the supported Minecraft
- * and Forge APIs.
+ * Resolves the player's block interaction range across supported Forge APIs.
  */
 final class PlayerInteractionRange {
     private static final Method MODERN_RANGE_METHOD = findModernRangeMethod();
@@ -54,9 +53,8 @@ final class PlayerInteractionRange {
     }
 
     /**
-     * Forge 1.20.1 exposes block reach through a registry object while newer
-     * loaders expose a direct player method. Reflection keeps the shared module
-     * independent from either loader at compile time.
+     * Forge 1.20.1 exposes block reach through a registry object. Reflection
+     * keeps the shared module independent from Forge at compile time.
      */
     private static Attribute findForgeBlockReachAttribute() {
         try {

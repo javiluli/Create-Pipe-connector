@@ -28,7 +28,7 @@ import java.util.UUID;
  * Public facade for pipe routing, preview generation, inventory accounting,
  * placement and per-player connector sessions.
  *
- * <p>Loader-specific code should call this class instead of depending on the
+ * <p>Forge integration code should call this class instead of depending on the
  * package-private routing and Create integration helpers directly.</p>
  */
 public final class PipeConnectorLogic {

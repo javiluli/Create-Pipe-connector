@@ -8,7 +8,7 @@ package com.javiluli.createpipeconnector;
  * gameplay code.</p>
  */
 public final class Constants {
-    /** The mod identifier used by every loader entrypoint and metadata file. */
+    /** The mod identifier used by the Forge entrypoint and metadata file. */
     public static final String MOD_ID = "createpipeconnector";
 
     /** Create namespace used by registry identifiers. */
