@@ -21,15 +21,15 @@ Keep the Forge branch focused on Minecraft `1.20.1` while preserving shared conn
 
 ## Useful commands
 
-- `./gradlew :forge:Client`
-- `./gradlew :forge:Server`
+- `./gradlew runClient`
+- `./gradlew runServer`
 - `./gradlew :forge:build`
-- `./gradlew buildAll`
+- `./gradlew buildRelease`
 
 ## Release checklist
 
-1. Run `./gradlew buildAll` or `./gradlew :forge:build`.
-2. Upload `out_jars/createpipeconnector-forge-1.20.1-1.0.0.jar` to CurseForge.
+1. Run `./gradlew buildRelease` or `./gradlew :forge:build`.
+2. Upload `out_jars/createpipeconnector-forge-1.20.1-1.1.0.jar` to CurseForge.
 3. Mark Minecraft `1.20.1`, Forge, and Java `17`.
 4. Add Create as a required dependency.
 5. Mark the environment as both client and server.

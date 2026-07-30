@@ -4,7 +4,7 @@
 
 - Minecraft `1.20.1`
 - Forge `47.4.20` or compatible `47.x`
-- Create `6.0.8-289` or compatible `6.0.x`
+- Create `6.0.6-168` or compatible `6.0.x`
 - Java `17`
 
 ## Runtime dependencies
@@ -26,5 +26,5 @@
 
 - Minecraft `1.20.1`
 - Forge `47.4.20` or newer `47.x`
-- Create `6.0.8-289`
-- Create: Pipe Connector `1.0.0`
+- Create `6.0.6-168`
+- Create: Pipe Connector `1.1.0`

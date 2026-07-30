@@ -7,6 +7,8 @@ The categories follow Create's changelog style: **Additions**, **Art Changes**, 
 
 ## Unreleased
 
+## 1.1.0 - 2026-07-30
+
 ### Gameplay Changes
 
 - Glass pipe styling now uses regular fluid pipes as its only consumable material.
@@ -15,9 +17,10 @@ The categories follow Create's changelog style: **Additions**, **Art Changes**, 
 
 ### Optimizations
 
-- Split pathfinding, route geometry, interaction range, and client material evaluation into focused utility classes.
-- Centralized shared identifiers, translation keys, network metadata, and gameplay thresholds.
-- Documented the connector facade, Forge lifecycle, rendering pipeline, radial strategies, and network payloads for future maintenance.
+- Reorganized pathfinding, route geometry, interaction range, material evaluation, and shared constants into focused utilities.
+- Removed unused connector members and obsolete translation entries.
+- Removed the stale NeoForge module and loader-specific references from the Forge branch.
+- Simplified the root Gradle commands used to run and package the Forge build without colliding with subproject lifecycle tasks.
 - Added dedicated ghost and anchor render types to make preview rendering more predictable across modpacks.
 - Applied ghost transparency directly to preview vertices instead of relying on global shader color state.
 - Reused the cached preview geometry while preserving separate colors for valid and missing materials.

@@ -5,12 +5,20 @@
 
 **Build Create fluid pipe routes faster: preview the path, adjust it, and place it in one action.**
 
-Forge build for Minecraft `1.20.1`.
+A utility addon for [Create](https://github.com/Creators-of-Create/Create). Available builds are listed below.
 
-![Version](https://img.shields.io/badge/Version-1.0.0-2E7D32?style=for-the-badge)
-![Create](https://img.shields.io/badge/Create-6.0.6+-7B4F1D?style=for-the-badge)
-![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
-![Loader](https://img.shields.io/badge/Loader-Forge-E65100?style=for-the-badge&logo=forge&logoColor=white)
+![Version](https://img.shields.io/badge/Version-1.1.0-2E7D32?style=for-the-badge)
+<a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
+<img src="https://img.shields.io/curseforge/dt/1610354?style=for-the-badge&color=242629&labelColor=F16436&logo=curseforge&logoColor=white&label=" alt="CurseForge">
+</a>
+<a href="https://modrinth.com/mod/create-pipe-connector">
+<img src="https://img.shields.io/modrinth/dt/create-pipe-connector?logo=modrinth&label=&suffix=%20&style=for-the-badge&color=242629&labelColor=5CA424&logoColor=1C1C1C" alt="Modrinth">
+</a>
+![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
+![NeoForge](https://img.shields.io/badge/NeoForge-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
+![Forge](https://img.shields.io/badge/Forge-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
+![Fabric](https://img.shields.io/badge/Fabric-not%20available-757575?style=for-the-badge)
+
 </div>
 
 ---
@@ -49,14 +57,14 @@ Optional features use:
 
 Only the most important controls are bound by default:
 
-| Action | Default |
-| --- | --- |
-| Toggle Connector Pipe mode | `B` |
-| Start / confirm route | Right-click |
-| Open radial menu | `N` |
-| Add anchor | `C` |
-| Lock preview target / freecam-style planning | `Left Alt` |
-| Cancel current route | Left-click |
+| Action                                       | Default     |
+| -------------------------------------------- | ----------- |
+| Toggle Connector Pipe mode                   | `B`         |
+| Start / confirm route                        | Right-click |
+| Open radial menu                             | `N`         |
+| Add anchor                                   | `C`         |
+| Lock preview target / freecam-style planning | `Left Alt`  |
+| Cancel current route                         | Left-click  |
 
 Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps, and undo actions are available in Minecraft's Controls menu but are **unassigned by default**. You can use the radial menu instead, or bind them yourself.
 
@@ -98,7 +106,6 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 ## Requirements
 
 - **Minecraft:** `1.20.1`
-- **Loader:** `Forge`
 - **Forge:** `47.4.20` or compatible `47.x`
 - **Create:** `6.0.6` or compatible `6.0.x`
 - **Java:** `17`
@@ -108,12 +115,12 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 - Install on both client and server.
 - Requires Create at runtime.
 - No extra runtime dependencies beyond Minecraft, Forge, and Create.
-- Current Forge version: **`1.0.0`**.
-- This build matches the current NeoForge gameplay feature set, adapted for Forge `1.20.1`.
+- Current Forge version: **`1.1.0`**.
+- Report route or preview edge cases with screenshots and the relevant client or server log.
 
 ## Developer Notes
 
-This branch is Forge-only for Minecraft `1.20.1`. Shared connector logic lives in `common`; Forge input, networking, events, HUD, and rendering live in `forge`.
+This branch targets Forge for Minecraft `1.20.1`. Shared connector logic lives in `common`; Forge input, networking, events, HUD, and rendering live in `forge`.
 
 - Core routing: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
 - Preview state building: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipePreviewBuilder.java`
@@ -123,6 +130,13 @@ This branch is Forge-only for Minecraft `1.20.1`. Shared connector logic lives i
 
 Build commands:
 
-- Run client: `./gradlew :forge:Client`
+- Run client: `./gradlew runClient`
 - Build jar: `./gradlew :forge:build`
-- Build release copy: `./gradlew buildAll`
+- Build release copy: `./gradlew buildRelease`
+
+More docs:
+
+- `docs/PLAYER_GUIDE.md`
+- `docs/MODPACK_GUIDE.md`
+- `docs/DEV_GUIDE.md`
+- `docs/API.md`
