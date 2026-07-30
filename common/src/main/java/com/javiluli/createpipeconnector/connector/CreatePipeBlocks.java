@@ -19,12 +19,12 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 final class CreatePipeBlocks {
-    static final ResourceLocation FLUID_PIPE = ResourceLocation.tryParse("create:fluid_pipe");
-    static final ResourceLocation GLASS_FLUID_PIPE = ResourceLocation.tryParse("create:glass_fluid_pipe");
-    static final ResourceLocation ENCASED_FLUID_PIPE = ResourceLocation.tryParse("create:encased_fluid_pipe");
-    static final ResourceLocation MECHANICAL_PUMP = ResourceLocation.tryParse("create:mechanical_pump");
-    static final ResourceLocation COPPER_CASING = ResourceLocation.tryParse("create:copper_casing");
-    private static final ResourceLocation WRENCH = ResourceLocation.tryParse("create:wrench");
+    static final ResourceLocation FLUID_PIPE = new ResourceLocation("create", "fluid_pipe");
+    static final ResourceLocation GLASS_FLUID_PIPE = new ResourceLocation("create", "glass_fluid_pipe");
+    static final ResourceLocation ENCASED_FLUID_PIPE = new ResourceLocation("create", "encased_fluid_pipe");
+    static final ResourceLocation MECHANICAL_PUMP = new ResourceLocation("create", "mechanical_pump");
+    static final ResourceLocation COPPER_CASING = new ResourceLocation("create", "copper_casing");
+    private static final ResourceLocation WRENCH = new ResourceLocation("create", "wrench");
     private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(FLUID_PIPE);
     private static final Direction[] DIRECTIONS = Direction.values();
 

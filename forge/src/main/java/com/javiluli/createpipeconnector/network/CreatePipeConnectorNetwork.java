@@ -23,13 +23,11 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
-import java.util.Objects;
-
 public final class CreatePipeConnectorNetwork {
     private static final String NETWORK_VERSION = "1";
     private static int messageId;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            Objects.requireNonNull(ResourceLocation.tryParse(Constants.MOD_ID + ":main")),
+            new ResourceLocation(Constants.MOD_ID, "main"),
             () -> NETWORK_VERSION,
             NETWORK_VERSION::equals,
             NETWORK_VERSION::equals

@@ -10,7 +10,6 @@ base {
 minecraft {
     mappings channel: 'official', version: minecraft_version
     copyIdeResources = true
-    reobf = false
 
     runs {
         configureEach {
