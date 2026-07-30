@@ -475,6 +475,9 @@ public final class PipeConnectorLogic {
 
             appendSegmentPath(mergedPath, segment.path());
             placementPositions.addAll(segment.placementPositions());
+            if (!waypoint.existingPipe() && !isConnectablePipe(level.getBlockState(waypoint.position()))) {
+                placementPositions.add(waypoint.position());
+            }
             start = new SegmentEndpoint(waypoint.position(), waypoint.face(), waypoint.existingPipe());
         }
 

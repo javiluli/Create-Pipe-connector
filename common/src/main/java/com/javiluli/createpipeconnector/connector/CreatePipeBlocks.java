@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -239,8 +240,8 @@ final class CreatePipeBlocks {
     }
 
     private static BlockState copyWaterlogged(BlockState sourceState, BlockState targetState) {
-        if (targetState.hasProperty(BlockStateProperties.WATERLOGGED) && sourceState.hasProperty(BlockStateProperties.WATERLOGGED)) {
-            return targetState.setValue(BlockStateProperties.WATERLOGGED, sourceState.getValue(BlockStateProperties.WATERLOGGED));
+        if (targetState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+            return targetState.setValue(BlockStateProperties.WATERLOGGED, sourceState.getFluidState().is(FluidTags.WATER));
         }
         return targetState;
     }
