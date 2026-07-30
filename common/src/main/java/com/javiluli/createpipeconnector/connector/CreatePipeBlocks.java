@@ -205,10 +205,6 @@ final class CreatePipeBlocks {
         return GLASS_FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
-    static boolean isEncasedFluidPipe(BlockState state) {
-        return ENCASED_FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
-    }
-
     static boolean isMechanicalPump(BlockState state) {
         return MECHANICAL_PUMP.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }

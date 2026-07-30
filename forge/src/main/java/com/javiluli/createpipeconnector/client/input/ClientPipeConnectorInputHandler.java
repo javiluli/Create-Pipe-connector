@@ -430,10 +430,6 @@ public final class ClientPipeConnectorInputHandler {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastCopperCasing();
     }
 
-    public static boolean isPreviewTargetLocked() {
-        return previewTargetLocked;
-    }
-
     private static boolean canAddAnchor(Selection selection, PlacementTarget target) {
         if (selection.position().equals(target.position())) {
             return false;

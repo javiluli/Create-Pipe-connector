@@ -135,10 +135,6 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         return mechanicColorFor(mechanic);
     }
 
-    private static boolean isPixelatedMechanicBorder(int sectorIndex, double angle, double distance) {
-        return isPixelatedSectorBorder(sectorIndex, MECHANICS.length, MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS, angle, distance);
-    }
-
     private void renderPixelatedOptionRing(GuiGraphics guiGraphics, int centerX, int centerY) {
         RadialOption[] options = selectedMechanic.options();
         RingCells ring = optionRing(options.length);

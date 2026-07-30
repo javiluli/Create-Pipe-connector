@@ -159,42 +159,6 @@ public final class ClientPipeConnectorKeyMappings {
         return ADD_ANCHOR;
     }
 
-    public static KeyMapping removeLastAnchorKey() {
-        return REMOVE_LAST_ANCHOR;
-    }
-
-    public static KeyMapping toggleCopperCasingKey() {
-        return TOGGLE_COPPER_CASING;
-    }
-
-    public static KeyMapping toggleManualPumpKey() {
-        return TOGGLE_MANUAL_PUMP;
-    }
-
-    public static KeyMapping removeLastManualPumpKey() {
-        return REMOVE_LAST_MANUAL_PUMP;
-    }
-
-    public static KeyMapping removeLastCopperCasingKey() {
-        return REMOVE_LAST_COPPER_CASING;
-    }
-
-    public static KeyMapping toggleAutoPumpsKey() {
-        return TOGGLE_AUTO_PUMPS;
-    }
-
-    public static KeyMapping cycleCopperCasingModeKey() {
-        return CYCLE_COPPER_CASING_MODE;
-    }
-
-    public static KeyMapping cyclePipeStyleModeKey() {
-        return CYCLE_PIPE_STYLE_MODE;
-    }
-
-    public static KeyMapping reverseAutoPumpDirectionKey() {
-        return REVERSE_AUTO_PUMP_DIRECTION;
-    }
-
     public static KeyMapping cycleRoutePriorityKey() {
         return CYCLE_ROUTE_PRIORITY;
     }

@@ -270,10 +270,6 @@ public final class PipeConnectorLogic {
         return PipeInventory.countAvailablePipes(player, pipeBlock);
     }
 
-    public static boolean hasEnoughPipes(Player player, Block pipeBlock, int requiredPipes) {
-        return player.getAbilities().instabuild || PipeInventory.countAvailablePipes(player, pipeBlock) >= requiredPipes;
-    }
-
     public static int countAvailablePumps(Player player) {
         return PipeInventory.countAvailablePumps(player);
     }
@@ -347,10 +343,6 @@ public final class PipeConnectorLogic {
         return new ConnectionPlan(plan.path(), plan.placementPositions(), pumpPlacements, plan.copperCasingPlacements(), plan.glassPipePlacements());
     }
 
-    public static ConnectionPlan withCopperCasings(ConnectionPlan plan, List<BlockPos> casingPositions, Block pipeBlock) {
-        return withCopperCasingMode(plan, CopperCasingMode.MANUAL, casingPositions, pipeBlock);
-    }
-
     public static ConnectionPlan withCopperCasingMode(ConnectionPlan plan, CopperCasingMode mode, List<BlockPos> casingPositions, Block pipeBlock) {
         if (!CreatePipeBlocks.supportsCopperCasing(pipeBlock)) {
             return new ConnectionPlan(plan.path(), plan.placementPositions(), plan.pumpPlacements(), Set.of(), plan.glassPipePlacements());
@@ -404,10 +396,6 @@ public final class PipeConnectorLogic {
 
     public static ConnectionPlan buildConnectionPlan(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace) {
         return buildPlacementPlan(level, startPos, startFace, true, endPos, endFace, true);
-    }
-
-    public static ConnectionPlan buildPlacementPreviewPlan(Level level, BlockPos startPos, Direction startFace, BlockPos targetPos) {
-        return buildPlacementPlan(level, startPos, startFace, true, targetPos, null, false);
     }
 
     public static ConnectionPlan buildPlacementPlan(Level level, Selection selection, PlacementTarget target) {
