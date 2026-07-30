@@ -13,6 +13,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Adds mechanical pump placements to an immutable connection plan.
+ *
+ * <p>The planner keeps pumps on straight route sections and reads Create's
+ * configured flow limits when the compatible API is available.</p>
+ */
 final class AutoPumpPlanner {
     private static final int FALLBACK_PUMP_SUCTION_PIPE_GAP = 15;
     private static final int FALLBACK_PUMP_PUSH_PIPE_GAP = 15;
@@ -141,6 +147,8 @@ final class AutoPumpPlanner {
             return cachedPumpSuctionPipeGap;
         }
 
+        // Create has changed this API between releases. Reflection lets the
+        // shared module support the compatible Create 6.x variants.
         try {
             Class<?> fluidPropagator = Class.forName(Constants.CREATE_FLUID_PROPAGATOR);
             Method getPumpRange = fluidPropagator.getMethod(Constants.GET_PUMP_RANGE);

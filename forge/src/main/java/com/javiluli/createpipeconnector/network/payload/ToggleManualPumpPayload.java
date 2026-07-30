@@ -3,6 +3,9 @@ package com.javiluli.createpipeconnector.network.payload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 
+/**
+ * Adds or removes a manual pump marker at a route position.
+ */
 public record ToggleManualPumpPayload(BlockPos position) {
     public static ToggleManualPumpPayload decode(FriendlyByteBuf buffer) {
         return new ToggleManualPumpPayload(buffer.readBlockPos());

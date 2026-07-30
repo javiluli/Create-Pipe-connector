@@ -24,6 +24,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Public facade for pipe routing, preview generation, inventory accounting,
+ * placement and per-player connector sessions.
+ *
+ * <p>Loader-specific code should call this class instead of depending on the
+ * package-private routing and Create integration helpers directly.</p>
+ */
 public final class PipeConnectorLogic {
     private static final Direction[] DIRECTIONS = Direction.values();
 
@@ -74,6 +81,10 @@ public final class PipeConnectorLogic {
         return PipeDisplayToggler.toggleSegment(level, origin);
     }
 
+    /**
+     * Resolves a clicked face into an existing pipe endpoint or a replaceable
+     * position where the first pipe may be placed.
+     */
     public static PlacementTarget resolvePlacementTarget(Level level, BlockPos clickedPos, Direction clickedFace, Block pipeBlock) {
         BlockState clickedState = level.getBlockState(clickedPos);
         if (isConnectablePipe(clickedState)) {
@@ -121,6 +132,9 @@ public final class PipeConnectorLogic {
         return PipeConnectorSessions.isConnectorModeEnabled(playerId);
     }
 
+    /**
+     * Applies the same reach restriction used by normal player interactions.
+     */
     public static boolean isWithinInteractionRange(Player player, BlockPos position) {
         double maxDistance = getInteractionRange(player) + 1.0D;
         return player.getEyePosition().distanceToSqr(Vec3.atCenterOf(position)) <= maxDistance * maxDistance;
@@ -234,6 +248,11 @@ public final class PipeConnectorLogic {
         PipeConnectorSessions.removeLastCopperCasing(playerId);
     }
 
+    /**
+     * Calculates and places a basic connection between two world positions.
+     *
+     * @return {@code true} when a valid route was placed
+     */
     public static boolean connect(ServerLevel level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
         ConnectionPlan plan = buildConnectionPlan(level, startPos, endPos);
         if (plan == null) {
@@ -243,6 +262,12 @@ public final class PipeConnectorLogic {
         return connect(level, plan, pipeBlock);
     }
 
+    /**
+     * Places a previously validated plan and refreshes the resulting Create
+     * pipe network.
+     *
+     * @return {@code false} if any destination became obstructed
+     */
     public static boolean connect(ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
         Block pumpBlock = getMechanicalPumpBlock();
 
@@ -298,6 +323,9 @@ public final class PipeConnectorLogic {
         return CreatePipeBlocks.createPumpState(pumpBlock, sourceState, facing);
     }
 
+    /**
+     * Builds render-ready pipe states without modifying the level.
+     */
     public static List<PreviewPipe> buildPreview(Level level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
         ConnectionPlan plan = buildConnectionPlan(level, startPos, endPos);
         if (plan == null) {
@@ -688,6 +716,9 @@ public final class PipeConnectorLogic {
         return pipeState;
     }
 
+    /**
+     * First endpoint and pipe type stored while a player edits a route.
+     */
     public record Selection(BlockPos position, Block pipeBlock, Direction face, boolean existingPipe) {
         public Selection {
             Objects.requireNonNull(position, "position");
@@ -696,6 +727,9 @@ public final class PipeConnectorLogic {
         }
     }
 
+    /**
+     * Candidate endpoint or anchor resolved from the player's current aim.
+     */
     public record PlacementTarget(BlockPos position, Direction face, boolean existingPipe) {
         public PlacementTarget {
             Objects.requireNonNull(position, "position");
@@ -703,6 +737,10 @@ public final class PipeConnectorLogic {
         }
     }
 
+    /**
+     * Render-ready preview entry with optional pump orientation and material
+     * availability feedback.
+     */
     public record PreviewPipe(BlockPos position, BlockState state, Direction mechanicalPumpFacing, boolean missingMaterial) {
         public PreviewPipe(BlockPos position, BlockState state) {
             this(position, state, null, false);
@@ -722,6 +760,9 @@ public final class PipeConnectorLogic {
         }
     }
 
+    /**
+     * Immutable route result and all optional placement modifiers.
+     */
     public record ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions, Map<BlockPos, Direction> pumpPlacements, Set<BlockPos> copperCasingPlacements, Set<BlockPos> glassPipePlacements) {
         public ConnectionPlan(List<BlockPos> path, List<BlockPos> placementPositions) {
             this(path, placementPositions, Map.of());
@@ -757,12 +798,18 @@ public final class PipeConnectorLogic {
 
     }
 
+    /**
+     * Summary returned after toggling a connected pipe segment's display.
+     */
     public record PipeDisplayToggleResult(boolean glassMode, int changed, int skipped, int total) {
         public static PipeDisplayToggleResult empty(boolean glassMode) {
             return new PipeDisplayToggleResult(glassMode, 0, 0, 0);
         }
     }
 
+    /**
+     * Routing strategies exposed through the connector options menu.
+     */
     public enum RoutePriority {
         AUTO(1),
         HORIZONTAL_FIRST(1),
@@ -792,6 +839,9 @@ public final class PipeConnectorLogic {
         }
     }
 
+    /**
+     * Automatic mechanical pump spacing strategies.
+     */
     public enum PumpMode {
         OFF,
         EFFICIENT,
@@ -812,6 +862,9 @@ public final class PipeConnectorLogic {
         }
     }
 
+    /**
+     * Determines whether copper casing is disabled, manually marked or global.
+     */
     public enum CopperCasingMode {
         NONE,
         MANUAL,
@@ -828,6 +881,9 @@ public final class PipeConnectorLogic {
         }
     }
 
+    /**
+     * Visual style applied to ordinary pipe positions in a route.
+     */
     public enum PipeStyleMode {
         DEFAULT,
         GLASS;

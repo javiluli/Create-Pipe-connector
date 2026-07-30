@@ -4,6 +4,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 
+/**
+ * Starts or confirms a route using the targeted position and face.
+ */
 public record SelectPipeTargetPayload(BlockPos position, Direction face, boolean existingPipe) {
     public static SelectPipeTargetPayload decode(FriendlyByteBuf buffer) {
         return new SelectPipeTargetPayload(buffer.readBlockPos(), buffer.readEnum(Direction.class), buffer.readBoolean());

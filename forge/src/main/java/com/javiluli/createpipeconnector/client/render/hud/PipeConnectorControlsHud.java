@@ -21,6 +21,10 @@ import net.minecraftforge.fml.common.Mod;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Displays active connector controls and predicted material requirements above
+ * the vanilla hotbar.
+ */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class PipeConnectorControlsHud {
     private static final int BACKGROUND_COLOR = 0xAA101010;
@@ -36,6 +40,9 @@ public final class PipeConnectorControlsHud {
     private PipeConnectorControlsHud() {
     }
 
+    /**
+     * Places the connector HUD above the vanilla hotbar overlay.
+     */
     @SubscribeEvent
     public static void register(RegisterGuiOverlaysEvent event) {
         event.registerAbove(

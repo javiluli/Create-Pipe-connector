@@ -20,6 +20,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
 
+/**
+ * Centralizes registry lookups and block-state interoperability with Create.
+ *
+ * <p>Keeping Create-specific reflection here prevents routing and placement
+ * code from depending on implementation details that may move between Create
+ * versions.</p>
+ */
 final class CreatePipeBlocks {
     static final ResourceLocation FLUID_PIPE = createId(Constants.FLUID_PIPE);
     static final ResourceLocation GLASS_FLUID_PIPE = createId(Constants.GLASS_FLUID_PIPE);

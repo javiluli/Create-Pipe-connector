@@ -25,12 +25,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Owns Forge server events for route lifecycle, placement confirmation and
+ * double-wrench pipe display toggling.
+ */
 public final class ServerPipeConnectorEvents {
     private static final Map<UUID, WrenchPipeClick> WRENCH_PIPE_CLICKS = new HashMap<>();
 
     private ServerPipeConnectorEvents() {
     }
 
+    /**
+     * Clears stale selections when the player leaves connector-compatible
+     * gameplay state.
+     */
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
             return;
@@ -62,6 +70,9 @@ public final class ServerPipeConnectorEvents {
         clearActionBar(player);
     }
 
+    /**
+     * Detects a short double click before converting a connected pipe segment.
+     */
     public static void handleWrenchPipeDisplayClick(Player player, ServerLevel serverLevel, BlockPos position) {
         if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
             return;
@@ -100,6 +111,9 @@ public final class ServerPipeConnectorEvents {
         player.displayClientMessage(Component.translatable(translationKey, result.changed()), true);
     }
 
+    /**
+     * Handles block-targeted route starts and confirmations on the server.
+     */
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (event.getLevel().isClientSide() || event.getHand() != InteractionHand.MAIN_HAND) {
             return;
@@ -127,6 +141,11 @@ public final class ServerPipeConnectorEvents {
         }
     }
 
+    /**
+     * Starts a route or validates, consumes and places its confirmed plan.
+     *
+     * @return {@code true} when the interaction was accepted
+     */
     public static boolean handlePipeTarget(Player player, ServerLevel serverLevel, PlacementTarget target) {
         if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
             return false;
@@ -187,6 +206,9 @@ public final class ServerPipeConnectorEvents {
         return true;
     }
 
+    /**
+     * Clears all transient route data and the connector action-bar message.
+     */
     public static void cancelPipeConnection(Player player) {
         PipeConnectorLogic.clearSelection(player.getUUID());
         clearActionBar(player);

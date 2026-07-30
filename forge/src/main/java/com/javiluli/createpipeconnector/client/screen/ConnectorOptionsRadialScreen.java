@@ -27,6 +27,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Non-pausing radial menu for route, pump, casing and pipe-style strategies.
+ *
+ * <p>The inner ring selects a mechanic and the outer ring applies one of that
+ * mechanic's polymorphic {@link RadialOption} implementations.</p>
+ */
 public final class ConnectorOptionsRadialScreen extends Screen {
     private static final int BACKGROUND_COLOR = 0x33000000;
     private static final int MECHANIC_COLOR = 0x73000000;
@@ -401,9 +407,15 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         return cachedRing == null ? RingCells.create(OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS, sectorCount) : cachedRing;
     }
 
+    /**
+     * One precomputed GUI cell in a pixelated ring sector.
+     */
     private record RingCell(int x, int y, int sectorIndex, double distance, boolean border) {
     }
 
+    /**
+     * Immutable ring geometry shared across frames with the same sector count.
+     */
     private record RingCells(List<RingCell> cells) {
         private static RingCells create(int innerRadius, int outerRadius, int sectorCount) {
             int radius = outerRadius + PIXEL_RING_CELL_SIZE;
@@ -497,6 +509,10 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         return false;
     }
 
+    /**
+     * Inner-ring categories. Each constant supplies its own option strategy,
+     * avoiding category-specific conditionals in the screen renderer.
+     */
     private enum Mechanic {
         ROUTE_STYLE("route_style") {
             @Override
@@ -618,6 +634,9 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         }
     }
 
+    /**
+     * Polymorphic action displayed in an outer-ring sector.
+     */
     private interface RadialOption {
         String id();
 

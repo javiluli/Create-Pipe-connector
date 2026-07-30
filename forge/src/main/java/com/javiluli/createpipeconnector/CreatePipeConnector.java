@@ -5,8 +5,11 @@ import com.javiluli.createpipeconnector.network.CreatePipeConnectorNetwork;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 
+/**
+ * Forge entrypoint that registers networking and server gameplay events.
+ */
 @Mod(Constants.MOD_ID)
-public class CreatePipeConnector {
+public final class CreatePipeConnector {
     public CreatePipeConnector() {
         CreatePipeConnectorNetwork.register();
         MinecraftForge.EVENT_BUS.addListener(ServerPipeConnectorEvents::onRightClickBlock);

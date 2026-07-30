@@ -23,6 +23,9 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
+/**
+ * Registers the Forge network channel and client-to-server connector payloads.
+ */
 public final class CreatePipeConnectorNetwork {
     private static int messageId;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
@@ -35,6 +38,9 @@ public final class CreatePipeConnectorNetwork {
     private CreatePipeConnectorNetwork() {
     }
 
+    /**
+     * Registers all payload codecs and server handlers in stable order.
+     */
     public static void register() {
         CHANNEL.registerMessage(
                 nextMessageId(),

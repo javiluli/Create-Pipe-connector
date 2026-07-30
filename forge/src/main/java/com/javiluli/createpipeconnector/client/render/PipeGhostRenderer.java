@@ -1,7 +1,6 @@
 package com.javiluli.createpipeconnector.client.render;
 
 import com.javiluli.createpipeconnector.Constants;
-import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.client.render.overlay.AnchorOverlayRenderer;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
@@ -48,6 +47,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Renders the in-world ghost route, material warnings and anchor overlays.
+ *
+ * <p>Geometry is cached by preview version so unchanged routes do not rebuild
+ * block models every frame.</p>
+ */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class PipeGhostRenderer {
     private static final ModelResourceLocation MECHANICAL_PUMP_ITEM_MODEL = new ModelResourceLocation(
@@ -81,6 +86,10 @@ public final class PipeGhostRenderer {
     private PipeGhostRenderer() {
     }
 
+    /**
+     * Draws the preview in the render stage that keeps it visible across the
+     * camera's current fluid boundary.
+     */
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         RenderLevelStageEvent.Stage stage = event.getStage();
@@ -109,6 +118,8 @@ public final class PipeGhostRenderer {
             return;
         }
 
+        // Rendering on the camera side of a water/lava boundary keeps the
+        // preview visible both from outside and from inside the fluid.
         boolean renderBeforeFluids = shouldRenderBeforeFluids(event.getCamera(), level, previewPipes, anchors);
         RenderLevelStageEvent.Stage targetStage = renderBeforeFluids
                 ? RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS
@@ -482,6 +493,10 @@ public final class PipeGhostRenderer {
         return rendersMechanicalPump ? PUMP_OUTLINE_BLUE : OUTLINE_BLUE;
     }
 
+    /**
+     * Separates normal and missing-material geometry so each receives a stable
+     * tint without rebuilding the underlying block models.
+     */
     private record PreviewBufferCache(Map<RenderType, SuperByteBuffer> base, Map<RenderType, SuperByteBuffer> missing) {
         private static PreviewBufferCache empty() {
             return new PreviewBufferCache(Map.of(), Map.of());
@@ -492,6 +507,9 @@ public final class PipeGhostRenderer {
         }
     }
 
+    /**
+     * Reuses render-only mutable objects without sharing them across threads.
+     */
     private static final class ThreadLocalObjects {
         private final PoseStack poseStack = new PoseStack();
         private final RandomSource random = RandomSource.createNewThreadLocalInstance();

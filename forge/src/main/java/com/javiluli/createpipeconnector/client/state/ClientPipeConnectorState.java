@@ -13,6 +13,12 @@ import net.minecraft.world.level.block.Block;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Client-side mirror of the active connector session and its latest preview.
+ *
+ * <p>The server remains authoritative for placement; this state exists to keep
+ * input and rendering responsive.</p>
+ */
 public final class ClientPipeConnectorState {
     private static boolean connectorModeEnabled;
     private static boolean autoPumpDirectionReversed;
@@ -208,6 +214,8 @@ public final class ClientPipeConnectorState {
         }
 
         previewPipes = copiedPreviewPipes;
+        // Render caches use this token instead of comparing every block model
+        // during each frame.
         previewVersion++;
     }
 
@@ -219,6 +227,9 @@ public final class ClientPipeConnectorState {
         materialStatus = newMaterialStatus;
     }
 
+    /**
+     * Inventory snapshot displayed by the material HUD for the current plan.
+     */
     public record MaterialStatus(
             Block pipeBlock,
             int requiredPipes,

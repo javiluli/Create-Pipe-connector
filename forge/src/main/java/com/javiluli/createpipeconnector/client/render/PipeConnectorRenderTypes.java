@@ -5,6 +5,9 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderType;
 
+/**
+ * Render layers configured for translucent ghost blocks and anchor volumes.
+ */
 public final class PipeConnectorRenderTypes extends RenderType {
     private static final RenderType GHOST_TRANSLUCENT = RenderType.create(
             Constants.GHOST_RENDER_TYPE,

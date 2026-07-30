@@ -3,6 +3,9 @@ package com.javiluli.createpipeconnector.network.payload;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.CopperCasingMode;
 import net.minecraft.network.FriendlyByteBuf;
 
+/**
+ * Synchronizes the selected copper casing strategy with the server.
+ */
 public record CopperCasingModePayload(CopperCasingMode mode) {
     public static CopperCasingModePayload decode(FriendlyByteBuf buffer) {
         return new CopperCasingModePayload(buffer.readEnum(CopperCasingMode.class));

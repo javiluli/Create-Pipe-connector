@@ -10,6 +10,12 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import org.joml.Matrix4f;
 
+/**
+ * Batches pixel-aligned GUI rectangles into one draw call.
+ *
+ * <p>Used by the radial screen to avoid issuing a separate buffer upload for
+ * every Minecraft-style ring cell.</p>
+ */
 public final class GuiPixelBatch implements AutoCloseable {
     private final Matrix4f matrix;
     private BufferBuilder bufferBuilder;
@@ -46,4 +52,3 @@ public final class GuiPixelBatch implements AutoCloseable {
         RenderSystem.disableBlend();
     }
 }
-

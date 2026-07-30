@@ -8,6 +8,10 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import org.lwjgl.glfw.GLFW;
 
+/**
+ * Declares configurable Minecraft controls and exposes consume helpers used by
+ * the client input loop.
+ */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ClientPipeConnectorKeyMappings {
     private static final KeyMapping TOGGLE_CONNECTOR_MODE = new KeyMapping(
@@ -78,6 +82,9 @@ public final class ClientPipeConnectorKeyMappings {
     private ClientPipeConnectorKeyMappings() {
     }
 
+    /**
+     * Registers every connector action in Minecraft's controls screen.
+     */
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(TOGGLE_CONNECTOR_MODE);

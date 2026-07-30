@@ -19,6 +19,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Produces connected block states for the ghost preview without mutating the
+ * real world.
+ */
 final class PipePreviewBuilder {
     private PipePreviewBuilder() {
     }
@@ -49,6 +53,8 @@ final class PipePreviewBuilder {
 
         BlockAndTintGetter previewWorld = createPreviewWorld(level, connectionStates);
         Map<BlockPos, Direction> preferredDirections = preferredDirectionsForPath(plan.path());
+        // Create derives pipe arms from neighbouring states. Repeating until
+        // stable lets corners observe updates made earlier in the same preview.
         for (int pass = 0; pass < 3; pass++) {
             boolean changed = false;
             for (BlockPos position : plan.path()) {

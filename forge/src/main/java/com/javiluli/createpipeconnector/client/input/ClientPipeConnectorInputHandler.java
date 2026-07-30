@@ -10,6 +10,7 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTa
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeStyleMode;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PumpMode;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
+import com.javiluli.createpipeconnector.network.CreatePipeConnectorNetwork;
 import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayload;
 import com.javiluli.createpipeconnector.network.payload.CopperCasingModePayload;
@@ -42,10 +43,13 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import com.javiluli.createpipeconnector.network.CreatePipeConnectorNetwork;
 
 import java.util.List;
 
+/**
+ * Translates client input into connector state changes, preview updates and
+ * validated server payloads.
+ */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ClientPipeConnectorInputHandler {
     private static boolean showingPipeStatus;
@@ -58,6 +62,10 @@ public final class ClientPipeConnectorInputHandler {
     private ClientPipeConnectorInputHandler() {
     }
 
+    /**
+     * Prevents vanilla pipe or wrench handling when connector mode owns the
+     * targeted interaction.
+     */
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (!event.getLevel().isClientSide() || event.getHand() != InteractionHand.MAIN_HAND) {
@@ -91,6 +99,9 @@ public final class ClientPipeConnectorInputHandler {
         event.setCanceled(true);
     }
 
+    /**
+     * Handles air confirmation and the left-click route cancellation shortcut.
+     */
     @SubscribeEvent
     public static void onInteractionKeyMappingTriggered(InputEvent.InteractionKeyMappingTriggered event) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -183,6 +194,10 @@ public final class ClientPipeConnectorInputHandler {
         clearCurrentConnection(player);
     }
 
+    /**
+     * Consumes configurable controls and updates the live preview once per
+     * client tick.
+     */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {

@@ -4,6 +4,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 
+/**
+ * Requests that the server append an anchor to the active route.
+ */
 public record AddAnchorPayload(BlockPos position, Direction face, boolean existingPipe) {
     public static AddAnchorPayload decode(FriendlyByteBuf buffer) {
         return new AddAnchorPayload(buffer.readBlockPos(), buffer.readEnum(Direction.class), buffer.readBoolean());

@@ -12,6 +12,9 @@ import net.minecraft.core.BlockPos;
 
 import java.util.List;
 
+/**
+ * Draws the translucent yellow volume and outline used to identify anchors.
+ */
 public final class AnchorOverlayRenderer {
     private static final float FILL_RED = 1.0F;
     private static final float FILL_GREEN = 0.85F;

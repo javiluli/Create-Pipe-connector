@@ -17,6 +17,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Converts one connected pipe segment between Create's regular and glass
+ * display variants without crossing mechanical pumps.
+ */
 final class PipeDisplayToggler {
     private static final int MAX_TOGGLE_BLOCKS = 512;
     private static final Direction[] DIRECTIONS = Direction.values();
@@ -67,6 +71,7 @@ final class PipeDisplayToggler {
         ArrayDeque<BlockPos> openSet = new ArrayDeque<>();
         openSet.add(origin);
 
+        // Prevent malformed or enormous networks from stalling the server tick.
         while (!openSet.isEmpty() && segment.size() < MAX_TOGGLE_BLOCKS) {
             BlockPos position = openSet.removeFirst();
             if (!visited.add(position)) {

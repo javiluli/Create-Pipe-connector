@@ -9,6 +9,10 @@ import net.minecraft.world.level.block.Block;
 
 import java.util.List;
 
+/**
+ * Counts and consumes connector materials from a player's main inventory and
+ * off-hand while preserving creative-mode behavior.
+ */
 final class PipeInventory {
     private PipeInventory() {
     }

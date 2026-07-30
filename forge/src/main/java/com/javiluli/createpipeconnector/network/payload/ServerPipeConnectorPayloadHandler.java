@@ -12,6 +12,10 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
+/**
+ * Executes connector payloads on the server thread and validates any
+ * world-facing target before changing session state or placing blocks.
+ */
 public final class ServerPipeConnectorPayloadHandler {
     private ServerPipeConnectorPayloadHandler() {
     }
