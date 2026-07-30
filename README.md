@@ -11,7 +11,7 @@ A utility addon for [Create](https://github.com/Creators-of-Create/Create). Avai
 <a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
 <img src="https://img.shields.io/curseforge/dt/1610354?style=for-the-badge&color=242629&labelColor=F16436&logo=curseforge&logoColor=white&label=" alt="CurseForge">
 </a>
-![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
+![Create](https://img.shields.io/badge/Create-6.0.6+-7B4F1D?style=for-the-badge)
 ![NeoForge](https://img.shields.io/badge/NeoForge-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
 ![Forge](https://img.shields.io/badge/Forge-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
 ![Fabric](https://img.shields.io/badge/Fabric-not%20available-757575?style=for-the-badge)
@@ -112,7 +112,7 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 For the NeoForge build:
 
 - **NeoForge:** `21.1.219` or compatible
-- **Create:** `6.0.10-280` or compatible
+- **Create:** `6.0.6` or compatible `6.0.x`
 
 ## Modpack Notes
 
