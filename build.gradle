@@ -40,19 +40,19 @@ tasks.register('copyJars', Copy) {
     into layout.projectDirectory.dir('out_jars')
 }
 
-tasks.register('buildAll') {
+tasks.register('buildRelease') {
     group = 'dev-run'
     description = 'Cleans everything and generates the Forge JAR in the out_jars folder.'
     dependsOn 'clean', 'copyJars'
 }
 
-tasks.register('Forge_runClient') {
+tasks.register('runClient') {
     group = 'dev-run'
     description = 'Run Forge client'
     dependsOn ':forge:Client'
 }
 
-tasks.register('Forge_runServer') {
+tasks.register('runServer') {
     group = 'dev-run'
     description = 'Run Forge server'
     dependsOn ':forge:Server'
