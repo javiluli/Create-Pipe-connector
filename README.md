@@ -1,5 +1,5 @@
 <div align="center">
-<a><img src="./public/icon.png" width="180" /></a>
+<a><img src="https://raw.githubusercontent.com/javiluli/Create-Pipe-connector/master/public/icon.png" width="180" /></a>
 
 # Create: Pipe Connector
 
