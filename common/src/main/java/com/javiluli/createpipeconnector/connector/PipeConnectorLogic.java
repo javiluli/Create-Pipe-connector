@@ -285,10 +285,6 @@ public final class PipeConnectorLogic {
         return PipeInventory.countAvailablePumps(player);
     }
 
-    public static int countAvailableGlassPipes(Player player) {
-        return PipeInventory.countAvailableGlassPipes(player);
-    }
-
     public static boolean hasEnoughItems(Player player, Block pipeBlock, ConnectionPlan plan) {
         return PipeInventory.hasEnoughItems(player, pipeBlock, plan);
     }
@@ -1072,7 +1068,7 @@ public final class PipeConnectorLogic {
         }
 
         public int requiredPipes() {
-            return placementPositions.size() - requiredPumps() - requiredGlassPipes();
+            return placementPositions.size() - requiredPumps();
         }
 
         public int requiredPumps() {
@@ -1083,9 +1079,6 @@ public final class PipeConnectorLogic {
             return copperCasingPlacements.isEmpty() ? 0 : 1;
         }
 
-        public int requiredGlassPipes() {
-            return glassPipePlacements.size();
-        }
     }
 
     public record PipeDisplayToggleResult(boolean glassMode, int changed, int skipped, int total) {

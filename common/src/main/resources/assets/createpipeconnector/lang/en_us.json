@@ -54,7 +54,6 @@
   "hud.createpipeconnector.missing_materials": "Missing: %s",
   "hud.createpipeconnector.missing_pipes": "%s pipes",
   "hud.createpipeconnector.missing_pumps": "%s pumps",
-  "hud.createpipeconnector.missing_glass_pipes": "%s glass pipes",
   "hud.createpipeconnector.missing_casings": "%s casings",
   "hud.createpipeconnector.first_point_selected": "First point selected. Mark the second point.",
   "hud.createpipeconnector.pipe_style_click_again": "Right-click again to toggle this pipe segment.",

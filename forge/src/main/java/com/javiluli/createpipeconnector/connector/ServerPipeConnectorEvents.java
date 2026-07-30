@@ -215,7 +215,6 @@ public final class ServerPipeConnectorEvents {
         List<Component> missingMaterials = new ArrayList<>();
         addMissingMaterial(missingMaterials, plan.requiredPipes(), PipeConnectorLogic.countAvailablePipes(player, pipeBlock), "hud.createpipeconnector.missing_pipes");
         addMissingMaterial(missingMaterials, plan.requiredPumps(), PipeConnectorLogic.countAvailablePumps(player), "hud.createpipeconnector.missing_pumps");
-        addMissingMaterial(missingMaterials, plan.requiredGlassPipes(), PipeConnectorLogic.countAvailableGlassPipes(player), "hud.createpipeconnector.missing_glass_pipes");
         addMissingMaterial(missingMaterials, plan.requiredCopperCasings(), PipeConnectorLogic.countAvailableCopperCasings(player), "hud.createpipeconnector.missing_casings");
         if (missingMaterials.isEmpty()) {
             return Component.translatable("hud.createpipeconnector.missing_materials", Component.literal("?"));

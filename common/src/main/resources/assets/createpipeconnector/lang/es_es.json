@@ -54,7 +54,6 @@
   "hud.createpipeconnector.missing_materials": "Faltan: %s",
   "hud.createpipeconnector.missing_pipes": "%s tuberías",
   "hud.createpipeconnector.missing_pumps": "%s pumps",
-  "hud.createpipeconnector.missing_glass_pipes": "%s tuberías de cristal",
   "hud.createpipeconnector.missing_casings": "%s revestimientos",
   "hud.createpipeconnector.first_point_selected": "Primer punto seleccionado. Marca el segundo punto.",
   "hud.createpipeconnector.pipe_style_click_again": "Haz click derecho otra vez para cambiar este tramo.",

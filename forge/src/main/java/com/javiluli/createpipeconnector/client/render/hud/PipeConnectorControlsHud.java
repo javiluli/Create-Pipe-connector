@@ -110,11 +110,6 @@ public final class PipeConnectorControlsHud {
             entries.add(new MaterialEntry(new ItemStack(pumpBlock.asItem()), materialStatus.requiredPumps(), materialStatus.availablePumps(), materialStatus.creative()));
         }
 
-        Block glassPipeBlock = PipeConnectorLogic.getGlassFluidPipeBlock();
-        if (materialStatus.requiredGlassPipes() > 0 && glassPipeBlock != null) {
-            entries.add(new MaterialEntry(new ItemStack(glassPipeBlock.asItem()), materialStatus.requiredGlassPipes(), materialStatus.availableGlassPipes(), materialStatus.creative()));
-        }
-
         Block casingBlock = PipeConnectorLogic.getCopperCasingBlock();
         if (materialStatus.requiredCopperCasings() > 0 && casingBlock != null) {
             entries.add(new MaterialEntry(new ItemStack(casingBlock.asItem()), materialStatus.requiredCopperCasings(), materialStatus.availableCopperCasings(), materialStatus.creative()));

@@ -225,8 +225,6 @@ public final class ClientPipeConnectorState {
             int availablePipes,
             int requiredPumps,
             int availablePumps,
-            int requiredGlassPipes,
-            int availableGlassPipes,
             int requiredCopperCasings,
             int availableCopperCasings,
             boolean creative

@@ -492,16 +492,14 @@ public final class ClientPipeConnectorInputHandler {
 
         int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
         int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
-        int availableGlassPipes = PipeConnectorLogic.countAvailableGlassPipes(player);
         int availableCopperCasings = PipeConnectorLogic.countAvailableCopperCasings(player);
         if (availablePipes >= plan.requiredPipes()
                 && availablePumps >= plan.requiredPumps()
-                && availableGlassPipes >= plan.requiredGlassPipes()
                 && availableCopperCasings >= plan.requiredCopperCasings()) {
             return previewPipes;
         }
 
-        Set<BlockPos> missingPositions = missingMaterialPositions(plan, availablePipes, availablePumps, availableGlassPipes, availableCopperCasings);
+        Set<BlockPos> missingPositions = missingMaterialPositions(plan, availablePipes, availablePumps, availableCopperCasings);
         if (missingPositions.isEmpty()) {
             return previewPipes;
         }
@@ -513,22 +511,16 @@ public final class ClientPipeConnectorInputHandler {
         return markedPreviewPipes;
     }
 
-    private static Set<BlockPos> missingMaterialPositions(ConnectionPlan plan, int availablePipes, int availablePumps, int availableGlassPipes, int availableCopperCasings) {
+    private static Set<BlockPos> missingMaterialPositions(ConnectionPlan plan, int availablePipes, int availablePumps, int availableCopperCasings) {
         Set<BlockPos> missingPositions = new HashSet<>();
         int pipeIndex = 0;
         int pumpIndex = 0;
-        int glassPipeIndex = 0;
         boolean missingCopperCasing = plan.requiredCopperCasings() > availableCopperCasings;
 
         for (BlockPos position : plan.placementPositions()) {
             if (plan.pumpPlacements().containsKey(position)) {
                 pumpIndex++;
                 if (pumpIndex > availablePumps) {
-                    missingPositions.add(position);
-                }
-            } else if (plan.glassPipePlacements().contains(position)) {
-                glassPipeIndex++;
-                if (glassPipeIndex > availableGlassPipes) {
                     missingPositions.add(position);
                 }
             } else {
@@ -605,7 +597,6 @@ public final class ClientPipeConnectorInputHandler {
     private static void updateMaterialStatus(LocalPlayer player, Selection selection, ConnectionPlan plan) {
         int requiredPipes = plan.requiredPipes();
         int requiredPumps = plan.requiredPumps();
-        int requiredGlassPipes = plan.requiredGlassPipes();
         int requiredCopperCasings = plan.requiredCopperCasings();
         if (player.getAbilities().instabuild) {
             ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
@@ -613,8 +604,6 @@ public final class ClientPipeConnectorInputHandler {
                     requiredPipes,
                     Integer.MAX_VALUE,
                     requiredPumps,
-                    Integer.MAX_VALUE,
-                    requiredGlassPipes,
                     Integer.MAX_VALUE,
                     requiredCopperCasings,
                     Integer.MAX_VALUE,
@@ -625,7 +614,6 @@ public final class ClientPipeConnectorInputHandler {
 
         int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
         int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
-        int availableGlassPipes = PipeConnectorLogic.countAvailableGlassPipes(player);
         int availableCopperCasings = PipeConnectorLogic.countAvailableCopperCasings(player);
         ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
                 selection.pipeBlock(),
@@ -633,8 +621,6 @@ public final class ClientPipeConnectorInputHandler {
                 availablePipes,
                 requiredPumps,
                 availablePumps,
-                requiredGlassPipes,
-                availableGlassPipes,
                 requiredCopperCasings,
                 availableCopperCasings,
                 false
@@ -649,7 +635,6 @@ public final class ClientPipeConnectorInputHandler {
         List<Component> missingMaterials = new ArrayList<>();
         addMissingMaterial(missingMaterials, materialStatus.requiredPipes(), materialStatus.availablePipes(), "hud.createpipeconnector.missing_pipes");
         addMissingMaterial(missingMaterials, materialStatus.requiredPumps(), materialStatus.availablePumps(), "hud.createpipeconnector.missing_pumps");
-        addMissingMaterial(missingMaterials, materialStatus.requiredGlassPipes(), materialStatus.availableGlassPipes(), "hud.createpipeconnector.missing_glass_pipes");
         addMissingMaterial(missingMaterials, materialStatus.requiredCopperCasings(), materialStatus.availableCopperCasings(), "hud.createpipeconnector.missing_casings");
         if (missingMaterials.isEmpty()) {
             return null;
