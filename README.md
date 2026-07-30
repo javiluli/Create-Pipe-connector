@@ -8,7 +8,7 @@
 Forge build for Minecraft `1.20.1`.
 
 ![Version](https://img.shields.io/badge/Version-1.0.0-2E7D32?style=for-the-badge)
-![Create](https://img.shields.io/badge/Create-6.0.8-7B4F1D?style=for-the-badge)
+![Create](https://img.shields.io/badge/Create-6.0.6+-7B4F1D?style=for-the-badge)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
 ![Loader](https://img.shields.io/badge/Loader-Forge-E65100?style=for-the-badge&logo=forge&logoColor=white)
 </div>
@@ -100,7 +100,7 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 - **Minecraft:** `1.20.1`
 - **Loader:** `Forge`
 - **Forge:** `47.4.20` or compatible `47.x`
-- **Create:** `6.0.8-289` or compatible `6.0.x`
+- **Create:** `6.0.6` or compatible `6.0.x`
 - **Java:** `17`
 
 ## Modpack Notes
