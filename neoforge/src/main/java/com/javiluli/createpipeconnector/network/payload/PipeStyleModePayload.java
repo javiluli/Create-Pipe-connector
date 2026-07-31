@@ -7,8 +7,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Selects the default or glass pipe preview style.
+ */
 public record PipeStyleModePayload(PipeStyleMode mode) implements CustomPacketPayload {
-    public static final Type<PipeStyleModePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "pipe_style_mode"));
+    public static final Type<PipeStyleModePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.PAYLOAD_PIPE_STYLE_MODE));
     public static final StreamCodec<RegistryFriendlyByteBuf, PipeStyleModePayload> STREAM_CODEC = StreamCodec.ofMember(PipeStyleModePayload::write, PipeStyleModePayload::read);
 
     private static PipeStyleModePayload read(RegistryFriendlyByteBuf buffer) {

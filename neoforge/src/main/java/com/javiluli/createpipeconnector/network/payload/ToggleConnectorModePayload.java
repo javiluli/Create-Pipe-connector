@@ -6,8 +6,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Enables or disables Connector Pipe mode.
+ */
 public record ToggleConnectorModePayload(boolean enabled) implements CustomPacketPayload {
-    public static final Type<ToggleConnectorModePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "toggle_connector_mode"));
+    public static final Type<ToggleConnectorModePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.PAYLOAD_TOGGLE_CONNECTOR));
     public static final StreamCodec<RegistryFriendlyByteBuf, ToggleConnectorModePayload> STREAM_CODEC = StreamCodec.ofMember(ToggleConnectorModePayload::write, ToggleConnectorModePayload::read);
 
     private static ToggleConnectorModePayload read(RegistryFriendlyByteBuf buffer) {

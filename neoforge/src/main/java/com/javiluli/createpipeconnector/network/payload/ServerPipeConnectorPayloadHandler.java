@@ -10,6 +10,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+/**
+ * Applies decoded connector commands on the authoritative server thread.
+ */
 public final class ServerPipeConnectorPayloadHandler {
     private ServerPipeConnectorPayloadHandler() {
     }

@@ -20,6 +20,9 @@ import com.javiluli.createpipeconnector.network.payload.WrenchPipeDisplayPayload
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
+/**
+ * Registers every NeoForge payload used by connector interactions.
+ */
 public final class CreatePipeConnectorNetwork {
     private static final String NETWORK_VERSION = "1";
 

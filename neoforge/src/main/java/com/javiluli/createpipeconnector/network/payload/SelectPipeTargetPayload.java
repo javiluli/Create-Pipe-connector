@@ -8,8 +8,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Starts or confirms a route at a validated target.
+ */
 public record SelectPipeTargetPayload(BlockPos position, Direction face, boolean existingPipe) implements CustomPacketPayload {
-    public static final Type<SelectPipeTargetPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "select_pipe_target"));
+    public static final Type<SelectPipeTargetPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.PAYLOAD_SELECT_TARGET));
     public static final StreamCodec<RegistryFriendlyByteBuf, SelectPipeTargetPayload> STREAM_CODEC = StreamCodec.ofMember(SelectPipeTargetPayload::write, SelectPipeTargetPayload::read);
 
     private static SelectPipeTargetPayload read(RegistryFriendlyByteBuf buffer) {

@@ -8,8 +8,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Adds a route anchor at the selected placement target.
+ */
 public record AddAnchorPayload(BlockPos position, Direction face, boolean existingPipe) implements CustomPacketPayload {
-    public static final Type<AddAnchorPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "add_anchor"));
+    public static final Type<AddAnchorPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.PAYLOAD_ADD_ANCHOR));
     public static final StreamCodec<RegistryFriendlyByteBuf, AddAnchorPayload> STREAM_CODEC = StreamCodec.ofMember(AddAnchorPayload::write, AddAnchorPayload::read);
 
     private static AddAnchorPayload read(RegistryFriendlyByteBuf buffer) {

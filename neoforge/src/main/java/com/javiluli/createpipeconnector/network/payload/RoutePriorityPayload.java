@@ -7,8 +7,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Selects the pathfinding route priority.
+ */
 public record RoutePriorityPayload(RoutePriority priority) implements CustomPacketPayload {
-    public static final Type<RoutePriorityPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "route_priority"));
+    public static final Type<RoutePriorityPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.PAYLOAD_ROUTE_PRIORITY));
     public static final StreamCodec<RegistryFriendlyByteBuf, RoutePriorityPayload> STREAM_CODEC = StreamCodec.ofMember(RoutePriorityPayload::write, RoutePriorityPayload::read);
 
     private static RoutePriorityPayload read(RegistryFriendlyByteBuf buffer) {

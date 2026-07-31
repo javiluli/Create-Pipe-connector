@@ -6,8 +6,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Changes the flow direction used by automatic pumps.
+ */
 public record ReverseAutoPumpDirectionPayload(boolean reversed) implements CustomPacketPayload {
-    public static final Type<ReverseAutoPumpDirectionPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "reverse_auto_pump_direction"));
+    public static final Type<ReverseAutoPumpDirectionPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.PAYLOAD_REVERSE_PUMPS));
     public static final StreamCodec<RegistryFriendlyByteBuf, ReverseAutoPumpDirectionPayload> STREAM_CODEC = StreamCodec.ofMember(ReverseAutoPumpDirectionPayload::write, ReverseAutoPumpDirectionPayload::read);
 
     private static ReverseAutoPumpDirectionPayload read(RegistryFriendlyByteBuf buffer) {

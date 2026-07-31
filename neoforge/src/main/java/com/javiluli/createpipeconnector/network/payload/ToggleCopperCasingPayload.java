@@ -7,8 +7,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Toggles a manual copper casing marker.
+ */
 public record ToggleCopperCasingPayload(BlockPos position) implements CustomPacketPayload {
-    public static final Type<ToggleCopperCasingPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "toggle_copper_casing"));
+    public static final Type<ToggleCopperCasingPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.PAYLOAD_TOGGLE_CASING));
     public static final StreamCodec<RegistryFriendlyByteBuf, ToggleCopperCasingPayload> STREAM_CODEC = StreamCodec.ofMember(ToggleCopperCasingPayload::write, ToggleCopperCasingPayload::read);
 
     private static ToggleCopperCasingPayload read(RegistryFriendlyByteBuf buffer) {

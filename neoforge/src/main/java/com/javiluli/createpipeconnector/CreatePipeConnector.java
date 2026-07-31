@@ -7,6 +7,9 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 
 @Mod(Constants.MOD_ID)
+/**
+ * NeoForge entrypoint that registers gameplay events and networking.
+ */
 public class CreatePipeConnector {
     public CreatePipeConnector(IEventBus eventBus) {
         eventBus.addListener(CreatePipeConnectorNetwork::register);
