@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.client.render.overlay;
 
+import com.javiluli.createpipeconnector.client.render.PipeConnectorRenderTypes;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -11,6 +12,9 @@ import net.minecraft.core.BlockPos;
 
 import java.util.List;
 
+/**
+ * Draws the translucent yellow volume and outline used to identify anchors.
+ */
 public final class AnchorOverlayRenderer {
     private static final float FILL_RED = 1.0F;
     private static final float FILL_GREEN = 0.85F;
@@ -25,19 +29,25 @@ public final class AnchorOverlayRenderer {
     private AnchorOverlayRenderer() {
     }
 
-    public static void render(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, List<PlacementTarget> anchors) {
+    public static void renderFaces(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, List<PlacementTarget> anchors) {
         if (anchors.isEmpty()) {
             return;
         }
 
         RenderSystem.disableCull();
         try {
-            renderAnchorFaces(poseStack, bufferSource.getBuffer(RenderType.debugFilledBox()), anchors);
-            bufferSource.endBatch(RenderType.debugFilledBox());
+            RenderType anchorRenderType = PipeConnectorRenderTypes.anchorFilledBox();
+            renderAnchorFaces(poseStack, bufferSource.getBuffer(anchorRenderType), anchors);
+            bufferSource.endBatch(anchorRenderType);
         } finally {
             RenderSystem.enableCull();
         }
+    }
 
+    public static void renderOutlines(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, List<PlacementTarget> anchors) {
+        if (anchors.isEmpty()) {
+            return;
+        }
         renderAnchorOutlines(poseStack, bufferSource.getBuffer(RenderType.lines()), anchors);
         bufferSource.endBatch(RenderType.lines());
     }
