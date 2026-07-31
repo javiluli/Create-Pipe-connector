@@ -3,6 +3,8 @@ package com.javiluli.createpipeconnector.client.render;
 import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.client.render.overlay.AnchorOverlayRenderer;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
+import com.javiluli.createpipeconnector.client.state.ClientRemotePreviewState;
+import com.javiluli.createpipeconnector.client.state.ClientRemotePreviewState.RemotePreview;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PreviewPipe;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
@@ -43,9 +45,13 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.model.data.ModelData;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Renders the in-world ghost route, material warnings and anchor overlays.
@@ -79,9 +85,7 @@ public final class PipeGhostRenderer {
     private static final float PUMP_OUTLINE_GREEN = 0.82F;
     private static final float PUMP_OUTLINE_BLUE = 0.18F;
     private static final ThreadLocal<ThreadLocalObjects> THREAD_LOCAL_OBJECTS = ThreadLocal.withInitial(ThreadLocalObjects::new);
-    private static Level cachedLevel;
-    private static int cachedPreviewVersion = -1;
-    private static PreviewBufferCache cachedBufferCache = PreviewBufferCache.empty();
+    private static final Map<UUID, CachedPreviewBuffer> CACHED_PREVIEWS = new LinkedHashMap<>();
 
     private PipeGhostRenderer() {
     }
@@ -105,31 +109,29 @@ public final class PipeGhostRenderer {
             return;
         }
 
-        Selection selection = ClientPipeConnectorState.getSelection();
-        if (selection == null) {
+        List<PreviewScene> previewScenes = collectPreviewScenes(minecraft, level);
+        if (previewScenes.isEmpty()) {
             clearBufferCache();
             return;
         }
 
-        List<PreviewPipe> previewPipes = ClientPipeConnectorState.getPreviewPipes();
-        List<PlacementTarget> anchors = ClientPipeConnectorState.getAnchors();
-        if (previewPipes.isEmpty() && anchors.isEmpty()) {
-            clearBufferCache();
-            return;
+        pruneBufferCaches(previewScenes);
+        List<PreviewScene> stageScenes = new ArrayList<>(previewScenes.size());
+        for (PreviewScene previewScene : previewScenes) {
+            boolean renderBeforeFluids = shouldRenderBeforeFluids(
+                    event.getCamera(),
+                    level,
+                    previewScene.previewPipes(),
+                    previewScene.anchors()
+            );
+            RenderLevelStageEvent.Stage targetStage = renderBeforeFluids
+                    ? RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS
+                    : RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS;
+            if (stage == targetStage) {
+                stageScenes.add(previewScene);
+            }
         }
-
-        // Rendering on the camera side of a water/lava boundary keeps the
-        // preview visible both from outside and from inside the fluid.
-        boolean renderBeforeFluids = shouldRenderBeforeFluids(event.getCamera(), level, previewPipes, anchors);
-        RenderLevelStageEvent.Stage targetStage = renderBeforeFluids
-                ? RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS
-                : RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS;
-        if (stage != targetStage) {
-            return;
-        }
-
-        PreviewBufferCache bufferCache = getBufferCache(minecraft, level, previewPipes, ClientPipeConnectorState.getPreviewVersion());
-        if (bufferCache.isEmpty() && anchors.isEmpty()) {
+        if (stageScenes.isEmpty()) {
             return;
         }
 
@@ -147,10 +149,25 @@ public final class PipeGhostRenderer {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         try {
-            renderPipeGhosts(poseStack, bufferSource, level, previewPipes, bufferCache);
-            AnchorOverlayRenderer.renderFaces(poseStack, bufferSource, anchors);
-            AnchorOverlayRenderer.renderOutlines(poseStack, bufferSource, anchors);
-            renderAnchorPipeOutlines(poseStack, bufferSource, level, previewPipes, anchors);
+            for (PreviewScene previewScene : stageScenes) {
+                PreviewBufferCache bufferCache = getBufferCache(
+                        minecraft,
+                        level,
+                        previewScene.ownerId(),
+                        previewScene.previewPipes(),
+                        previewScene.version()
+                );
+                renderPipeGhosts(poseStack, bufferSource, level, previewScene.previewPipes(), bufferCache);
+                AnchorOverlayRenderer.renderFaces(poseStack, bufferSource, previewScene.anchors());
+                AnchorOverlayRenderer.renderOutlines(poseStack, bufferSource, previewScene.anchors());
+                renderAnchorPipeOutlines(
+                        poseStack,
+                        bufferSource,
+                        level,
+                        previewScene.previewPipes(),
+                        previewScene.anchors()
+                );
+            }
         } finally {
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
             RenderSystem.depthMask(true);
@@ -158,6 +175,33 @@ public final class PipeGhostRenderer {
             RenderSystem.disableBlend();
             poseStack.popPose();
         }
+    }
+
+    private static List<PreviewScene> collectPreviewScenes(Minecraft minecraft, Level level) {
+        List<PreviewScene> previewScenes = new ArrayList<>();
+        Selection selection = ClientPipeConnectorState.getSelection();
+        if (selection != null) {
+            List<PreviewPipe> previewPipes = ClientPipeConnectorState.getPreviewPipes();
+            List<PlacementTarget> anchors = ClientPipeConnectorState.getAnchors();
+            if (!previewPipes.isEmpty() || !anchors.isEmpty()) {
+                previewScenes.add(new PreviewScene(
+                        minecraft.player.getUUID(),
+                        ClientPipeConnectorState.getPreviewVersion(),
+                        previewPipes,
+                        anchors
+                ));
+            }
+        }
+
+        for (RemotePreview remotePreview : ClientRemotePreviewState.getActive(level)) {
+            previewScenes.add(new PreviewScene(
+                    remotePreview.ownerId(),
+                    remotePreview.visualVersion(),
+                    remotePreview.previewPipes(),
+                    remotePreview.anchors()
+            ));
+        }
+        return previewScenes;
     }
 
     private static boolean shouldRenderBeforeFluids(Camera camera, Level level, List<PreviewPipe> previewPipes, List<PlacementTarget> anchors) {
@@ -201,22 +245,30 @@ public final class PipeGhostRenderer {
         return 3;
     }
 
-    private static PreviewBufferCache getBufferCache(Minecraft minecraft, Level level, List<PreviewPipe> previewPipes, int previewVersion) {
-        if (cachedLevel == level && cachedPreviewVersion == previewVersion) {
-            return cachedBufferCache;
+    private static PreviewBufferCache getBufferCache(Minecraft minecraft, Level level, UUID ownerId, List<PreviewPipe> previewPipes, int previewVersion) {
+        CachedPreviewBuffer cachedPreview = CACHED_PREVIEWS.get(ownerId);
+        if (cachedPreview != null
+                && cachedPreview.level() == level
+                && cachedPreview.version() == previewVersion) {
+            return cachedPreview.bufferCache();
         }
 
         SchematicLevel schematicLevel = buildPreviewWorld(level, previewPipes);
-        cachedLevel = level;
-        cachedPreviewVersion = previewVersion;
-        cachedBufferCache = redrawPreview(minecraft, schematicLevel, previewPipes);
-        return cachedBufferCache;
+        PreviewBufferCache bufferCache = redrawPreview(minecraft, schematicLevel, previewPipes);
+        CACHED_PREVIEWS.put(ownerId, new CachedPreviewBuffer(level, previewVersion, bufferCache));
+        return bufferCache;
     }
 
     private static void clearBufferCache() {
-        cachedLevel = null;
-        cachedPreviewVersion = -1;
-        cachedBufferCache = PreviewBufferCache.empty();
+        CACHED_PREVIEWS.clear();
+    }
+
+    private static void pruneBufferCaches(List<PreviewScene> previewScenes) {
+        Set<UUID> activeOwners = new HashSet<>(previewScenes.size());
+        for (PreviewScene previewScene : previewScenes) {
+            activeOwners.add(previewScene.ownerId());
+        }
+        CACHED_PREVIEWS.keySet().removeIf(ownerId -> !activeOwners.contains(ownerId));
     }
 
     private static void renderPipeGhosts(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Level level, List<PreviewPipe> previewPipes, PreviewBufferCache bufferCache) {
@@ -505,6 +557,17 @@ public final class PipeGhostRenderer {
         private boolean isEmpty() {
             return base.isEmpty() && missing.isEmpty();
         }
+    }
+
+    private record CachedPreviewBuffer(Level level, int version, PreviewBufferCache bufferCache) {
+    }
+
+    private record PreviewScene(
+            UUID ownerId,
+            int version,
+            List<PreviewPipe> previewPipes,
+            List<PlacementTarget> anchors
+    ) {
     }
 
     /**

@@ -5,7 +5,9 @@ import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.CancelPipeConnectionPayload;
 import com.javiluli.createpipeconnector.network.payload.CopperCasingModePayload;
 import com.javiluli.createpipeconnector.network.payload.PipeStyleModePayload;
+import com.javiluli.createpipeconnector.network.payload.PreviewSnapshotPayload;
 import com.javiluli.createpipeconnector.network.payload.PumpModePayload;
+import com.javiluli.createpipeconnector.network.payload.RemotePreviewPayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastAnchorPayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastCopperCasingPayload;
 import com.javiluli.createpipeconnector.network.payload.RemoveLastManualPumpPayload;
@@ -19,12 +21,16 @@ import com.javiluli.createpipeconnector.network.payload.ToggleCopperCasingPayloa
 import com.javiluli.createpipeconnector.network.payload.ToggleManualPumpPayload;
 import com.javiluli.createpipeconnector.network.payload.WrenchPipeDisplayPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
+import java.util.Optional;
+
 /**
- * Registers the Forge network channel and client-to-server connector payloads.
+ * Registers the Forge network channel and all connector payload directions.
  */
 public final class CreatePipeConnectorNetwork {
     private static int messageId;
@@ -154,6 +160,22 @@ public final class CreatePipeConnectorNetwork {
                 WrenchPipeDisplayPayload::decode,
                 ServerPipeConnectorPayloadHandler::handleWrenchPipeDisplay
         );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                PreviewSnapshotPayload.class,
+                PreviewSnapshotPayload::encode,
+                PreviewSnapshotPayload::decode,
+                ServerPipeConnectorPayloadHandler::handlePreviewSnapshot,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER)
+        );
+        CHANNEL.registerMessage(
+                nextMessageId(),
+                RemotePreviewPayload.class,
+                RemotePreviewPayload::encode,
+                RemotePreviewPayload::decode,
+                RemotePreviewPayload::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        );
     }
 
     public static void sendToServer(AddAnchorPayload payload) {
@@ -218,6 +240,14 @@ public final class CreatePipeConnectorNetwork {
 
     public static void sendToServer(WrenchPipeDisplayPayload payload) {
         CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToServer(PreviewSnapshotPayload payload) {
+        CHANNEL.send(PacketDistributor.SERVER.noArg(), payload);
+    }
+
+    public static void sendToPlayer(ServerPlayer player, RemotePreviewPayload payload) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), payload);
     }
 
     private static int nextMessageId() {

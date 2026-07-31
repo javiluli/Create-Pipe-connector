@@ -702,6 +702,14 @@ public final class PipeConnectorLogic {
         return PipeRouteGeometry.straightPumpFacing(path, position);
     }
 
+    /**
+     * Checks whether a block state may be relayed as part of another player's
+     * visual-only route preview.
+     */
+    public static boolean isPreviewBlockState(BlockState state) {
+        return CreatePipeBlocks.isPreviewBlockState(state);
+    }
+
     private static BlockState createPlacementPipeState(BlockState pipeState, BlockState sourceState, boolean copperCasing, boolean glassPipe) {
         if (copperCasing) {
             BlockState encasedState = CreatePipeBlocks.createEncasedPipeState(pipeState, sourceState);

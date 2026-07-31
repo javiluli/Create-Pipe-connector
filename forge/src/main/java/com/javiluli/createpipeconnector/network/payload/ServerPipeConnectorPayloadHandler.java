@@ -5,11 +5,13 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionP
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
 import com.javiluli.createpipeconnector.connector.ServerPipeConnectorEvents;
+import com.javiluli.createpipeconnector.network.CreatePipeConnectorNetwork;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -231,6 +233,35 @@ public final class ServerPipeConnectorPayloadHandler {
         context.setPacketHandled(true);
     }
 
+    /**
+     * Validates a visual-only client snapshot before relaying it to the other
+     * players in the same dimension.
+     */
+    public static void handlePreviewSnapshot(PreviewSnapshotPayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.getSender();
+            if (player == null || !(player.level() instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            PreviewSnapshotPayload relaySnapshot = isValidPreviewSnapshot(player, serverLevel, payload)
+                    ? payload
+                    : new PreviewSnapshotPayload(List.of(), List.of());
+            RemotePreviewPayload remotePayload = new RemotePreviewPayload(
+                    player.getUUID(),
+                    relaySnapshot.previewPipes(),
+                    relaySnapshot.anchors()
+            );
+            for (ServerPlayer recipient : serverLevel.players()) {
+                if (!recipient.getUUID().equals(player.getUUID())) {
+                    CreatePipeConnectorNetwork.sendToPlayer(recipient, remotePayload);
+                }
+            }
+        });
+        context.setPacketHandled(true);
+    }
+
     private static Selection validatedSelection(ServerPlayer player) {
         if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())) {
             PipeConnectorLogic.clearSelection(player.getUUID());
@@ -260,5 +291,27 @@ public final class ServerPipeConnectorPayloadHandler {
 
         BlockState anchorState = level.getBlockState(anchor.position());
         return PipeConnectorLogic.isConnectablePipe(anchorState) && anchorState.getBlock() == selection.pipeBlock();
+    }
+
+    private static boolean isValidPreviewSnapshot(ServerPlayer player, ServerLevel level, PreviewSnapshotPayload payload) {
+        if (payload.isEmpty()) {
+            return true;
+        }
+        if (!PipeConnectorLogic.isConnectorModeEnabled(player.getUUID())
+                || PipeConnectorLogic.getSelection(player.getUUID()) == null) {
+            return false;
+        }
+        for (PipeConnectorLogic.PreviewPipe previewPipe : payload.previewPipes()) {
+            if (!level.isInWorldBounds(previewPipe.position())
+                    || !PipeConnectorLogic.isPreviewBlockState(previewPipe.state())) {
+                return false;
+            }
+        }
+        for (PlacementTarget anchor : payload.anchors()) {
+            if (!level.isInWorldBounds(anchor.position())) {
+                return false;
+            }
+        }
+        return true;
     }
 }

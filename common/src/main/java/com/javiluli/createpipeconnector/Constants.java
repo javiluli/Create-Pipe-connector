@@ -33,13 +33,19 @@ public final class Constants {
     public static final String GET = "get";
 
     /** Forge network channel metadata. */
-    public static final String PROTOCOL_VERSION = "1";
+    public static final String PROTOCOL_VERSION = "2";
     public static final String CHANNEL_PATH = "main";
 
-    /** Shared interaction thresholds expressed in game ticks or blocks. */
+    /** Shared interaction, synchronization, and payload limits. */
     public static final int WRENCH_DOUBLE_CLICK_TICKS = 10;
     public static final int MANUAL_MARKER_SNAP_DISTANCE = 3;
     public static final double DEFAULT_BLOCK_REACH = 5.0D;
+    public static final int SHARED_PREVIEW_SYNC_INTERVAL_TICKS = 2;
+    public static final int SHARED_PREVIEW_HEARTBEAT_TICKS = 20;
+    public static final int SHARED_PREVIEW_TIMEOUT_TICKS = 60;
+    /** Keeps the worst-case client snapshot below Forge 1.20.1's 32767-byte payload limit. */
+    public static final int MAX_SHARED_PREVIEW_BLOCKS = 2_048;
+    public static final int MAX_SHARED_PREVIEW_ANCHORS = 128;
 
     /** Translation keys used by gameplay messages, HUD elements, and screens. */
     public static final String HUD_NO_ROUTE = "hud.createpipeconnector.no_route";

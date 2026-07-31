@@ -216,6 +216,14 @@ final class CreatePipeBlocks {
         return MECHANICAL_PUMP.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
+    static boolean isPreviewBlockState(BlockState state) {
+        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        return FLUID_PIPE.equals(blockId)
+                || GLASS_FLUID_PIPE.equals(blockId)
+                || ENCASED_FLUID_PIPE.equals(blockId)
+                || MECHANICAL_PUMP.equals(blockId);
+    }
+
     static boolean supportsCopperCasing(Block pipeBlock) {
         return FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(pipeBlock))
                 && getCopperCasingBlock() != null

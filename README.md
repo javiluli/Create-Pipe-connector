@@ -32,6 +32,7 @@ Instead of placing long pipe lines block by block, you select a start point, aim
 ## Main Features
 
 - **Ghost preview:** See the route before spending items.
+- **Shared planning:** In multiplayer, players in the same dimension can see each other's live route previews.
 - **Smart routing:** Finds a valid path around obstacles.
 - **Anchors:** Add waypoints to force turns or guide the route.
 - **Radial menu:** Change route style, pumps, flow direction, casing, and pipe style.
@@ -113,6 +114,7 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 ## Modpack Notes
 
 - Install on both client and server.
+- Shared multiplayer previews are currently tuned for two-player planning sessions.
 - Requires Create at runtime.
 - No extra runtime dependencies beyond Minecraft, Forge, and Create.
 - Current Forge version: **`1.1.0`**.

@@ -9,6 +9,10 @@ The categories follow Create's changelog style: **Additions**, **Art Changes**, 
 
 ## 1.1.0 - 2026-07-30
 
+### Additions
+
+- Added synchronized multiplayer route previews so two players can see each other's live pipes and anchors while planning.
+
 ### Gameplay Changes
 
 - Glass pipe styling now uses regular fluid pipes as its only consumable material.
