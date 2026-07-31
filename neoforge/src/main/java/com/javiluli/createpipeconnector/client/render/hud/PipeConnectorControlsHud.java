@@ -24,8 +24,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+/**
+ * Draws the compact controls and material availability above the hotbar.
+ */
 public final class PipeConnectorControlsHud {
-    private static final ResourceLocation LAYER_ID = ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "pipe_connector_controls");
+    private static final ResourceLocation LAYER_ID = ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.CONTROLS_OVERLAY);
     private static final int BACKGROUND_COLOR = 0xAA101010;
     private static final int TEXT_COLOR = 0xFFE8E8E8;
     private static final int MISSING_TEXT_COLOR = 0xFFFF6666;
@@ -58,11 +61,11 @@ public final class PipeConnectorControlsHud {
 
     private static void renderMinimalControls(GuiGraphics guiGraphics, Font font) {
         String controls = String.join("  |  ",
-                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), "hud.createpipeconnector.control.connector_mode"),
-                hint(keyName(Minecraft.getInstance().options.keyUse), "hud.createpipeconnector.control.start_confirm"),
-                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), "hud.createpipeconnector.control.cycle_route_priority"),
-                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), "hud.createpipeconnector.control.add_anchor"),
-                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), "hud.createpipeconnector.control.lock_preview")
+                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), Constants.HUD_CONTROL_CONNECTOR_MODE),
+                hint(keyName(Minecraft.getInstance().options.keyUse), Constants.HUD_CONTROL_START_CONFIRM),
+                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), Constants.HUD_CONTROL_ROUTE_PRIORITY),
+                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), Constants.HUD_CONTROL_ADD_ANCHOR),
+                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), Constants.HUD_CONTROL_LOCK_PREVIEW)
         );
 
         int width = Math.round(font.width(controls) * CONTROL_TEXT_SCALE);
@@ -111,11 +114,6 @@ public final class PipeConnectorControlsHud {
         Block pumpBlock = PipeConnectorLogic.getMechanicalPumpBlock();
         if (materialStatus.requiredPumps() > 0 && pumpBlock != null) {
             entries.add(new MaterialEntry(new ItemStack(pumpBlock.asItem()), materialStatus.requiredPumps(), materialStatus.availablePumps(), materialStatus.creative()));
-        }
-
-        Block glassPipeBlock = PipeConnectorLogic.getGlassFluidPipeBlock();
-        if (materialStatus.requiredGlassPipes() > 0 && glassPipeBlock != null) {
-            entries.add(new MaterialEntry(new ItemStack(glassPipeBlock.asItem()), materialStatus.requiredGlassPipes(), materialStatus.availableGlassPipes(), materialStatus.creative()));
         }
 
         Block casingBlock = PipeConnectorLogic.getCopperCasingBlock();

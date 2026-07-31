@@ -8,7 +8,6 @@ import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.ConnectionP
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.CopperCasingMode;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PlacementTarget;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeStyleMode;
-import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PreviewPipe;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PumpMode;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.Selection;
 import com.javiluli.createpipeconnector.network.payload.AddAnchorPayload;
@@ -32,7 +31,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
@@ -46,12 +44,12 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+/**
+ * Coordinates connector-mode input, live route planning and client feedback.
+ */
 public final class ClientPipeConnectorInputHandler {
     private static boolean showingPipeStatus;
     private static boolean previewTargetLocked;
@@ -160,7 +158,7 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
         if (currentSelection != null) {
-            Component missingMaterialsMessage = missingMaterialsMessage(ClientPipeConnectorState.getMaterialStatus());
+            Component missingMaterialsMessage = ClientMaterialPreview.missingMaterialsMessage(ClientPipeConnectorState.getMaterialStatus());
             if (missingMaterialsMessage != null) {
                 player.displayClientMessage(missingMaterialsMessage.copy().withStyle(ChatFormatting.RED), true);
                 return;
@@ -273,9 +271,11 @@ public final class ClientPipeConnectorInputHandler {
 
         PlacementTarget target = getTrackingPreviewTarget(minecraft, heldPipeBlock);
         if (target == null || target.position().equals(selection.position())) {
-            ClientPipeConnectorState.setPreviewPipes(List.of());
-            ClientPipeConnectorState.setMaterialStatus(null);
-            clearPipeStatus(minecraft.player);
+            if (!showInitialPipePreview(minecraft, selection)) {
+                ClientPipeConnectorState.setPreviewPipes(List.of());
+                ClientPipeConnectorState.setMaterialStatus(null);
+                clearPipeStatus(minecraft.player);
+            }
             return;
         }
 
@@ -283,7 +283,7 @@ public final class ClientPipeConnectorInputHandler {
         if (plan == null) {
             ClientPipeConnectorState.setPreviewPipes(List.of());
             ClientPipeConnectorState.setMaterialStatus(null);
-            showPipeStatus(minecraft.player, Component.translatable("hud.createpipeconnector.no_route").withStyle(ChatFormatting.RED));
+            showPipeStatus(minecraft.player, Component.translatable(Constants.HUD_NO_ROUTE).withStyle(ChatFormatting.RED));
             return;
         }
         plan = applyAutoPumps(plan);
@@ -333,12 +333,50 @@ public final class ClientPipeConnectorInputHandler {
                 }
             }
         }
-        plan = PipeConnectorLogic.withCopperCasingMode(plan, ClientPipeConnectorState.getCopperCasingMode(), ClientPipeConnectorState.getCopperCasings(), selection.pipeBlock());
-        plan = PipeConnectorLogic.withPipeStyleMode(plan, ClientPipeConnectorState.getPipeStyleMode(), selection.pipeBlock());
+        plan = applyPreviewAppearance(plan, selection);
 
-        ClientPipeConnectorState.setPreviewPipes(markMissingPreviewMaterials(minecraft.player, selection, plan, PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock())));
-        updateMaterialStatus(minecraft.player, selection, plan);
+        updatePreview(minecraft, selection, plan);
         clearPipeStatus(minecraft.player);
+    }
+
+    private static boolean showInitialPipePreview(Minecraft minecraft, Selection selection) {
+        if (selection.existingPipe() || !ClientPipeConnectorState.getAnchors().isEmpty()) {
+            return false;
+        }
+
+        ConnectionPlan plan = new ConnectionPlan(
+                List.of(selection.position()),
+                List.of(selection.position())
+        );
+        plan = applyPreviewAppearance(plan, selection);
+
+        updatePreview(minecraft, selection, plan);
+        clearPipeStatus(minecraft.player);
+        return true;
+    }
+
+    private static ConnectionPlan applyPreviewAppearance(ConnectionPlan plan, Selection selection) {
+        ConnectionPlan styledPlan = PipeConnectorLogic.withCopperCasingMode(
+                plan,
+                ClientPipeConnectorState.getCopperCasingMode(),
+                ClientPipeConnectorState.getCopperCasings(),
+                selection.pipeBlock()
+        );
+        return PipeConnectorLogic.withPipeStyleMode(
+                styledPlan,
+                ClientPipeConnectorState.getPipeStyleMode(),
+                selection.pipeBlock()
+        );
+    }
+
+    private static void updatePreview(Minecraft minecraft, Selection selection, ConnectionPlan plan) {
+        ClientPipeConnectorState.setPreviewPipes(ClientMaterialPreview.markMissingMaterials(
+                minecraft.player,
+                selection,
+                plan,
+                PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock())
+        ));
+        ClientMaterialPreview.updateStatus(minecraft.player, selection, plan);
     }
 
     private static ConnectionPlan getBasePlacementPlan(Minecraft minecraft, Selection selection, PlacementTarget target) {
@@ -423,10 +461,6 @@ public final class ClientPipeConnectorInputHandler {
         return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastCopperCasing();
     }
 
-    public static boolean isPreviewTargetLocked() {
-        return previewTargetLocked;
-    }
-
     private static boolean canAddAnchor(Selection selection, PlacementTarget target) {
         if (selection.position().equals(target.position())) {
             return false;
@@ -454,7 +488,7 @@ public final class ClientPipeConnectorInputHandler {
                 closestDistance = distance;
             }
         }
-        return closestDistance <= 3 ? closestPosition : null;
+        return closestDistance <= Constants.MANUAL_MARKER_SNAP_DISTANCE ? closestPosition : null;
     }
 
     private static BlockPos closestManualPumpPosition(ConnectionPlan plan, BlockPos targetPosition) {
@@ -478,67 +512,7 @@ public final class ClientPipeConnectorInputHandler {
                 closestDistance = distance;
             }
         }
-        return closestDistance <= 3 ? closestPosition : null;
-    }
-
-    private static List<PreviewPipe> markMissingPreviewMaterials(LocalPlayer player, Selection selection, ConnectionPlan plan, List<PreviewPipe> previewPipes) {
-        if (player.getAbilities().instabuild || previewPipes.isEmpty()) {
-            return previewPipes;
-        }
-
-        int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
-        int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
-        int availableGlassPipes = PipeConnectorLogic.countAvailableGlassPipes(player);
-        int availableCopperCasings = PipeConnectorLogic.countAvailableCopperCasings(player);
-        if (availablePipes >= plan.requiredPipes()
-                && availablePumps >= plan.requiredPumps()
-                && availableGlassPipes >= plan.requiredGlassPipes()
-                && availableCopperCasings >= plan.requiredCopperCasings()) {
-            return previewPipes;
-        }
-
-        Set<BlockPos> missingPositions = missingMaterialPositions(plan, availablePipes, availablePumps, availableGlassPipes, availableCopperCasings);
-        if (missingPositions.isEmpty()) {
-            return previewPipes;
-        }
-
-        List<PreviewPipe> markedPreviewPipes = new ArrayList<>(previewPipes.size());
-        for (PreviewPipe previewPipe : previewPipes) {
-            markedPreviewPipes.add(previewPipe.withMissingMaterial(missingPositions.contains(previewPipe.position())));
-        }
-        return markedPreviewPipes;
-    }
-
-    private static Set<BlockPos> missingMaterialPositions(ConnectionPlan plan, int availablePipes, int availablePumps, int availableGlassPipes, int availableCopperCasings) {
-        Set<BlockPos> missingPositions = new HashSet<>();
-        int pipeIndex = 0;
-        int pumpIndex = 0;
-        int glassPipeIndex = 0;
-        boolean missingCopperCasing = plan.requiredCopperCasings() > availableCopperCasings;
-
-        for (BlockPos position : plan.placementPositions()) {
-            if (plan.pumpPlacements().containsKey(position)) {
-                pumpIndex++;
-                if (pumpIndex > availablePumps) {
-                    missingPositions.add(position);
-                }
-            } else if (plan.glassPipePlacements().contains(position)) {
-                glassPipeIndex++;
-                if (glassPipeIndex > availableGlassPipes) {
-                    missingPositions.add(position);
-                }
-            } else {
-                pipeIndex++;
-                if (pipeIndex > availablePipes) {
-                    missingPositions.add(position);
-                }
-                if (missingCopperCasing && plan.copperCasingPlacements().contains(position)) {
-                    missingPositions.add(position);
-                }
-            }
-        }
-
-        return missingPositions;
+        return closestDistance <= Constants.MANUAL_MARKER_SNAP_DISTANCE ? closestPosition : null;
     }
 
     private static PlacementTarget getPreviewTarget(Minecraft minecraft, Block pipeBlock) {
@@ -596,80 +570,6 @@ public final class ClientPipeConnectorInputHandler {
 
         Direction face = Direction.getNearest(lookVector.x(), lookVector.y(), lookVector.z());
         return new PlacementTarget(targetPosition, face, false);
-    }
-
-    private static void updateMaterialStatus(LocalPlayer player, Selection selection, ConnectionPlan plan) {
-        int requiredPipes = plan.requiredPipes();
-        int requiredPumps = plan.requiredPumps();
-        int requiredGlassPipes = plan.requiredGlassPipes();
-        int requiredCopperCasings = plan.requiredCopperCasings();
-        if (player.getAbilities().instabuild) {
-            ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
-                    selection.pipeBlock(),
-                    requiredPipes,
-                    Integer.MAX_VALUE,
-                    requiredPumps,
-                    Integer.MAX_VALUE,
-                    requiredGlassPipes,
-                    Integer.MAX_VALUE,
-                    requiredCopperCasings,
-                    Integer.MAX_VALUE,
-                    true
-            ));
-            return;
-        }
-
-        int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
-        int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
-        int availableGlassPipes = PipeConnectorLogic.countAvailableGlassPipes(player);
-        int availableCopperCasings = PipeConnectorLogic.countAvailableCopperCasings(player);
-        ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
-                selection.pipeBlock(),
-                requiredPipes,
-                availablePipes,
-                requiredPumps,
-                availablePumps,
-                requiredGlassPipes,
-                availableGlassPipes,
-                requiredCopperCasings,
-                availableCopperCasings,
-                false
-        ));
-    }
-
-    private static Component missingMaterialsMessage(ClientPipeConnectorState.MaterialStatus materialStatus) {
-        if (materialStatus == null || materialStatus.creative()) {
-            return null;
-        }
-
-        List<Component> missingMaterials = new ArrayList<>();
-        addMissingMaterial(missingMaterials, materialStatus.requiredPipes(), materialStatus.availablePipes(), "hud.createpipeconnector.missing_pipes");
-        addMissingMaterial(missingMaterials, materialStatus.requiredPumps(), materialStatus.availablePumps(), "hud.createpipeconnector.missing_pumps");
-        addMissingMaterial(missingMaterials, materialStatus.requiredGlassPipes(), materialStatus.availableGlassPipes(), "hud.createpipeconnector.missing_glass_pipes");
-        addMissingMaterial(missingMaterials, materialStatus.requiredCopperCasings(), materialStatus.availableCopperCasings(), "hud.createpipeconnector.missing_casings");
-        if (missingMaterials.isEmpty()) {
-            return null;
-        }
-
-        return Component.translatable("hud.createpipeconnector.missing_materials", joinComponents(missingMaterials));
-    }
-
-    private static void addMissingMaterial(List<Component> missingMaterials, int required, int available, String translationKey) {
-        int missing = required - available;
-        if (missing > 0) {
-            missingMaterials.add(Component.translatable(translationKey, missing));
-        }
-    }
-
-    private static MutableComponent joinComponents(List<Component> components) {
-        MutableComponent joined = Component.empty();
-        for (int index = 0; index < components.size(); index++) {
-            if (index > 0) {
-                joined.append(", ");
-            }
-            joined.append(components.get(index));
-        }
-        return joined;
     }
 
     private static void showPipeStatus(LocalPlayer player, Component message) {

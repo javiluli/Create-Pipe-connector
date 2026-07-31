@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.client.screen;
 
+import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.client.input.ClientPipeConnectorKeyMappings;
 import com.javiluli.createpipeconnector.client.render.gui.GuiPixelBatch;
 import com.javiluli.createpipeconnector.client.state.ClientPipeConnectorState;
@@ -23,6 +24,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Locale;
 
+/**
+ * Radial interface for route, pump, casing and pipe-style settings.
+ */
 public final class ConnectorOptionsRadialScreen extends Screen {
     private static final int BACKGROUND_COLOR = 0x33000000;
     private static final int MECHANIC_COLOR = 0x73000000;
@@ -61,7 +65,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private RadialOption hoveredOption;
 
     public ConnectorOptionsRadialScreen() {
-        super(Component.translatable("screen.createpipeconnector.options.title"));
+        super(Component.translatable(Constants.OPTIONS_TITLE));
     }
 
     @Override
@@ -78,7 +82,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         renderLabels(guiGraphics, font, centerX, centerY);
         renderTooltip(guiGraphics, font, centerX, centerY);
 
-        Component hint = Component.translatable("screen.createpipeconnector.options.hint");
+        Component hint = Component.translatable(Constants.OPTIONS_HINT);
         drawScaledCenteredString(guiGraphics, font, hint, centerX, centerY + OPTION_OUTER_RADIUS + 44, HINT_COLOR, SMALL_TEXT_SCALE);
     }
 
@@ -613,7 +617,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         }
 
         String translationKey() {
-            return "screen.createpipeconnector.options.mechanic." + id;
+            return Constants.OPTIONS_MECHANIC_PREFIX + id;
         }
 
         private static int optionIndex(RadialOption option, RadialOption[] options) {
@@ -634,11 +638,11 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         boolean apply();
 
         default String translationKey() {
-            return "screen.createpipeconnector.options.option." + id();
+            return Constants.OPTIONS_OPTION_PREFIX + id();
         }
 
         default String descriptionTranslationKey() {
-            return "screen.createpipeconnector.options.description." + id();
+            return Constants.OPTIONS_DESCRIPTION_PREFIX + id();
         }
     }
 

@@ -10,6 +10,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import org.joml.Matrix4f;
 
+/**
+ * Batches pixel-aligned GUI geometry used by the radial selector.
+ */
 public final class GuiPixelBatch implements AutoCloseable {
     private final Matrix4f matrix;
     private BufferBuilder bufferBuilder;

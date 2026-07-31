@@ -13,6 +13,9 @@ import net.minecraft.world.level.block.Block;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Stores the local connector session and invalidates render caches on change.
+ */
 public final class ClientPipeConnectorState {
     private static boolean connectorModeEnabled;
     private static boolean autoPumpDirectionReversed;
@@ -225,8 +228,6 @@ public final class ClientPipeConnectorState {
             int availablePipes,
             int requiredPumps,
             int availablePumps,
-            int requiredGlassPipes,
-            int availableGlassPipes,
             int requiredCopperCasings,
             int availableCopperCasings,
             boolean creative
