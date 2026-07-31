@@ -10,7 +10,7 @@ logoFile = "icon.png"
 credits = "${credits}"
 authors = "${mod_author}"
 description='''
-Create: Pipe Connector is a beta Create addon for Minecraft 1.21.1.
+Create: Pipe Connector previews and places Create fluid pipe routes with anchors, pumps, casing, and pipe style options.
 It connects two Create fluid pipes through the shortest valid route and shows a ghost preview before placing the pipe line.
 '''
 

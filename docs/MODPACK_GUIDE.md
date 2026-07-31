@@ -4,7 +4,7 @@
 
 - Minecraft `1.21.1`
 - NeoForge `21.1.219` or compatible
-- Create `6.0.10-280` or compatible
+- Create `6.0.6-107` or compatible `6.0.x`
 - Java `21`
 
 ## Runtime dependencies
@@ -43,7 +43,7 @@
 
 ## Recommended version
 
-- Use `Create 6.0.10-280` for the exact version this addon is being validated against.
+- Use `Create 6.0.6-107` as the minimum validated NeoForge build; compatible `6.0.x` releases are accepted.
 
 ## For modders
 

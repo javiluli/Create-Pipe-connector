@@ -12,6 +12,10 @@ Keep the project focused on the NeoForge runtime while preserving shared logic i
 ## Key classes
 
 - `common/.../connector/PipeConnectorLogic.java`
+- `common/.../connector/PipePathfinder.java`: obstacle-aware route search and route priorities
+- `common/.../connector/PipeRouteGeometry.java`: path directions, corners, and pump orientation
+- `common/.../connector/PlayerInteractionRange.java`: Minecraft 1.21.1 reach resolution
+- `neoforge/.../client/input/ClientMaterialPreview.java`: material warnings and HUD counts
   - public connector facade
   - pathfinding and connection plan creation
   - route style selection and axis ordering
