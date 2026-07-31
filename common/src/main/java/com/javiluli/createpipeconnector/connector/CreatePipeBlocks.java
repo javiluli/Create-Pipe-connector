@@ -1,9 +1,11 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -18,13 +20,20 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
 
+/**
+ * Centralizes registry lookups and block-state interoperability with Create.
+ *
+ * <p>Keeping Create-specific reflection here prevents routing and placement
+ * code from depending on implementation details that may move between Create
+ * versions.</p>
+ */
 final class CreatePipeBlocks {
-    static final ResourceLocation FLUID_PIPE = ResourceLocation.fromNamespaceAndPath("create", "fluid_pipe");
-    static final ResourceLocation GLASS_FLUID_PIPE = ResourceLocation.fromNamespaceAndPath("create", "glass_fluid_pipe");
-    static final ResourceLocation ENCASED_FLUID_PIPE = ResourceLocation.fromNamespaceAndPath("create", "encased_fluid_pipe");
-    static final ResourceLocation MECHANICAL_PUMP = ResourceLocation.fromNamespaceAndPath("create", "mechanical_pump");
-    static final ResourceLocation COPPER_CASING = ResourceLocation.fromNamespaceAndPath("create", "copper_casing");
-    private static final ResourceLocation WRENCH = ResourceLocation.fromNamespaceAndPath("create", "wrench");
+    static final ResourceLocation FLUID_PIPE = createId(Constants.FLUID_PIPE);
+    static final ResourceLocation GLASS_FLUID_PIPE = createId(Constants.GLASS_FLUID_PIPE);
+    static final ResourceLocation ENCASED_FLUID_PIPE = createId(Constants.ENCASED_FLUID_PIPE);
+    static final ResourceLocation MECHANICAL_PUMP = createId(Constants.MECHANICAL_PUMP);
+    static final ResourceLocation COPPER_CASING = createId(Constants.COPPER_CASING);
+    private static final ResourceLocation WRENCH = createId(Constants.WRENCH);
     private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(FLUID_PIPE);
     private static final Direction[] DIRECTIONS = Direction.values();
 
@@ -203,10 +212,6 @@ final class CreatePipeBlocks {
         return GLASS_FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
-    static boolean isEncasedFluidPipe(BlockState state) {
-        return ENCASED_FLUID_PIPE.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
-    }
-
     static boolean isMechanicalPump(BlockState state) {
         return MECHANICAL_PUMP.equals(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
@@ -225,7 +230,7 @@ final class CreatePipeBlocks {
     static BlockState updatePipeState(BlockState state, Direction preferredDirection, BlockAndTintGetter world, BlockPos position) {
         try {
             Method updateBlockState = state.getBlock().getClass().getMethod(
-                    "updateBlockState",
+                    Constants.UPDATE_BLOCK_STATE,
                     BlockState.class,
                     Direction.class,
                     Direction.class,
@@ -239,9 +244,13 @@ final class CreatePipeBlocks {
     }
 
     private static BlockState copyWaterlogged(BlockState sourceState, BlockState targetState) {
-        if (targetState.hasProperty(BlockStateProperties.WATERLOGGED) && sourceState.hasProperty(BlockStateProperties.WATERLOGGED)) {
-            return targetState.setValue(BlockStateProperties.WATERLOGGED, sourceState.getValue(BlockStateProperties.WATERLOGGED));
+        if (targetState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+            return targetState.setValue(BlockStateProperties.WATERLOGGED, sourceState.getFluidState().is(FluidTags.WATER));
         }
         return targetState;
+    }
+
+    private static ResourceLocation createId(String path) {
+        return ResourceLocation.fromNamespaceAndPath(Constants.NAMESPACE, path);
     }
 }

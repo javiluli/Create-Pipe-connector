@@ -1,5 +1,6 @@
 package com.javiluli.createpipeconnector.connector;
 
+import com.javiluli.createpipeconnector.Constants;
 import com.javiluli.createpipeconnector.connector.PipeConnectorLogic.PipeDisplayToggleResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -16,6 +17,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Converts one connected pipe segment between Create's regular and glass
+ * display variants without crossing mechanical pumps.
+ */
 final class PipeDisplayToggler {
     private static final int MAX_TOGGLE_BLOCKS = 512;
     private static final Direction[] DIRECTIONS = Direction.values();
@@ -66,6 +71,7 @@ final class PipeDisplayToggler {
         ArrayDeque<BlockPos> openSet = new ArrayDeque<>();
         openSet.add(origin);
 
+        // Prevent malformed or enormous networks from stalling the server tick.
         while (!openSet.isEmpty() && segment.size() < MAX_TOGGLE_BLOCKS) {
             BlockPos position = openSet.removeFirst();
             if (!visited.add(position)) {
@@ -99,16 +105,16 @@ final class PipeDisplayToggler {
     }
 
     private static void cacheFluidFlows(LevelAccessor level, BlockPos position) {
-        invokeFluidTransportMethod("cacheFlows", level, position);
+        invokeFluidTransportMethod(Constants.CACHE_FLOWS, level, position);
     }
 
     private static void loadFluidFlows(LevelAccessor level, BlockPos position) {
-        invokeFluidTransportMethod("loadFlows", level, position);
+        invokeFluidTransportMethod(Constants.LOAD_FLOWS, level, position);
     }
 
     private static void invokeFluidTransportMethod(String methodName, LevelAccessor level, BlockPos position) {
         try {
-            Class<?> fluidTransport = Class.forName("com.simibubi.create.content.fluids.FluidTransportBehaviour");
+            Class<?> fluidTransport = Class.forName(Constants.CREATE_FLUID_TRANSPORT);
             Method method = fluidTransport.getMethod(methodName, LevelAccessor.class, BlockPos.class);
             method.invoke(null, level, position);
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {

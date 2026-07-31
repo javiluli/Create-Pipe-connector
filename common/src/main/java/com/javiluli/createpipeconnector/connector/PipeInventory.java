@@ -9,6 +9,10 @@ import net.minecraft.world.level.block.Block;
 
 import java.util.List;
 
+/**
+ * Counts and consumes connector materials from a player's main inventory and
+ * off-hand while preserving creative-mode behavior.
+ */
 final class PipeInventory {
     private PipeInventory() {
     }
@@ -44,20 +48,10 @@ final class PipeInventory {
         return countAvailableItems(player, casingBlock.asItem());
     }
 
-    static int countAvailableGlassPipes(Player player) {
-        Block glassPipeBlock = CreatePipeBlocks.getGlassFluidPipeBlock();
-        if (glassPipeBlock == null) {
-            return 0;
-        }
-
-        return countAvailableItems(player, glassPipeBlock.asItem());
-    }
-
     static boolean hasEnoughItems(Player player, Block pipeBlock, ConnectionPlan plan) {
         return player.getAbilities().instabuild
                 || (countAvailablePipes(player, pipeBlock) >= plan.requiredPipes()
                 && countAvailablePumps(player) >= plan.requiredPumps()
-                && countAvailableGlassPipes(player) >= plan.requiredGlassPipes()
                 && countAvailableCopperCasings(player) >= plan.requiredCopperCasings());
     }
 
@@ -101,16 +95,8 @@ final class PipeInventory {
             remainingPumps = consumeMatchingStacks(player.getInventory().offhand, pumpItem, remainingPumps);
         }
 
-        int remainingGlassPipes = plan.requiredGlassPipes();
-        Block glassPipeBlock = CreatePipeBlocks.getGlassFluidPipeBlock();
-        if (remainingGlassPipes > 0 && glassPipeBlock != null) {
-            Item glassPipeItem = glassPipeBlock.asItem();
-            remainingGlassPipes = consumeMatchingStacks(player.getInventory().items, glassPipeItem, remainingGlassPipes);
-            remainingGlassPipes = consumeMatchingStacks(player.getInventory().offhand, glassPipeItem, remainingGlassPipes);
-        }
-
         player.getInventory().setChanged();
-        return remainingPipes == 0 && remainingPumps == 0 && remainingGlassPipes == 0;
+        return remainingPipes == 0 && remainingPumps == 0;
     }
 
     private static int countAvailableItems(Player player, Item item) {

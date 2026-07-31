@@ -12,6 +12,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Stores transient server-side connector state keyed by player UUID.
+ *
+ * <p>Selections and manual route modifiers are intentionally discarded when
+ * connector mode is disabled or the player session ends.</p>
+ */
 final class PipeConnectorSessions {
     private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
     private static final Map<UUID, List<PlacementTarget>> ANCHORS = new HashMap<>();
