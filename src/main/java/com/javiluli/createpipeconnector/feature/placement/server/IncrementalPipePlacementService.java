@@ -198,7 +198,6 @@ public final class IncrementalPipePlacementService {
         private final int piecesPerSecond;
         private int nextStepIndex;
         private int placementProgress;
-        private boolean firstPiecePlaced;
 
         private PendingPlacement(
                 ServerLevel level,
@@ -216,11 +215,6 @@ public final class IncrementalPipePlacementService {
 
         /** Distribuye piezas individuales entre los veinte ticks de cada segundo. */
         private PlacementProgress placeNextTick() {
-            if (!firstPiecePlaced) {
-                firstPiecePlaced = true;
-                return placeNext();
-            }
-
             placementProgress += piecesPerSecond;
             if (placementProgress < PlacementAnimationSettings.GAME_TICKS_PER_SECOND) {
                 return PlacementProgress.CONTINUE;

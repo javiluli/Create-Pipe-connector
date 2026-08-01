@@ -30,6 +30,7 @@ public final class ClientPlacementAnimationSynchronizer {
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         loginSyncPending = false;
+        ClientPlacementLeadPreview.clear();
     }
 
     /** Reintenta la sincronizacion cuando Forge aun no habia publicado la conexion. */

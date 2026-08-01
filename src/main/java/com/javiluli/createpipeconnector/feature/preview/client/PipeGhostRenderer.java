@@ -5,6 +5,8 @@ import com.javiluli.createpipeconnector.feature.anchor.client.AnchorOverlayRende
 import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorState;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.ActivePreview;
 import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -82,6 +84,11 @@ public final class PipeGhostRenderer {
     private static Level cachedLevel;
     private static int cachedPreviewVersion = -1;
     private static PreviewBufferCache cachedBufferCache = PreviewBufferCache.empty();
+    private static Level cachedLeadLevel;
+    private static int cachedLeadVersion = -1;
+    private static int cachedLeadPieceIndex = -1;
+    private static SchematicLevel cachedLeadSchematic;
+    private static PreviewBufferCache cachedLeadBufferCache = PreviewBufferCache.empty();
 
     /** Impide crear instancias del renderizador global. */
     private PipeGhostRenderer() {
@@ -103,25 +110,39 @@ public final class PipeGhostRenderer {
         Level level = minecraft.level;
         if (level == null || minecraft.player == null) {
             clearBufferCache();
+            clearLeadBufferCache();
             return;
         }
 
         Selection selection = ClientPipeConnectorState.getSelection();
+        List<PreviewPipe> previewPipes = selection == null
+                ? List.of()
+                : ClientPipeConnectorState.getPreviewPipes();
+        List<PlacementTarget> anchors = selection == null
+                ? List.of()
+                : ClientPipeConnectorState.getAnchors();
+        ActivePreview leadPreview = ClientPlacementLeadPreview.getActive(level);
+        PreviewPipe leadPiece = leadPreview == null ? null : leadPreview.activePiece();
+
         if (selection == null) {
             clearBufferCache();
-            return;
         }
-
-        List<PreviewPipe> previewPipes = ClientPipeConnectorState.getPreviewPipes();
-        List<PlacementTarget> anchors = ClientPipeConnectorState.getAnchors();
-        if (previewPipes.isEmpty() && anchors.isEmpty()) {
-            clearBufferCache();
+        if (leadPreview == null) {
+            clearLeadBufferCache();
+        }
+        if (previewPipes.isEmpty() && anchors.isEmpty() && leadPiece == null) {
             return;
         }
 
         // Renderizar en el lado de la camara respecto al fluido mantiene el
         // preview visible tanto desde fuera como desde dentro del agua o lava.
-        boolean renderBeforeFluids = shouldRenderBeforeFluids(event.getCamera(), level, previewPipes, anchors);
+        boolean renderBeforeFluids = shouldRenderBeforeFluids(
+                event.getCamera(),
+                level,
+                previewPipes,
+                leadPiece,
+                anchors
+        );
         RenderLevelStageEvent.Stage targetStage = renderBeforeFluids
                 ? RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS
                 : RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS;
@@ -129,8 +150,13 @@ public final class PipeGhostRenderer {
             return;
         }
 
-        PreviewBufferCache bufferCache = getBufferCache(minecraft, level, previewPipes, ClientPipeConnectorState.getPreviewVersion());
-        if (bufferCache.isEmpty() && anchors.isEmpty()) {
+        PreviewBufferCache bufferCache = previewPipes.isEmpty()
+                ? PreviewBufferCache.empty()
+                : getBufferCache(minecraft, level, previewPipes, ClientPipeConnectorState.getPreviewVersion());
+        PreviewBufferCache leadBufferCache = leadPreview == null
+                ? PreviewBufferCache.empty()
+                : getLeadBufferCache(minecraft, level, leadPreview);
+        if (bufferCache.isEmpty() && anchors.isEmpty() && leadBufferCache.isEmpty()) {
             return;
         }
 
@@ -149,6 +175,9 @@ public final class PipeGhostRenderer {
 
         try {
             renderPipeGhosts(poseStack, bufferSource, level, previewPipes, bufferCache);
+            if (leadPiece != null) {
+                renderPipeGhosts(poseStack, bufferSource, level, List.of(leadPiece), leadBufferCache);
+            }
             AnchorOverlayRenderer.renderFaces(poseStack, bufferSource, anchors);
             AnchorOverlayRenderer.renderOutlines(poseStack, bufferSource, anchors);
             renderAnchorPipeOutlines(poseStack, bufferSource, level, previewPipes, anchors);
@@ -162,12 +191,21 @@ public final class PipeGhostRenderer {
     }
 
     /** Decide en que fase dibujar cuando preview y camara estan en fluidos distintos. */
-    private static boolean shouldRenderBeforeFluids(Camera camera, Level level, List<PreviewPipe> previewPipes, List<PlacementTarget> anchors) {
+    private static boolean shouldRenderBeforeFluids(
+            Camera camera,
+            Level level,
+            List<PreviewPipe> previewPipes,
+            PreviewPipe leadPiece,
+            List<PlacementTarget> anchors
+    ) {
         FogType cameraFluid = camera.getFluidInCamera();
         for (PreviewPipe previewPipe : previewPipes) {
             if (crossesFluidBoundary(cameraFluid, level.getFluidState(previewPipe.position()))) {
                 return true;
             }
+        }
+        if (leadPiece != null && crossesFluidBoundary(cameraFluid, level.getFluidState(leadPiece.position()))) {
+            return true;
         }
         for (PlacementTarget anchor : anchors) {
             if (crossesFluidBoundary(cameraFluid, level.getFluidState(anchor.position()))) {
@@ -224,6 +262,42 @@ public final class PipeGhostRenderer {
         cachedLevel = null;
         cachedPreviewVersion = -1;
         cachedBufferCache = PreviewBufferCache.empty();
+    }
+
+    /**
+     * Construye la siguiente pieza sobre el plan completo para conservar sus
+     * conexiones, modelo, color y contorno originales.
+     */
+    private static PreviewBufferCache getLeadBufferCache(
+            Minecraft minecraft,
+            Level level,
+            ActivePreview leadPreview
+    ) {
+        if (cachedLeadLevel != level || cachedLeadVersion != leadPreview.version()) {
+            cachedLeadLevel = level;
+            cachedLeadVersion = leadPreview.version();
+            cachedLeadPieceIndex = -1;
+            cachedLeadSchematic = buildPreviewWorld(level, leadPreview.pieces());
+            cachedLeadBufferCache = PreviewBufferCache.empty();
+        }
+        if (cachedLeadPieceIndex != leadPreview.pieceIndex()) {
+            cachedLeadPieceIndex = leadPreview.pieceIndex();
+            cachedLeadBufferCache = redrawPreview(
+                    minecraft,
+                    cachedLeadSchematic,
+                    List.of(leadPreview.activePiece())
+            );
+        }
+        return cachedLeadBufferCache;
+    }
+
+    /** Libera el modelo de la pieza adelantada cuando termina la construccion. */
+    private static void clearLeadBufferCache() {
+        cachedLeadLevel = null;
+        cachedLeadVersion = -1;
+        cachedLeadPieceIndex = -1;
+        cachedLeadSchematic = null;
+        cachedLeadBufferCache = PreviewBufferCache.empty();
     }
 
     /** Dibuja la geometria fantasma normal y la marcada por falta de materiales. */

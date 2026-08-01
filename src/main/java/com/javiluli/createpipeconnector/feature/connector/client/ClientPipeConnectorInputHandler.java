@@ -8,6 +8,7 @@ import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.material.client.ClientMaterialPreview;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementAnimationSynchronizer;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview;
 import com.javiluli.createpipeconnector.feature.pump.PumpMode;
 import com.javiluli.createpipeconnector.feature.routing.RoutePriority;
 import com.javiluli.createpipeconnector.feature.style.PipeStyleMode;
@@ -194,6 +195,7 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
+        ClientPlacementLeadPreview.enqueue(player.level(), ClientPipeConnectorState.getPreviewPipes());
         clearCurrentConnection(player);
     }
 

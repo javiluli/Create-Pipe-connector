@@ -98,6 +98,9 @@ public final class PlacementAnimationConfigScreen extends Screen {
     /** Guarda el TOML y sincroniza los valores actuales con el servidor conectado. */
     private void applySettings() {
         PlacementAnimationClientConfig.save(new PlacementAnimationSettings(animationEnabled, piecesPerSecond));
+        if (!animationEnabled) {
+            ClientPlacementLeadPreview.clear();
+        }
         ClientPlacementAnimationSynchronizer.syncIfConnected();
     }
 
