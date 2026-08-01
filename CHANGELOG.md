@@ -40,6 +40,7 @@ The categories follow Create's changelog style: **Additions**, **Art Changes**, 
 - Fixed anchor positions occasionally leaving an empty gap in the placed route.
 - Fixed the all-glass style requesting and consuming separate glass pipe items.
 - Fixed missing-material highlighting so styled glass sections count against the available regular pipes.
+- Fixed the first selected pipe not appearing until the route reached a second block.
 
 ### Art Changes
 

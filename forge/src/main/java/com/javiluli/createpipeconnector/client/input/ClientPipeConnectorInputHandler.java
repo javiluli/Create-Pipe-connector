@@ -287,9 +287,11 @@ public final class ClientPipeConnectorInputHandler {
 
         PlacementTarget target = getTrackingPreviewTarget(minecraft, heldPipeBlock);
         if (target == null || target.position().equals(selection.position())) {
-            ClientPipeConnectorState.setPreviewPipes(List.of());
-            ClientPipeConnectorState.setMaterialStatus(null);
-            clearPipeStatus(minecraft.player);
+            if (!showInitialPipePreview(minecraft, selection)) {
+                ClientPipeConnectorState.setPreviewPipes(List.of());
+                ClientPipeConnectorState.setMaterialStatus(null);
+                clearPipeStatus(minecraft.player);
+            }
             return;
         }
 
@@ -350,9 +352,43 @@ public final class ClientPipeConnectorInputHandler {
                 }
             }
         }
-        plan = PipeConnectorLogic.withCopperCasingMode(plan, ClientPipeConnectorState.getCopperCasingMode(), ClientPipeConnectorState.getCopperCasings(), selection.pipeBlock());
-        plan = PipeConnectorLogic.withPipeStyleMode(plan, ClientPipeConnectorState.getPipeStyleMode(), selection.pipeBlock());
+        plan = applyPreviewAppearance(plan, selection);
 
+        updatePreview(minecraft, selection, plan);
+        clearPipeStatus(minecraft.player);
+    }
+
+    private static boolean showInitialPipePreview(Minecraft minecraft, Selection selection) {
+        if (selection.existingPipe() || !ClientPipeConnectorState.getAnchors().isEmpty()) {
+            return false;
+        }
+
+        ConnectionPlan plan = new ConnectionPlan(
+                List.of(selection.position()),
+                List.of(selection.position())
+        );
+        plan = applyPreviewAppearance(plan, selection);
+
+        updatePreview(minecraft, selection, plan);
+        clearPipeStatus(minecraft.player);
+        return true;
+    }
+
+    private static ConnectionPlan applyPreviewAppearance(ConnectionPlan plan, Selection selection) {
+        ConnectionPlan styledPlan = PipeConnectorLogic.withCopperCasingMode(
+                plan,
+                ClientPipeConnectorState.getCopperCasingMode(),
+                ClientPipeConnectorState.getCopperCasings(),
+                selection.pipeBlock()
+        );
+        return PipeConnectorLogic.withPipeStyleMode(
+                styledPlan,
+                ClientPipeConnectorState.getPipeStyleMode(),
+                selection.pipeBlock()
+        );
+    }
+
+    private static void updatePreview(Minecraft minecraft, Selection selection, ConnectionPlan plan) {
         ClientPipeConnectorState.setPreviewPipes(ClientMaterialPreview.markMissingMaterials(
                 minecraft.player,
                 selection,
@@ -360,7 +396,6 @@ public final class ClientPipeConnectorInputHandler {
                 PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock())
         ));
         ClientMaterialPreview.updateStatus(minecraft.player, selection, plan);
-        clearPipeStatus(minecraft.player);
     }
 
     private static ConnectionPlan getBasePlacementPlan(Minecraft minecraft, Selection selection, PlacementTarget target) {
