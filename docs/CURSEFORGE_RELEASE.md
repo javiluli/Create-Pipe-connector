@@ -17,7 +17,7 @@
 
 - Required dependency: `Create`
 - Recommended Create version: `6.0.6-168`
-- Do not mark Ponder, Flywheel, Registrate, or MixinExtras as direct addon dependencies unless CurseForge requires them through Create's own dependency chain.
+- Do not mark Ponder, Flywheel, or Registrate as direct addon dependencies unless CurseForge requires them through Create's own dependency chain.
 
 ## Release notes
 
@@ -32,7 +32,7 @@ Use the Forge `1.1.0` notes:
 
 ## Validation
 
-- Run `./gradlew buildRelease` or `./gradlew :forge:build`.
+- Run `./gradlew buildRelease` or `./gradlew build`.
 - Confirm the generated JAR contains `META-INF/mods.toml`.
 - Confirm `mods.toml` declares:
   - `forge` range `[47,)`

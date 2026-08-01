@@ -120,18 +120,21 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 
 ## Developer Notes
 
-This branch targets Forge for Minecraft `1.20.1`. Shared connector logic lives in `common`; Forge input, networking, events, HUD, and rendering live in `forge`.
+This branch targets Forge for Minecraft `1.20.1` as a single Gradle module. The code uses a Create-inspired, feature-first structure under `src/main/java`: gameplay mechanics stay together, shared foundations remain small, and Forge registration is isolated from feature logic.
 
-- Core routing: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
-- Preview state building: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipePreviewBuilder.java`
-- Forge client input: `forge/src/main/java/com/javiluli/createpipeconnector/client/input`
-- Ghost preview renderer: `forge/src/main/java/com/javiluli/createpipeconnector/client/render/PipeGhostRenderer.java`
-- Radial menu: `forge/src/main/java/com/javiluli/createpipeconnector/client/screen/ConnectorOptionsRadialScreen.java`
+- Shared immutable plan: `src/main/java/com/javiluli/createpipeconnector/core/model/ConnectionPlan.java`
+- Connector facade, planning, selection, and sessions: `src/main/java/com/javiluli/createpipeconnector/feature/connector`
+- Player session state: `src/main/java/com/javiluli/createpipeconnector/feature/connector/session`
+- Routing and preview building: `src/main/java/com/javiluli/createpipeconnector/feature/routing` and `src/main/java/com/javiluli/createpipeconnector/feature/preview`
+- Ghost preview renderer: `src/main/java/com/javiluli/createpipeconnector/feature/preview/client/PipeGhostRenderer.java`
+- Radial menu and HUD: `src/main/java/com/javiluli/createpipeconnector/feature/ui/client`
+- Payload registration: `src/main/java/com/javiluli/createpipeconnector/bootstrap/ForgePayloadRegistry.java`
+- Feature-independent Forge infrastructure: `src/main/java/com/javiluli/createpipeconnector/platform`
 
 Build commands:
 
 - Run client: `./gradlew runClient`
-- Build jar: `./gradlew :forge:build`
+- Build jar: `./gradlew build`
 - Build release copy: `./gradlew buildRelease`
 
 More docs:

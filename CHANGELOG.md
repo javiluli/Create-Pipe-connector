@@ -7,6 +7,13 @@ The categories follow Create's changelog style: **Additions**, **Art Changes**, 
 
 ## Unreleased
 
+### Optimizations
+
+- Reorganized the Forge source into focused feature, core, bootstrap, and platform packages.
+- Converted the legacy multiloader layout into a standard single-module Forge project.
+- Added concise Spanish Javadocs to the mod classes and methods for future maintenance.
+- Removed obsolete loader scaffolding, empty package metadata, and unused project files.
+
 ## 1.1.0 - 2026-07-30
 
 ### Gameplay Changes
