@@ -107,6 +107,11 @@ public final class CreatePipeBlocks {
         return copyWaterlogged(sourceState, pipeBlock.defaultBlockState());
     }
 
+    /** Actualiza el agua del estado final usando el fluido presente al colocarlo. */
+    public static BlockState applyCurrentWaterlogging(BlockState sourceState, BlockState targetState) {
+        return copyWaterlogged(sourceState, targetState);
+    }
+
     /** Convierte una tuberia normal en revestida conservando sus conexiones. */
     public static BlockState createEncasedPipeState(BlockState pipeState, BlockState sourceState) {
         if (!isFluidPipe(pipeState)) {

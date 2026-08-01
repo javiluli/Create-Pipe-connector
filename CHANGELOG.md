@@ -7,6 +7,20 @@ The categories follow Create's changelog style: **Additions**, **Art Changes**, 
 
 ## Unreleased
 
+### Additions
+
+- Added a Forge config screen for enabling progressive construction and selecting 1-20 pieces per second.
+- Added per-player animation preference synchronization for multiplayer servers.
+
+### Art Changes
+
+- Confirmed routes now build progressively one piece at a time without same-tick animation batches.
+
+### Bug Fixes
+
+- Fixed placement animation settings not applying reliably after joining or closing the config screen with Escape.
+- Disabling progressive construction now finishes already queued routes immediately.
+
 ### Optimizations
 
 - Reorganized the Forge source into focused feature, core, bootstrap, and platform packages.

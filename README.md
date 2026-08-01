@@ -32,6 +32,8 @@ Instead of placing long pipe lines block by block, you select a start point, aim
 ## Main Features
 
 - **Ghost preview:** See the route before spending items.
+- **Progressive construction:** Confirmed routes appear at a configurable speed instead of all at once.
+- **Animation settings:** Choose from `1-20` pieces per second or disable the animation for instant placement.
 - **Smart routing:** Finds a valid path around obstacles.
 - **Anchors:** Add waypoints to force turns or guide the route.
 - **Radial menu:** Change route style, pumps, flow direction, casing, and pipe style.
@@ -79,6 +81,17 @@ Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps
 7. Optional: press `N` to open the radial menu.
 8. Right-click again to place the route.
 9. Left-click during preview to cancel only the current route.
+
+### Placement Animation
+
+Open `Mods -> Create: Pipe Connector -> Config` to change how confirmed routes are built.
+
+- Keep **Progressive construction** enabled for the animated building effect.
+- Choose from `1` to `20` pieces per second (`20` by default).
+- Pieces always appear individually; the mod never places animation batches in the same tick.
+- Disable it to place the complete route instantly.
+- Changes are saved and synchronized as soon as you adjust them.
+- In multiplayer, each route uses the preference of the player who confirmed it.
 10. Press `B` again to leave Connector Pipe mode.
 
 ## Radial Menu Options

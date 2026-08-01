@@ -66,5 +66,12 @@
   "screen.createpipeconnector.options.description.casing_mode_manual": "Uses only casing marks placed with the casing key.",
   "screen.createpipeconnector.options.description.casing_mode_all": "Applies copper casing to every valid pipe slot; pumps still take priority.",
   "screen.createpipeconnector.options.description.pipe_style_default": "Places regular pipes for the planned route.",
-  "screen.createpipeconnector.options.description.pipe_style_glass": "Uses glass pipes on straight sections and regular pipes on corners."
+  "screen.createpipeconnector.options.description.pipe_style_glass": "Uses glass pipes on straight sections and regular pipes on corners.",
+  "screen.createpipeconnector.config.title": "Create: Pipe Connector Settings",
+  "screen.createpipeconnector.config.description": "Pieces are placed individually and distributed over each second.",
+  "screen.createpipeconnector.config.animation": "Progressive construction",
+  "screen.createpipeconnector.config.speed": "Construction speed: %s pieces/s",
+  "screen.createpipeconnector.config.reset": "Reset",
+  "config.createpipeconnector.placement_animation.enabled": "Progressive construction",
+  "config.createpipeconnector.placement_animation.pieces_per_second": "Construction speed"
 }

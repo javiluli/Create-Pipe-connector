@@ -167,48 +167,6 @@ public final class PipeConnectorLogic {
         return PlayerInteractionRange.resolve(player);
     }
 
-    /**
-     * Calcula y coloca una conexion basica entre dos posiciones.
-     *
-     * @return {@code true} si se coloco una ruta valida
-     */
-    public static boolean connect(ServerLevel level, BlockPos startPos, BlockPos endPos, Block pipeBlock) {
-        ConnectionPlan plan = buildConnectionPlan(level, startPos, endPos);
-        if (plan == null) {
-            return false;
-        }
-
-        return connect(level, plan, pipeBlock);
-    }
-
-    /**
-     * Coloca un plan validado y actualiza la red de tuberias de Create.
-     *
-     * @return {@code false} si alguna posicion quedo obstruida
-     */
-    public static boolean connect(ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
-        Block pumpBlock = getMechanicalPumpBlock();
-
-        for (BlockPos position : plan.placementPositions()) {
-            if (!PipePathfinder.isTraversableBlock(level, position)) {
-                return false;
-            }
-        }
-
-        Map<BlockPos, BlockState> connectionStates = PipePreviewBuilder.buildConnectionStates(level, plan, pipeBlock);
-        for (BlockPos position : plan.placementPositions()) {
-            BlockState sourceState = level.getBlockState(position);
-            BlockState connectedPipeState = connectionStates.getOrDefault(position, createPipeState(pipeBlock, sourceState));
-            BlockState state = plan.pumpPlacements().containsKey(position) && pumpBlock != null
-                    ? createPumpState(pumpBlock, sourceState, plan.pumpPlacements().get(position))
-                    : createPlacementPipeState(connectedPipeState, sourceState, plan.copperCasingPlacements().contains(position), plan.glassPipePlacements().contains(position));
-            level.setBlockAndUpdate(position, state);
-        }
-
-        refreshPipeStates(level, plan.path());
-        return true;
-    }
-
     /** Cuenta las tuberias disponibles para el tipo seleccionado. */
     public static int countAvailablePipes(Player player, Block pipeBlock) {
         return PipeInventory.countAvailablePipes(player, pipeBlock);
@@ -409,21 +367,6 @@ public final class PipeConnectorLogic {
     /** Devuelve una orientacion valida de bomba en un tramo recto. */
     public static Direction straightPumpFacing(List<BlockPos> path, BlockPos position) {
         return PipeRouteGeometry.straightPumpFacing(path, position);
-    }
-
-    /** Aplica revestimiento o cristal al estado final de colocacion. */
-    private static BlockState createPlacementPipeState(BlockState pipeState, BlockState sourceState, boolean copperCasing, boolean glassPipe) {
-        if (copperCasing) {
-            BlockState encasedState = CreatePipeBlocks.createEncasedPipeState(pipeState, sourceState);
-            return encasedState == null ? pipeState : encasedState;
-        }
-
-        if (glassPipe) {
-            BlockState glassState = CreatePipeBlocks.createGlassPipeState(pipeState);
-            return glassState == null ? pipeState : glassState;
-        }
-
-        return pipeState;
     }
 
 }

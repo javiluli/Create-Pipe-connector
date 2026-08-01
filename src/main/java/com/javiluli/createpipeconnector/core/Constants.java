@@ -32,7 +32,7 @@ public final class Constants {
     public static final String GET = "get";
 
     /** Metadatos del canal de red de Forge. */
-    public static final String PROTOCOL_VERSION = "1";
+    public static final String PROTOCOL_VERSION = "2";
     public static final String CHANNEL_PATH = "main";
 
     /** Limites de interaccion expresados en ticks o bloques. */

@@ -6,6 +6,8 @@ import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.connector.session.ConnectorSessionStore;
+import com.javiluli.createpipeconnector.feature.placement.server.IncrementalPipePlacementService;
+import com.javiluli.createpipeconnector.feature.placement.server.PlacementAnimationPreferenceStore;
 import com.javiluli.createpipeconnector.feature.pump.PumpMode;
 import com.javiluli.createpipeconnector.feature.style.PipeDisplayToggleResult;
 import net.minecraft.core.BlockPos;
@@ -19,6 +21,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.TickEvent;
 
 import java.util.HashMap;
@@ -52,6 +55,7 @@ public final class ServerPipeConnectorEvents {
         }
 
         clearExpiredWrenchClicks(player.level().getGameTime());
+        IncrementalPipePlacementService.tick(player);
 
         Selection selection = ConnectorSessionStore.getSelection(player.getUUID());
         if (selection == null) {
@@ -217,10 +221,7 @@ public final class ServerPipeConnectorEvents {
             return true;
         }
 
-        boolean connected = PipeConnectorLogic.connect(serverLevel, plan, currentSelection.pipeBlock());
-        if (connected) {
-            PipeConnectorLogic.consumeItems(player, currentSelection.pipeBlock(), plan);
-        }
+        IncrementalPipePlacementService.enqueue(player, serverLevel, plan, currentSelection.pipeBlock());
 
         ConnectorSessionStore.clearSelection(player.getUUID());
         clearActionBar(player);
@@ -233,6 +234,14 @@ public final class ServerPipeConnectorEvents {
     public static void cancelPipeConnection(Player player) {
         ConnectorSessionStore.clearSelection(player.getUUID());
         clearActionBar(player);
+    }
+
+    /** Devuelve reservas pendientes cuando el jugador abandona el servidor. */
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (!event.getEntity().level().isClientSide()) {
+            IncrementalPipePlacementService.cancelAndRefund(event.getEntity());
+            PlacementAnimationPreferenceStore.clear(event.getEntity().getUUID());
+        }
     }
 
     /** Comprueba alcance, ocupacion y tipo de tuberia del objetivo. */

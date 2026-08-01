@@ -15,6 +15,8 @@ import com.javiluli.createpipeconnector.feature.pump.network.ReverseAutoPumpDire
 import com.javiluli.createpipeconnector.feature.pump.network.ServerPumpPayloadHandler;
 import com.javiluli.createpipeconnector.feature.pump.network.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.feature.pump.network.ToggleManualPumpPayload;
+import com.javiluli.createpipeconnector.feature.placement.network.PlacementAnimationSettingsPayload;
+import com.javiluli.createpipeconnector.feature.placement.network.ServerPlacementAnimationPayloadHandler;
 import com.javiluli.createpipeconnector.feature.routing.network.CancelPipeConnectionPayload;
 import com.javiluli.createpipeconnector.feature.routing.network.RoutePriorityPayload;
 import com.javiluli.createpipeconnector.feature.routing.network.SelectPipeTargetPayload;
@@ -127,6 +129,12 @@ public final class ForgePayloadRegistry {
                 WrenchPipeDisplayPayload::encode,
                 WrenchPipeDisplayPayload::decode,
                 ServerPipeStylePayloadHandler::handleWrenchPipeDisplay
+        );
+        CreatePipeConnectorNetwork.registerMessage(
+                PlacementAnimationSettingsPayload.class,
+                PlacementAnimationSettingsPayload::encode,
+                PlacementAnimationSettingsPayload::decode,
+                ServerPlacementAnimationPayloadHandler::handleSettings
         );
     }
 }

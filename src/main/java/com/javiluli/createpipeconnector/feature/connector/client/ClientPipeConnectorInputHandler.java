@@ -7,6 +7,7 @@ import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.material.client.ClientMaterialPreview;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementAnimationSynchronizer;
 import com.javiluli.createpipeconnector.feature.pump.PumpMode;
 import com.javiluli.createpipeconnector.feature.routing.RoutePriority;
 import com.javiluli.createpipeconnector.feature.style.PipeStyleMode;
@@ -166,7 +167,7 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
         if (currentSelection != null) {
-        Component missingMaterialsMessage = ClientMaterialPreview.missingMaterialsMessage(ClientPipeConnectorState.getMaterialStatus());
+            Component missingMaterialsMessage = ClientMaterialPreview.missingMaterialsMessage(ClientPipeConnectorState.getMaterialStatus());
             if (missingMaterialsMessage != null) {
                 player.displayClientMessage(missingMaterialsMessage.copy().withStyle(ChatFormatting.RED), true);
                 return;
@@ -177,6 +178,7 @@ public final class ClientPipeConnectorInputHandler {
 
     /** Inicia o confirma localmente una ruta y envia el objetivo al servidor. */
     private static void handleClientTarget(LocalPlayer player, Block heldPipeBlock, PlacementTarget target) {
+        ClientPlacementAnimationSynchronizer.syncIfConnected();
         CreatePipeConnectorNetwork.sendToServer(new SelectPipeTargetPayload(target.position(), target.face(), target.existingPipe()));
 
         Selection currentSelection = ClientPipeConnectorState.getSelection();

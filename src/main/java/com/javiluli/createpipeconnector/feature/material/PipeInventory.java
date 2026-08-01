@@ -108,6 +108,20 @@ public final class PipeInventory {
         return remainingPipes == 0 && remainingPumps == 0;
     }
 
+    /** Devuelve tuberias y bombas reservadas que finalmente no fueron colocadas. */
+    public static void refundItems(Player player, Block pipeBlock, int pipes, int pumps) {
+        if (player.getAbilities().instabuild) {
+            return;
+        }
+
+        giveItems(player, pipeBlock.asItem(), pipes);
+        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
+        if (pumpBlock != null) {
+            giveItems(player, pumpBlock.asItem(), pumps);
+        }
+        player.getInventory().setChanged();
+    }
+
     /** Cuenta un tipo de objeto entre manos e inventario. */
     private static int countAvailableItems(Player player, Item item) {
         if (player.getAbilities().instabuild) {
@@ -148,5 +162,23 @@ public final class PipeInventory {
             remaining -= consumed;
         }
         return remaining;
+    }
+
+    /** Inserta objetos en el inventario y deja caer cualquier resto a los pies. */
+    private static void giveItems(Player player, Item item, int amount) {
+        if (item == Items.AIR || amount <= 0) {
+            return;
+        }
+
+        int remaining = amount;
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, item.getMaxStackSize());
+            ItemStack stack = new ItemStack(item, stackSize);
+            player.getInventory().add(stack);
+            if (!stack.isEmpty()) {
+                player.drop(stack, false);
+            }
+            remaining -= stackSize;
+        }
     }
 }
