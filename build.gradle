@@ -1,22 +1,164 @@
 plugins {
-    id 'net.minecraftforge.gradle' version '[6.0.24,6.2)' apply false
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
 }
 
-tasks.register('clean', Delete) {
-    delete rootProject.layout.buildDirectory
+base {
+    archivesName = "${mod_id}-forge-${minecraft_version}"
 }
 
-subprojects {
-    apply plugin: 'java'
-    java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+    withSourcesJar()
+    withJavadocJar()
+}
 
-    tasks.withType(JavaCompile).configureEach {
-        options.encoding = 'UTF-8'
-        options.release = 17
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    copyIdeResources = true
+
+    runs {
+        configureEach {
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+        }
+
+        client {
+            workingDirectory file('runs/client')
+            ideaModule "${rootProject.name}.main"
+            taskName 'Client'
+            mods {
+                modClientRun {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        server {
+            workingDirectory file('runs/server')
+            ideaModule "${rootProject.name}.main"
+            taskName 'Server'
+            args '--nogui'
+            mods {
+                modServerRun {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+sourceSets.main.resources.srcDir 'src/generated/resources'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'Create'
+        url = 'https://maven.createmod.net'
+    }
+    maven {
+        name = 'Registrate'
+        url = 'https://maven.ithundxr.dev/mirror'
+    }
+    maven {
+        name = 'ModResources'
+        url = 'https://raw.githubusercontent.com/Fuzss/modresources/main/maven'
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    runtimeOnly(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false })
+    compileOnly(fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}"))
+    runtimeOnly(fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}"))
+    compileOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-api-${minecraft_version}:${flywheel_version}"))
+    runtimeOnly(fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}"))
+    runtimeOnly(fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"))
+    runtimeOnly("io.github.llamalad7:mixinextras-forge:${mixinextras_version}")
+
+    implementation('net.sf.jopt-simple:jopt-simple:5.0.4') {
+        version {
+            strictly '5.0.4'
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = java_version as int
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+processResources {
+    def expandProps = [
+            'version'                    : version,
+            'group'                      : project.group,
+            'minecraft_version'          : minecraft_version,
+            'minecraft_version_range'    : minecraft_version_range,
+            'mod_name'                   : mod_name,
+            'mod_author'                 : mod_author,
+            'mod_id'                     : mod_id,
+            'license'                    : license,
+            'description'                : project.description,
+            'forge_version'              : forge_version,
+            'forge_loader_version_range' : forge_loader_version_range,
+            'credits'                    : credits,
+            'java_version'               : java_version
+    ]
+
+    filesMatching(['pack.mcmeta', 'META-INF/mods.toml']) {
+        expand expandProps
+    }
+    inputs.properties(expandProps)
+}
+
+sourceSets.each {
+    def directory = layout.buildDirectory.dir("sourceSets/$it.name")
+    it.output.resourcesDir = directory
+    it.java.destinationDirectory = directory
+}
+
+sourcesJar {
+    from(layout.projectDirectory.file('LICENSE')) {
+        rename { "${it}_${mod_name}" }
+    }
+}
+
+jar {
+    from(layout.projectDirectory.file('LICENSE')) {
+        rename { "${it}_${mod_name}" }
     }
 
-    tasks.withType(Javadoc).configureEach {
-        enabled = false
+    manifest {
+        attributes([
+                'Specification-Title'    : mod_name,
+                'Specification-Vendor'   : mod_author,
+                'Specification-Version'  : archiveVersion,
+                'Implementation-Title'   : project.name,
+                'Implementation-Version' : archiveVersion,
+                'Implementation-Vendor'  : mod_author,
+                'Built-On-Minecraft'     : minecraft_version
+        ])
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId base.archivesName.get()
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url System.getenv('local_maven_url')
+        }
     }
 }
 
@@ -29,31 +171,29 @@ tasks.register('cleanOutJars', Delete) {
 tasks.register('copyJars', Copy) {
     group = 'build'
     description = 'Copies the final Forge JAR file to the out_jars folder.'
+    dependsOn 'cleanOutJars', 'build'
 
-    dependsOn('cleanOutJars', ':forge:build')
-
-    from(project(':forge').layout.buildDirectory.dir('libs')) {
+    from(layout.buildDirectory.dir('libs')) {
         include "*-${minecraft_version}-${version}.jar"
         exclude "*-sources.jar", "*-dev.jar", "*-shadow.jar", "*-all.jar", "*-sources-dev.jar", "*-javadoc.jar"
     }
-
     into layout.projectDirectory.dir('out_jars')
 }
 
 tasks.register('buildRelease') {
     group = 'dev-run'
-    description = 'Cleans everything and generates the Forge JAR in the out_jars folder.'
-    dependsOn 'clean', 'copyJars'
+    description = 'Generates the Forge release JAR in the out_jars folder.'
+    dependsOn 'copyJars'
 }
 
 tasks.register('runClient') {
     group = 'dev-run'
-    description = 'Run Forge client'
-    dependsOn ':forge:Client'
+    description = 'Runs the Forge client.'
+    dependsOn 'Client'
 }
 
 tasks.register('runServer') {
     group = 'dev-run'
-    description = 'Run Forge server'
-    dependsOn ':forge:Server'
+    description = 'Runs the Forge server.'
+    dependsOn 'Server'
 }

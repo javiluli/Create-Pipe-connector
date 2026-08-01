@@ -32,5 +32,3 @@ plugins {
 }
 
 rootProject.name = 'Create-Pipe-Connector'
-include('common')
-include('forge')
