@@ -25,9 +25,7 @@ public final class ServerPlacementAnimationPayloadHandler {
                     payload.piecesPerSecond()
             );
             PlacementAnimationPreferenceStore.set(player.getUUID(), settings);
-            if (!settings.enabled()) {
-                IncrementalPipePlacementService.completeAllImmediately(player);
-            }
+            IncrementalPipePlacementService.applySettings(player, settings);
         });
     }
 }

@@ -26,6 +26,12 @@ import java.util.List;
  */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class PipeConnectorControlsHud {
+    private static final String OVERLAY_ID = "pipe_connector_controls";
+    private static final String CONNECTOR_MODE_HINT = "hud.createpipeconnector.control.connector_mode";
+    private static final String START_CONFIRM_HINT = "hud.createpipeconnector.control.start_confirm";
+    private static final String ROUTE_PRIORITY_HINT = "hud.createpipeconnector.control.cycle_route_priority";
+    private static final String ADD_ANCHOR_HINT = "hud.createpipeconnector.control.add_anchor";
+    private static final String LOCK_PREVIEW_HINT = "hud.createpipeconnector.control.lock_preview";
     private static final int BACKGROUND_COLOR = 0xAA101010;
     private static final int TEXT_COLOR = 0xFFE8E8E8;
     private static final int MISSING_TEXT_COLOR = 0xFFFF6666;
@@ -47,7 +53,7 @@ public final class PipeConnectorControlsHud {
     public static void register(RegisterGuiOverlaysEvent event) {
         event.registerAbove(
                 VanillaGuiOverlay.HOTBAR.id(),
-                Constants.CONTROLS_OVERLAY,
+                OVERLAY_ID,
                 (gui, guiGraphics, partialTick, screenWidth, screenHeight) -> render(guiGraphics)
         );
     }
@@ -68,11 +74,11 @@ public final class PipeConnectorControlsHud {
     /** Dibuja en una linea los controles principales asignados. */
     private static void renderMinimalControls(GuiGraphics guiGraphics, Font font) {
         String controls = String.join("  |  ",
-                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), Constants.HUD_CONTROL_CONNECTOR_MODE),
-                hint(keyName(Minecraft.getInstance().options.keyUse), Constants.HUD_CONTROL_START_CONFIRM),
-                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), Constants.HUD_CONTROL_ROUTE_PRIORITY),
-                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), Constants.HUD_CONTROL_ADD_ANCHOR),
-                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), Constants.HUD_CONTROL_LOCK_PREVIEW)
+                hint(keyName(ClientPipeConnectorKeyMappings.toggleConnectorModeKey()), CONNECTOR_MODE_HINT),
+                hint(keyName(Minecraft.getInstance().options.keyUse), START_CONFIRM_HINT),
+                hint(keyName(ClientPipeConnectorKeyMappings.cycleRoutePriorityKey()), ROUTE_PRIORITY_HINT),
+                hint(keyName(ClientPipeConnectorKeyMappings.addAnchorKey()), ADD_ANCHOR_HINT),
+                hint(keyName(ClientPipeConnectorKeyMappings.togglePreviewLockKey()), LOCK_PREVIEW_HINT)
         );
 
         int width = Math.round(font.width(controls) * CONTROL_TEXT_SCALE);

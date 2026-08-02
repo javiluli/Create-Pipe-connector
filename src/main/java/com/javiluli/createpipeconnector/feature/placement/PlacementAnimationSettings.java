@@ -4,19 +4,13 @@ package com.javiluli.createpipeconnector.feature.placement;
 public record PlacementAnimationSettings(boolean enabled, int piecesPerSecond) {
     public static final boolean DEFAULT_ENABLED = true;
     public static final int GAME_TICKS_PER_SECOND = 20;
-    public static final int DEFAULT_PIECES_PER_SECOND = 20;
-    public static final int MIN_PIECES_PER_SECOND = 1;
-    public static final int MAX_PIECES_PER_SECOND = 20;
     public static final PlacementAnimationSettings DEFAULT = new PlacementAnimationSettings(
             DEFAULT_ENABLED,
-            DEFAULT_PIECES_PER_SECOND
+            PlacementAnimationSpeed.VERY_FAST.piecesPerSecond()
     );
 
-    /** Limita la velocidad para impedir valores abusivos recibidos desde la red. */
+    /** Ajusta valores antiguos o externos al preset de velocidad mas cercano. */
     public PlacementAnimationSettings {
-        piecesPerSecond = Math.max(
-                MIN_PIECES_PER_SECOND,
-                Math.min(MAX_PIECES_PER_SECOND, piecesPerSecond)
-        );
+        piecesPerSecond = PlacementAnimationSpeed.fromPiecesPerSecond(piecesPerSecond).piecesPerSecond();
     }
 }

@@ -175,14 +175,7 @@ public final class ClientPipeConnectorState {
 
     /** Anade o retira una bomba manual local. */
     public static void toggleManualPump(BlockPos position) {
-        List<BlockPos> updatedManualPumps = new ArrayList<>(manualPumps);
-        if (updatedManualPumps.remove(position)) {
-            manualPumps = updatedManualPumps.isEmpty() ? List.of() : List.copyOf(updatedManualPumps);
-            return;
-        }
-
-        updatedManualPumps.add(position);
-        manualPumps = List.copyOf(updatedManualPumps);
+        manualPumps = toggleValue(manualPumps, position);
     }
 
     /** Elimina la ultima bomba manual local si existe. */
@@ -191,9 +184,7 @@ public final class ClientPipeConnectorState {
             return false;
         }
 
-        List<BlockPos> updatedManualPumps = new ArrayList<>(manualPumps);
-        updatedManualPumps.remove(updatedManualPumps.size() - 1);
-        manualPumps = updatedManualPumps.isEmpty() ? List.of() : List.copyOf(updatedManualPumps);
+        manualPumps = removeLastValue(manualPumps);
         return true;
     }
 
@@ -204,14 +195,7 @@ public final class ClientPipeConnectorState {
 
     /** Anade o retira un revestimiento manual local. */
     public static void toggleCopperCasing(BlockPos position) {
-        List<BlockPos> updatedCopperCasings = new ArrayList<>(copperCasings);
-        if (updatedCopperCasings.remove(position)) {
-            copperCasings = updatedCopperCasings.isEmpty() ? List.of() : List.copyOf(updatedCopperCasings);
-            return;
-        }
-
-        updatedCopperCasings.add(position);
-        copperCasings = List.copyOf(updatedCopperCasings);
+        copperCasings = toggleValue(copperCasings, position);
     }
 
     /** Elimina el ultimo revestimiento manual local si existe. */
@@ -220,10 +204,24 @@ public final class ClientPipeConnectorState {
             return false;
         }
 
-        List<BlockPos> updatedCopperCasings = new ArrayList<>(copperCasings);
-        updatedCopperCasings.remove(updatedCopperCasings.size() - 1);
-        copperCasings = updatedCopperCasings.isEmpty() ? List.of() : List.copyOf(updatedCopperCasings);
+        copperCasings = removeLastValue(copperCasings);
         return true;
+    }
+
+    /** Devuelve una copia inmutable con el valor anadido o retirado. */
+    private static <T> List<T> toggleValue(List<T> values, T value) {
+        List<T> updatedValues = new ArrayList<>(values);
+        if (!updatedValues.remove(value)) {
+            updatedValues.add(value);
+        }
+        return updatedValues.isEmpty() ? List.of() : List.copyOf(updatedValues);
+    }
+
+    /** Devuelve una copia inmutable sin el ultimo valor. */
+    private static <T> List<T> removeLastValue(List<T> values) {
+        List<T> updatedValues = new ArrayList<>(values);
+        updatedValues.remove(updatedValues.size() - 1);
+        return updatedValues.isEmpty() ? List.of() : List.copyOf(updatedValues);
     }
 
     /** Devuelve las piezas de la vista previa actual. */

@@ -1,6 +1,5 @@
 package com.javiluli.createpipeconnector.feature.ui.client;
 
-import com.javiluli.createpipeconnector.core.Constants;
 import com.javiluli.createpipeconnector.feature.casing.CopperCasingMode;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorKeyMappings;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorState;
@@ -33,6 +32,11 @@ import java.util.Map;
  * implementaciones polimorficas de {@link RadialOption}.</p>
  */
 public final class ConnectorOptionsRadialScreen extends Screen {
+    private static final String TITLE_KEY = "screen.createpipeconnector.options.title";
+    private static final String HINT_KEY = "screen.createpipeconnector.options.hint";
+    private static final String MECHANIC_KEY_PREFIX = "screen.createpipeconnector.options.mechanic.";
+    private static final String OPTION_KEY_PREFIX = "screen.createpipeconnector.options.option.";
+    private static final String DESCRIPTION_KEY_PREFIX = "screen.createpipeconnector.options.description.";
     private static final int BACKGROUND_COLOR = 0x33000000;
     private static final int MECHANIC_COLOR = 0x73000000;
     private static final int ACTIVE_COLOR = 0xA64A3518;
@@ -77,7 +81,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
 
     /** Crea el menu con su titulo localizado. */
     public ConnectorOptionsRadialScreen() {
-        super(Component.translatable(Constants.OPTIONS_TITLE));
+        super(Component.translatable(TITLE_KEY));
     }
 
     /** Dibuja el fondo, los anillos, las etiquetas y la ayuda contextual. */
@@ -95,7 +99,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         renderLabels(guiGraphics, font, centerX, centerY);
         renderTooltip(guiGraphics, font, centerX, centerY);
 
-        Component hint = Component.translatable(Constants.OPTIONS_HINT);
+        Component hint = Component.translatable(HINT_KEY);
         drawScaledCenteredString(guiGraphics, font, hint, centerX, centerY + OPTION_OUTER_RADIUS + 44, HINT_COLOR, SMALL_TEXT_SCALE);
     }
 
@@ -688,7 +692,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
 
         /** Construye la clave de traduccion de la categoria. */
         String translationKey() {
-            return Constants.OPTIONS_MECHANIC_PREFIX + id;
+            return MECHANIC_KEY_PREFIX + id;
         }
 
         /** Localiza una opcion dentro del conjunto de la categoria. */
@@ -717,12 +721,12 @@ public final class ConnectorOptionsRadialScreen extends Screen {
 
         /** Construye la clave de traduccion del nombre de la opcion. */
         default String translationKey() {
-            return Constants.OPTIONS_OPTION_PREFIX + id();
+            return OPTION_KEY_PREFIX + id();
         }
 
         /** Construye la clave de traduccion de la descripcion de la opcion. */
         default String descriptionTranslationKey() {
-            return Constants.OPTIONS_DESCRIPTION_PREFIX + id();
+            return DESCRIPTION_KEY_PREFIX + id();
         }
     }
 

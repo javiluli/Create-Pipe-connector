@@ -1,6 +1,5 @@
 package com.javiluli.createpipeconnector.feature.pump;
 
-import com.javiluli.createpipeconnector.core.Constants;
 import com.javiluli.createpipeconnector.core.create.CreatePipeBlocks;
 import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.routing.PipeRouteGeometry;
@@ -22,6 +21,8 @@ import java.util.Set;
  * de flujo de Create cuando la API compatible esta disponible.</p>
  */
 public final class AutoPumpPlanner {
+    private static final String FLUID_PROPAGATOR_CLASS = "com.simibubi.create.content.fluids.FluidPropagator";
+    private static final String GET_PUMP_RANGE_METHOD = "getPumpRange";
     private static final int FALLBACK_PUMP_SUCTION_PIPE_GAP = 15;
     private static final int FALLBACK_PUMP_PUSH_PIPE_GAP = 15;
     private static Integer cachedPumpSuctionPipeGap;
@@ -163,8 +164,8 @@ public final class AutoPumpPlanner {
         // Create ha cambiado esta API entre versiones. La reflexion mantiene
         // compatible el modulo comun con las variantes admitidas de Create 6.x.
         try {
-            Class<?> fluidPropagator = Class.forName(Constants.CREATE_FLUID_PROPAGATOR);
-            Method getPumpRange = fluidPropagator.getMethod(Constants.GET_PUMP_RANGE);
+            Class<?> fluidPropagator = Class.forName(FLUID_PROPAGATOR_CLASS);
+            Method getPumpRange = fluidPropagator.getMethod(GET_PUMP_RANGE_METHOD);
             Object range = getPumpRange.invoke(null);
             if (range instanceof Integer pumpRange) {
                 cachedPumpSuctionPipeGap = Math.max(1, pumpRange - 1);

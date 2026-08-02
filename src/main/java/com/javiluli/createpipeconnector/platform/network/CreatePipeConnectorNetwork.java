@@ -19,12 +19,14 @@ import java.util.function.Supplier;
  * {@link #sendToServer(Object)} para enviar sus acciones.</p>
  */
 public final class CreatePipeConnectorNetwork {
+    private static final String PROTOCOL_VERSION = "2";
+    private static final String CHANNEL_PATH = "main";
     private static int messageId;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, Constants.CHANNEL_PATH),
-            () -> Constants.PROTOCOL_VERSION,
-            Constants.PROTOCOL_VERSION::equals,
-            Constants.PROTOCOL_VERSION::equals
+            ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, CHANNEL_PATH),
+            () -> PROTOCOL_VERSION,
+            PROTOCOL_VERSION::equals,
+            PROTOCOL_VERSION::equals
     );
 
     /** Impide crear instancias del canal global. */

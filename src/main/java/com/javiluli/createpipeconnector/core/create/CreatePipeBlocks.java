@@ -32,12 +32,12 @@ import java.util.Set;
  */
 @SuppressWarnings("deprecation")
 public final class CreatePipeBlocks {
-    static final ResourceLocation FLUID_PIPE = createId(Constants.FLUID_PIPE);
-    static final ResourceLocation GLASS_FLUID_PIPE = createId(Constants.GLASS_FLUID_PIPE);
-    static final ResourceLocation ENCASED_FLUID_PIPE = createId(Constants.ENCASED_FLUID_PIPE);
+    static final ResourceLocation FLUID_PIPE = createId("fluid_pipe");
+    static final ResourceLocation GLASS_FLUID_PIPE = createId("glass_fluid_pipe");
+    static final ResourceLocation ENCASED_FLUID_PIPE = createId("encased_fluid_pipe");
     static final ResourceLocation MECHANICAL_PUMP = createId(Constants.MECHANICAL_PUMP);
-    static final ResourceLocation COPPER_CASING = createId(Constants.COPPER_CASING);
-    private static final ResourceLocation WRENCH = createId(Constants.WRENCH);
+    static final ResourceLocation COPPER_CASING = createId("copper_casing");
+    private static final ResourceLocation WRENCH = createId("wrench");
     private static final Set<ResourceLocation> CONNECTABLE_PIPES = Set.of(FLUID_PIPE);
     private static final Direction[] DIRECTIONS = Direction.values();
 

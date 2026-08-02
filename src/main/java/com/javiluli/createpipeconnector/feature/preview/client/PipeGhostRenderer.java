@@ -7,47 +7,36 @@ import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorState;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.ActivePreview;
+import com.javiluli.createpipeconnector.feature.placement.config.PlacementAnimationClientConfig;
 import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
-import net.createmod.catnip.levelWrappers.SchematicLevel;
-import net.createmod.catnip.render.ShadedBlockSbbBuilder;
 import net.createmod.catnip.render.SuperByteBuffer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FogType;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.model.data.ModelData;
 
-import java.util.LinkedHashMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Renderiza la ruta fantasma, los avisos de materiales y las anclas en el mundo.
@@ -57,38 +46,19 @@ import java.util.Map;
  */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class PipeGhostRenderer {
-    private static final ModelResourceLocation MECHANICAL_PUMP_ITEM_MODEL = new ModelResourceLocation(
-            ResourceLocation.fromNamespaceAndPath(Constants.NAMESPACE, Constants.MECHANICAL_PUMP),
-            Constants.ITEM_MODEL_VARIANT
-    );
     private static final RenderType GHOST_RENDER_TYPE = PipeConnectorRenderTypes.ghostTranslucent();
-    private static final float GHOST_RED = 1.00F;
-    private static final float GHOST_GREEN = 1.00F;
-    private static final float GHOST_BLUE = 1.00F;
-    private static final float GHOST_ALPHA = 0.42F;
-    private static final float MISSING_GHOST_RED = 1.00F;
-    private static final float MISSING_GHOST_GREEN = 0.38F;
-    private static final float MISSING_GHOST_BLUE = 0.34F;
-    private static final float MISSING_GHOST_ALPHA = 0.16F;
-    private static final float OUTLINE_RED = 0.15F;
-    private static final float OUTLINE_GREEN = 0.85F;
-    private static final float OUTLINE_BLUE = 1.00F;
+    private static final RenderType PLACEMENT_GHOST_RENDER_TYPE = PipeConnectorRenderTypes.placementGhostTranslucent();
+    private static final GhostTint GHOST_TINT = GhostTint.fromNormalized(1.00F, 1.00F, 1.00F, 0.42F);
+    private static final GhostTint MISSING_GHOST_TINT = GhostTint.fromNormalized(1.00F, 0.38F, 0.34F, 0.16F);
+    private static final OutlineColor DEFAULT_OUTLINE = new OutlineColor(0.15F, 0.85F, 1.00F);
+    private static final OutlineColor MISSING_OUTLINE = new OutlineColor(1.00F, 0.25F, 0.20F);
+    private static final OutlineColor PUMP_OUTLINE = new OutlineColor(1.00F, 0.82F, 0.18F);
     private static final float OUTLINE_ALPHA = 0.95F;
-    private static final float MISSING_OUTLINE_RED = 1.00F;
-    private static final float MISSING_OUTLINE_GREEN = 0.25F;
-    private static final float MISSING_OUTLINE_BLUE = 0.20F;
-    private static final float PUMP_OUTLINE_RED = 1.00F;
-    private static final float PUMP_OUTLINE_GREEN = 0.82F;
-    private static final float PUMP_OUTLINE_BLUE = 0.18F;
-    private static final ThreadLocal<ThreadLocalObjects> THREAD_LOCAL_OBJECTS = ThreadLocal.withInitial(ThreadLocalObjects::new);
     private static Level cachedLevel;
     private static int cachedPreviewVersion = -1;
-    private static PreviewBufferCache cachedBufferCache = PreviewBufferCache.empty();
+    private static PipeGhostGeometryCache cachedBufferCache = PipeGhostGeometryCache.empty();
     private static Level cachedLeadLevel;
-    private static int cachedLeadVersion = -1;
-    private static int cachedLeadPieceIndex = -1;
-    private static SchematicLevel cachedLeadSchematic;
-    private static PreviewBufferCache cachedLeadBufferCache = PreviewBufferCache.empty();
+    private static final Map<Integer, PipeGhostGeometryCache> CACHED_LEAD_BUFFER_CACHES = new HashMap<>();
 
     /** Impide crear instancias del renderizador global. */
     private PipeGhostRenderer() {
@@ -121,16 +91,28 @@ public final class PipeGhostRenderer {
         List<PlacementTarget> anchors = selection == null
                 ? List.of()
                 : ClientPipeConnectorState.getAnchors();
-        ActivePreview leadPreview = ClientPlacementLeadPreview.getActive(level);
-        PreviewPipe leadPiece = leadPreview == null ? null : leadPreview.activePiece();
+        List<ActivePreview> leadPreviews = ClientPlacementLeadPreview.getActivePreviews(level);
+        boolean showFullRoutePreview = PlacementAnimationClientConfig.showFullRoutePreview();
+        boolean showNextPiecePreview = PlacementAnimationClientConfig.showNextPiecePreview();
+        boolean showPlacementPreview = showFullRoutePreview || showNextPiecePreview;
 
         if (selection == null) {
             clearBufferCache();
         }
-        if (leadPreview == null) {
+        if (leadPreviews.isEmpty() || !showPlacementPreview) {
             clearLeadBufferCache();
         }
-        if (previewPipes.isEmpty() && anchors.isEmpty() && leadPiece == null) {
+        if (previewPipes.isEmpty() && anchors.isEmpty() && leadPreviews.isEmpty()) {
+            return;
+        }
+
+        PipeGhostGeometryCache bufferCache = previewPipes.isEmpty()
+                ? PipeGhostGeometryCache.empty()
+                : getBufferCache(minecraft, level, previewPipes, ClientPipeConnectorState.getPreviewVersion());
+        Map<Integer, PipeGhostGeometryCache> leadBufferCaches = leadPreviews.isEmpty() || !showPlacementPreview
+                ? Map.of()
+                : getLeadBufferCaches(minecraft, level, leadPreviews);
+        if (bufferCache.isEmpty() && anchors.isEmpty() && allBuffersEmpty(leadBufferCaches)) {
             return;
         }
 
@@ -139,8 +121,11 @@ public final class PipeGhostRenderer {
         boolean renderBeforeFluids = shouldRenderBeforeFluids(
                 event.getCamera(),
                 level,
-                previewPipes,
-                leadPiece,
+                bufferCache,
+                leadPreviews,
+                leadBufferCaches,
+                showFullRoutePreview,
+                showNextPiecePreview,
                 anchors
         );
         RenderLevelStageEvent.Stage targetStage = renderBeforeFluids
@@ -150,22 +135,13 @@ public final class PipeGhostRenderer {
             return;
         }
 
-        PreviewBufferCache bufferCache = previewPipes.isEmpty()
-                ? PreviewBufferCache.empty()
-                : getBufferCache(minecraft, level, previewPipes, ClientPipeConnectorState.getPreviewVersion());
-        PreviewBufferCache leadBufferCache = leadPreview == null
-                ? PreviewBufferCache.empty()
-                : getLeadBufferCache(minecraft, level, leadPreview);
-        if (bufferCache.isEmpty() && anchors.isEmpty() && leadBufferCache.isEmpty()) {
-            return;
-        }
-
         PoseStack poseStack = event.getPoseStack();
         Vec3 cameraPosition = event.getCamera().getPosition();
         poseStack.pushPose();
         poseStack.translate(-cameraPosition.x, -cameraPosition.y, -cameraPosition.z);
 
         MultiBufferSource.BufferSource bufferSource = minecraft.renderBuffers().bufferSource();
+        Frustum frustum = event.getFrustum();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.enableDepthTest();
@@ -174,9 +150,31 @@ public final class PipeGhostRenderer {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         try {
-            renderPipeGhosts(poseStack, bufferSource, level, previewPipes, bufferCache);
-            if (leadPiece != null) {
-                renderPipeGhosts(poseStack, bufferSource, level, List.of(leadPiece), leadBufferCache);
+            boolean renderedPreviewBodies = renderPipeBodies(
+                    poseStack,
+                    bufferSource,
+                    bufferCache,
+                    frustum,
+                    GHOST_RENDER_TYPE
+            );
+            if (renderedPreviewBodies) {
+                bufferSource.endBatch(GHOST_RENDER_TYPE);
+            }
+            boolean renderedPlacementBodies = renderLeadBodies(
+                    poseStack,
+                    bufferSource,
+                    leadPreviews,
+                    leadBufferCaches,
+                    showFullRoutePreview,
+                    showNextPiecePreview,
+                    frustum
+            );
+            if (renderedPlacementBodies) {
+                bufferSource.endBatch(PLACEMENT_GHOST_RENDER_TYPE);
+            }
+            renderPipeOutlines(poseStack, bufferSource, level, bufferCache, frustum);
+            if (showNextPiecePreview) {
+                renderLeadOutlines(poseStack, bufferSource, level, leadPreviews, frustum);
             }
             AnchorOverlayRenderer.renderFaces(poseStack, bufferSource, anchors);
             AnchorOverlayRenderer.renderOutlines(poseStack, bufferSource, anchors);
@@ -194,66 +192,49 @@ public final class PipeGhostRenderer {
     private static boolean shouldRenderBeforeFluids(
             Camera camera,
             Level level,
-            List<PreviewPipe> previewPipes,
-            PreviewPipe leadPiece,
+            PipeGhostGeometryCache previewBufferCache,
+            List<ActivePreview> leadPreviews,
+            Map<Integer, PipeGhostGeometryCache> leadBufferCaches,
+            boolean showFullRoutePreview,
+            boolean showNextPiecePreview,
             List<PlacementTarget> anchors
     ) {
-        FogType cameraFluid = camera.getFluidInCamera();
-        for (PreviewPipe previewPipe : previewPipes) {
-            if (crossesFluidBoundary(cameraFluid, level.getFluidState(previewPipe.position()))) {
+        int cameraFluidGroup = PipeGhostFluidClassifier.cameraGroup(camera);
+        int cameraFluidMask = 1 << cameraFluidGroup;
+        if ((previewBufferCache.fluidMask() & ~cameraFluidMask) != 0) {
+            return true;
+        }
+        for (ActivePreview leadPreview : leadPreviews) {
+            PipeGhostGeometryCache leadBufferCache = leadBufferCaches.get(leadPreview.version());
+            if (leadBufferCache == null) {
+                continue;
+            }
+            int fluidMask = showFullRoutePreview
+                    ? leadBufferCache.fluidMaskFrom(leadPreview.pieceIndex())
+                    : showNextPiecePreview
+                    ? leadBufferCache.fluidMaskAt(leadPreview.pieceIndex())
+                    : 0;
+            if ((fluidMask & ~cameraFluidMask) != 0) {
                 return true;
             }
         }
-        if (leadPiece != null && crossesFluidBoundary(cameraFluid, level.getFluidState(leadPiece.position()))) {
-            return true;
-        }
         for (PlacementTarget anchor : anchors) {
-            if (crossesFluidBoundary(cameraFluid, level.getFluidState(anchor.position()))) {
+            if (PipeGhostFluidClassifier.worldGroup(level.getFluidState(anchor.position())) != cameraFluidGroup) {
                 return true;
             }
         }
         return false;
     }
 
-    /** Comprueba si dos estados pertenecen a lados distintos de una frontera de fluido. */
-    private static boolean crossesFluidBoundary(FogType cameraFluid, FluidState previewFluid) {
-        return fluidGroup(cameraFluid) != fluidGroup(previewFluid);
-    }
-
-    /** Agrupa el fluido de la camara en aire, agua o lava. */
-    private static int fluidGroup(FogType fogType) {
-        return switch (fogType) {
-            case NONE -> 0;
-            case WATER -> 1;
-            case LAVA -> 2;
-            case POWDER_SNOW -> 3;
-        };
-    }
-
-    /** Agrupa un estado de fluido en aire, agua o lava. */
-    private static int fluidGroup(FluidState fluidState) {
-        if (fluidState.isEmpty()) {
-            return 0;
-        }
-        if (fluidState.is(FluidTags.WATER)) {
-            return 1;
-        }
-        if (fluidState.is(FluidTags.LAVA)) {
-            return 2;
-        }
-        return 3;
-    }
-
     /** Devuelve una cache valida o reconstruye la geometria del preview. */
-    private static PreviewBufferCache getBufferCache(Minecraft minecraft, Level level, List<PreviewPipe> previewPipes, int previewVersion) {
+    private static PipeGhostGeometryCache getBufferCache(Minecraft minecraft, Level level, List<PreviewPipe> previewPipes, int previewVersion) {
         if (cachedLevel == level && cachedPreviewVersion == previewVersion) {
             return cachedBufferCache;
         }
 
-        SchematicLevel schematicLevel = buildPreviewWorld(level, previewPipes);
         cachedLevel = level;
         cachedPreviewVersion = previewVersion;
-        cachedBufferCache = redrawPreview(minecraft, schematicLevel, previewPipes);
+        cachedBufferCache = PipeGhostGeometryBuilder.build(minecraft, level, previewPipes);
         return cachedBufferCache;
     }
 
@@ -261,54 +242,150 @@ public final class PipeGhostRenderer {
     private static void clearBufferCache() {
         cachedLevel = null;
         cachedPreviewVersion = -1;
-        cachedBufferCache = PreviewBufferCache.empty();
+        cachedBufferCache = PipeGhostGeometryCache.empty();
     }
 
-    /**
-     * Construye la siguiente pieza sobre el plan completo para conservar sus
-     * conexiones, modelo, color y contorno originales.
-     */
-    private static PreviewBufferCache getLeadBufferCache(
+    /** Construye una sola vez el cuerpo fantasma de cada ruta confirmada. */
+    private static Map<Integer, PipeGhostGeometryCache> getLeadBufferCaches(
             Minecraft minecraft,
             Level level,
-            ActivePreview leadPreview
+            List<ActivePreview> leadPreviews
     ) {
-        if (cachedLeadLevel != level || cachedLeadVersion != leadPreview.version()) {
+        if (cachedLeadLevel != level) {
             cachedLeadLevel = level;
-            cachedLeadVersion = leadPreview.version();
-            cachedLeadPieceIndex = -1;
-            cachedLeadSchematic = buildPreviewWorld(level, leadPreview.pieces());
-            cachedLeadBufferCache = PreviewBufferCache.empty();
+            CACHED_LEAD_BUFFER_CACHES.clear();
         }
-        if (cachedLeadPieceIndex != leadPreview.pieceIndex()) {
-            cachedLeadPieceIndex = leadPreview.pieceIndex();
-            cachedLeadBufferCache = redrawPreview(
-                    minecraft,
-                    cachedLeadSchematic,
-                    List.of(leadPreview.activePiece())
+
+        Set<Integer> activeVersions = new HashSet<>(leadPreviews.size());
+        for (ActivePreview leadPreview : leadPreviews) {
+            activeVersions.add(leadPreview.version());
+        }
+        CACHED_LEAD_BUFFER_CACHES.keySet().removeIf(version -> !activeVersions.contains(version));
+        for (ActivePreview leadPreview : leadPreviews) {
+            CACHED_LEAD_BUFFER_CACHES.computeIfAbsent(
+                    leadPreview.version(),
+                    version -> PipeGhostGeometryBuilder.buildProgressive(minecraft, level, leadPreview.pieces())
             );
         }
-        return cachedLeadBufferCache;
+        return CACHED_LEAD_BUFFER_CACHES;
     }
 
-    /** Libera el modelo de la pieza adelantada cuando termina la construccion. */
+    /** Libera los modelos de rutas confirmadas cuando termina la construccion. */
     private static void clearLeadBufferCache() {
         cachedLeadLevel = null;
-        cachedLeadVersion = -1;
-        cachedLeadPieceIndex = -1;
-        cachedLeadSchematic = null;
-        cachedLeadBufferCache = PreviewBufferCache.empty();
+        CACHED_LEAD_BUFFER_CACHES.clear();
     }
 
-    /** Dibuja la geometria fantasma normal y la marcada por falta de materiales. */
-    private static void renderPipeGhosts(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Level level, List<PreviewPipe> previewPipes, PreviewBufferCache bufferCache) {
-        if (previewPipes.isEmpty()) {
+    /** Indica si ninguna ruta confirmada contiene geometria renderizable. */
+    private static boolean allBuffersEmpty(Map<Integer, PipeGhostGeometryCache> bufferCaches) {
+        for (PipeGhostGeometryCache bufferCache : bufferCaches.values()) {
+            if (!bufferCache.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Dibuja solo los modelos fantasma sin anadir vertices ni contornos. */
+    private static boolean renderPipeBodies(
+            PoseStack poseStack,
+            MultiBufferSource.BufferSource bufferSource,
+            PipeGhostGeometryCache bufferCache,
+            Frustum frustum,
+            RenderType renderType
+    ) {
+        boolean rendered = false;
+        for (PipeGhostGeometryCache.Section section : bufferCache.sections()) {
+            if (!frustum.isVisible(section.bounds())) {
+                continue;
+            }
+            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), renderType, GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), renderType, MISSING_GHOST_TINT);
+        }
+        return rendered;
+    }
+
+    /** Dibuja los cuerpos de todas las rutas confirmadas en el lote compartido. */
+    private static boolean renderLeadBodies(
+            PoseStack poseStack,
+            MultiBufferSource.BufferSource bufferSource,
+            List<ActivePreview> leadPreviews,
+            Map<Integer, PipeGhostGeometryCache> bufferCaches,
+            boolean showFullRoutePreview,
+            boolean showNextPiecePreview,
+            Frustum frustum
+    ) {
+        boolean rendered = false;
+        for (ActivePreview leadPreview : leadPreviews) {
+            PipeGhostGeometryCache bufferCache = bufferCaches.get(leadPreview.version());
+            if (bufferCache != null) {
+                int firstSection = leadPreview.pieceIndex();
+                int lastSection = showFullRoutePreview
+                        ? bufferCache.sections().size()
+                        : showNextPiecePreview
+                        ? firstSection + 1
+                        : firstSection;
+                rendered |= renderPipeBodiesRange(
+                        poseStack,
+                        bufferSource,
+                        bufferCache,
+                        firstSection,
+                        lastSection,
+                        frustum,
+                        PLACEMENT_GHOST_RENDER_TYPE
+                );
+            }
+        }
+        return rendered;
+    }
+
+    /** Dibuja un rango de piezas que el servidor aun no ha colocado. */
+    private static boolean renderPipeBodiesRange(
+            PoseStack poseStack,
+            MultiBufferSource.BufferSource bufferSource,
+            PipeGhostGeometryCache bufferCache,
+            int firstSection,
+            int lastSection,
+            Frustum frustum,
+            RenderType renderType
+    ) {
+        boolean rendered = false;
+        List<PipeGhostGeometryCache.Section> sections = bufferCache.sections();
+        int endIndex = Math.min(lastSection, sections.size());
+        for (int index = Math.max(0, firstSection); index < endIndex; index++) {
+            PipeGhostGeometryCache.Section section = sections.get(index);
+            if (!frustum.isVisible(section.bounds())) {
+                continue;
+            }
+            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), renderType, GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), renderType, MISSING_GHOST_TINT);
+        }
+        return rendered;
+    }
+
+    /** Dibuja la pieza activa de cada ruta confirmada en un solo lote lineal. */
+    private static void renderLeadOutlines(
+            PoseStack poseStack,
+            MultiBufferSource.BufferSource bufferSource,
+            Level level,
+            List<ActivePreview> leadPreviews,
+            Frustum frustum
+    ) {
+        if (leadPreviews.isEmpty()) {
             return;
         }
-
-        renderBufferCache(poseStack, bufferSource, bufferCache.base(), GHOST_RED, GHOST_GREEN, GHOST_BLUE, GHOST_ALPHA);
-        renderBufferCache(poseStack, bufferSource, bufferCache.missing(), MISSING_GHOST_RED, MISSING_GHOST_GREEN, MISSING_GHOST_BLUE, MISSING_GHOST_ALPHA);
-        renderPipeOutlines(poseStack, bufferSource, level, previewPipes);
+        VertexConsumer lineBuffer = bufferSource.getBuffer(RenderType.lines());
+        boolean rendered = false;
+        for (ActivePreview leadPreview : leadPreviews) {
+            PreviewPipe activePiece = leadPreview.activePiece();
+            if (isVisible(frustum, activePiece.position())) {
+                renderPipeOutline(poseStack, lineBuffer, level, activePiece);
+                rendered = true;
+            }
+        }
+        if (rendered) {
+            bufferSource.endBatch(RenderType.lines());
+        }
     }
 
     /** Redibuja sobre las anclas los contornos de tuberia que podrian quedar ocultos. */
@@ -317,223 +394,79 @@ public final class PipeGhostRenderer {
             return;
         }
 
+        Set<BlockPos> anchorNeighbourhood = new HashSet<>(anchors.size() * (Direction.values().length + 1));
+        for (PlacementTarget anchor : anchors) {
+            BlockPos anchorPosition = anchor.position();
+            anchorNeighbourhood.add(anchorPosition);
+            for (Direction direction : Direction.values()) {
+                anchorNeighbourhood.add(anchorPosition.relative(direction));
+            }
+        }
+
         RenderSystem.disableDepthTest();
         try {
             VertexConsumer lineBuffer = bufferSource.getBuffer(RenderType.lines());
+            boolean rendered = false;
             for (PreviewPipe previewPipe : previewPipes) {
-                if (touchesAnchor(previewPipe.position(), anchors)) {
+                if (anchorNeighbourhood.contains(previewPipe.position())) {
                     renderPipeOutline(poseStack, lineBuffer, level, previewPipe);
+                    rendered = true;
                 }
             }
-            bufferSource.endBatch(RenderType.lines());
+            if (rendered) {
+                bufferSource.endBatch(RenderType.lines());
+            }
         } finally {
             RenderSystem.enableDepthTest();
         }
     }
 
-    /** Indica si una pieza ocupa o toca ortogonalmente un bloque de ancla. */
-    private static boolean touchesAnchor(BlockPos position, List<PlacementTarget> anchors) {
-        for (PlacementTarget anchor : anchors) {
-            BlockPos anchorPosition = anchor.position();
-            int distance = Math.abs(position.getX() - anchorPosition.getX())
-                    + Math.abs(position.getY() - anchorPosition.getY())
-                    + Math.abs(position.getZ() - anchorPosition.getZ());
-            if (distance <= 1) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /** Dibuja cada bufer de capa aplicando un tinte y opacidad estables. */
-    private static void renderBufferCache(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Map<RenderType, SuperByteBuffer> bufferCache, float red, float green, float blue, float alpha) {
+    private static boolean renderBufferCache(
+            PoseStack poseStack,
+            MultiBufferSource.BufferSource bufferSource,
+            Map<RenderType, SuperByteBuffer> bufferCache,
+            RenderType renderType,
+            GhostTint tint
+    ) {
         if (bufferCache.isEmpty()) {
-            return;
+            return false;
         }
 
-        int colorRed = colorChannel(red);
-        int colorGreen = colorChannel(green);
-        int colorBlue = colorChannel(blue);
-        int colorAlpha = colorChannel(alpha);
         bufferCache.values().forEach(buffer -> buffer
-                .color(colorRed, colorGreen, colorBlue, colorAlpha)
-                .renderInto(poseStack, bufferSource.getBuffer(GHOST_RENDER_TYPE)));
-        bufferSource.endBatch(GHOST_RENDER_TYPE);
-    }
-
-    /** Convierte un canal normalizado al rango de color de ocho bits. */
-    private static int colorChannel(float value) {
-        return Math.max(0, Math.min(255, Math.round(value * 255.0F)));
-    }
-
-    /** Construye el nivel esquematico utilizado por los modelos de Create. */
-    private static SchematicLevel buildPreviewWorld(Level level, List<PreviewPipe> previewPipes) {
-        SchematicLevel schematicLevel = new SchematicLevel(BlockPos.ZERO, level);
-        schematicLevel.renderMode = true;
-        for (PreviewPipe previewPipe : previewPipes) {
-            schematicLevel.setBlock(
-                    previewPipe.position(),
-                    previewPipe.state(),
-                    Constants.PREVIEW_BLOCK_UPDATE_FLAGS
-            );
-        }
-        return schematicLevel;
-    }
-
-    /** Reconstruye las capas de geometria normal y de materiales insuficientes. */
-    private static PreviewBufferCache redrawPreview(Minecraft minecraft, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes) {
-        Map<RenderType, SuperByteBuffer> baseCache = new LinkedHashMap<>(RenderType.chunkBufferLayers().size());
-        boolean hasMissingMaterials = hasMissingMaterials(previewPipes);
-        Map<RenderType, SuperByteBuffer> missingCache = hasMissingMaterials
-                ? new LinkedHashMap<>(RenderType.chunkBufferLayers().size())
-                : Map.of();
-        BlockRenderDispatcher dispatcher = minecraft.getBlockRenderer();
-        ModelBlockRenderer renderer = dispatcher.getModelRenderer();
-        BakedModel pumpModel = minecraft.getModelManager().getModel(MECHANICAL_PUMP_ITEM_MODEL);
-        ThreadLocalObjects objects = THREAD_LOCAL_OBJECTS.get();
-
-        schematicLevel.renderMode = true;
-        ModelBlockRenderer.enableCaching();
-        try {
-            for (RenderType layer : RenderType.chunkBufferLayers()) {
-                SuperByteBuffer buffer = drawLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects);
-                if (!buffer.isEmpty()) {
-                    baseCache.put(layer, buffer);
-                }
-
-                if (hasMissingMaterials) {
-                    SuperByteBuffer missingBuffer = drawMissingLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects);
-                    if (!missingBuffer.isEmpty()) {
-                        missingCache.put(layer, missingBuffer);
-                    }
-                }
-            }
-        } finally {
-            ModelBlockRenderer.clearCache();
-            schematicLevel.renderMode = false;
-        }
-
-        return new PreviewBufferCache(baseCache, missingCache);
-    }
-
-    /** Construye una capa completa de geometria disponible. */
-    private static SuperByteBuffer drawLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, BakedModel pumpModel, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects) {
-        return drawLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects, false);
-    }
-
-    /** Construye una capa limitada a piezas con materiales insuficientes. */
-    private static SuperByteBuffer drawMissingLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, BakedModel pumpModel, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects) {
-        return drawLayer(layer, dispatcher, renderer, pumpModel, schematicLevel, previewPipes, objects, true);
-    }
-
-    /** Emite modelos de bloque o bomba para una capa y grupo de disponibilidad. */
-    @SuppressWarnings("removal")
-    private static SuperByteBuffer drawLayer(RenderType layer, BlockRenderDispatcher dispatcher, ModelBlockRenderer renderer, BakedModel pumpModel, SchematicLevel schematicLevel, List<PreviewPipe> previewPipes, ThreadLocalObjects objects, boolean missingOnly) {
-        PoseStack poseStack = objects.poseStack;
-        RandomSource random = objects.random;
-        BlockPos.MutableBlockPos mutableBlockPos = objects.mutableBlockPos;
-        ShadedBlockSbbBuilder sbbBuilder = objects.sbbBuilder;
-
-        sbbBuilder.begin();
-
-        for (PreviewPipe previewPipe : previewPipes) {
-            if (missingOnly && !previewPipe.missingMaterial()) {
-                continue;
-            }
-
-            BlockPos localPos = previewPipe.position();
-            BlockPos worldPos = mutableBlockPos.set(localPos.getX(), localPos.getY(), localPos.getZ());
-            BlockState state = schematicLevel.getBlockState(worldPos);
-
-            if (state.getRenderShape() != RenderShape.MODEL) {
-                continue;
-            }
-
-            boolean rendersMechanicalPump = isMechanicalPumpPreview(previewPipe);
-            BakedModel model = rendersMechanicalPump ? pumpModel : dispatcher.getBlockModel(state);
-            ModelData modelData = ModelData.EMPTY;
-            if (!rendersMechanicalPump) {
-                BlockEntity blockEntity = schematicLevel.getBlockEntity(worldPos);
-                if (blockEntity != null) {
-                    modelData = blockEntity.getModelData();
-                }
-            }
-            modelData = model.getModelData(schematicLevel, worldPos, state, modelData);
-
-            long seed = state.getSeed(worldPos);
-            random.setSeed(seed);
-            if (!model.getRenderTypes(state, random, modelData).contains(layer)) {
-                continue;
-            }
-
-            poseStack.pushPose();
-            poseStack.translate(localPos.getX(), localPos.getY(), localPos.getZ());
-            if (rendersMechanicalPump) {
-                applyPumpFacingTransform(poseStack, previewPipe.mechanicalPumpFacing().getOpposite());
-                renderer.renderModel(
-                        poseStack.last(),
-                        sbbBuilder,
-                        state,
-                        model,
-                        1.0F,
-                        1.0F,
-                        1.0F,
-                        LevelRenderer.getLightColor(schematicLevel, worldPos),
-                        OverlayTexture.NO_OVERLAY,
-                        modelData,
-                        layer
-                );
-            } else {
-                renderer.tesselateBlock(
-                        schematicLevel,
-                        model,
-                        state,
-                        worldPos,
-                        poseStack,
-                        sbbBuilder,
-                        true,
-                        random,
-                        seed,
-                        OverlayTexture.NO_OVERLAY,
-                        modelData,
-                        layer
-                );
-            }
-            poseStack.popPose();
-        }
-
-        return sbbBuilder.end();
-    }
-
-    /** Orienta el modelo parcial de bomba en la misma direccion que el plan. */
-    private static void applyPumpFacingTransform(PoseStack poseStack, Direction facing) {
-        poseStack.translate(0.5D, 0.5D, 0.5D);
-        switch (facing) {
-            case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-            case NORTH -> poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
-            case SOUTH -> poseStack.mulPose(Axis.YP.rotationDegrees(-90.0F));
-            case UP -> poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
-            case DOWN -> poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0F));
-            case EAST -> {
-            }
-        }
-        poseStack.translate(-0.5D, -0.5D, -0.5D);
+                .color(tint.red(), tint.green(), tint.blue(), tint.alpha())
+                .renderInto(poseStack, bufferSource.getBuffer(renderType)));
+        return true;
     }
 
     /** Dibuja los contornos de todas las piezas del preview. */
-    private static void renderPipeOutlines(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Level level, List<PreviewPipe> previewPipes) {
+    private static void renderPipeOutlines(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, Level level, PipeGhostGeometryCache bufferCache, Frustum frustum) {
         VertexConsumer lineBuffer = bufferSource.getBuffer(RenderType.lines());
-        for (PreviewPipe previewPipe : previewPipes) {
-            renderPipeOutline(poseStack, lineBuffer, level, previewPipe);
+        boolean rendered = false;
+        for (PipeGhostGeometryCache.Section section : bufferCache.sections()) {
+            if (!frustum.isVisible(section.bounds())) {
+                continue;
+            }
+            for (PreviewPipe previewPipe : section.pieces()) {
+                renderPipeOutline(poseStack, lineBuffer, level, previewPipe);
+                rendered = true;
+            }
         }
-        bufferSource.endBatch(RenderType.lines());
+        if (rendered) {
+            bufferSource.endBatch(RenderType.lines());
+        }
+    }
+
+    /** Comprueba un bloque aislado contra el frustum actual. */
+    private static boolean isVisible(Frustum frustum, BlockPos position) {
+        return frustum.isVisible(new AABB(position).inflate(0.1D));
     }
 
     /** Dibuja el contorno del modelo o volumen de una pieza concreta. */
     private static void renderPipeOutline(PoseStack poseStack, VertexConsumer lineBuffer, Level level, PreviewPipe previewPipe) {
         BlockPos position = previewPipe.position();
         BlockState state = previewPipe.state();
-        boolean rendersMechanicalPump = isMechanicalPumpPreview(previewPipe);
+        OutlineColor outlineColor = outlineColor(previewPipe);
         VoxelShape shape = state.getShape(level, position, CollisionContext.empty());
         if (shape.isEmpty()) {
             return;
@@ -546,79 +479,41 @@ public final class PipeGhostRenderer {
                 position.getX(),
                 position.getY(),
                 position.getZ(),
-                outlineRed(previewPipe, rendersMechanicalPump),
-                outlineGreen(previewPipe, rendersMechanicalPump),
-                outlineBlue(previewPipe, rendersMechanicalPump),
+                outlineColor.red(),
+                outlineColor.green(),
+                outlineColor.blue(),
                 OUTLINE_ALPHA,
                 true
         );
     }
 
-    /** Indica si una pieza debe representarse con el modelo parcial de bomba. */
-    private static boolean isMechanicalPumpPreview(PreviewPipe previewPipe) {
-        return previewPipe.mechanicalPumpFacing() != null;
-    }
-
-    /** Indica si el preview contiene alguna pieza sin materiales suficientes. */
-    private static boolean hasMissingMaterials(List<PreviewPipe> previewPipes) {
-        for (PreviewPipe previewPipe : previewPipes) {
-            if (previewPipe.missingMaterial()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Devuelve el canal rojo del contorno segun el tipo y disponibilidad. */
-    private static float outlineRed(PreviewPipe previewPipe, boolean rendersMechanicalPump) {
+    /** Selecciona el color de contorno segun tipo y disponibilidad. */
+    private static OutlineColor outlineColor(PreviewPipe previewPipe) {
         if (previewPipe.missingMaterial()) {
-            return MISSING_OUTLINE_RED;
+            return MISSING_OUTLINE;
         }
-        return rendersMechanicalPump ? PUMP_OUTLINE_RED : OUTLINE_RED;
+        return previewPipe.isMechanicalPump() ? PUMP_OUTLINE : DEFAULT_OUTLINE;
     }
 
-    /** Devuelve el canal verde del contorno segun el tipo y disponibilidad. */
-    private static float outlineGreen(PreviewPipe previewPipe, boolean rendersMechanicalPump) {
-        if (previewPipe.missingMaterial()) {
-            return MISSING_OUTLINE_GREEN;
-        }
-        return rendersMechanicalPump ? PUMP_OUTLINE_GREEN : OUTLINE_GREEN;
-    }
-
-    /** Devuelve el canal azul del contorno segun el tipo y disponibilidad. */
-    private static float outlineBlue(PreviewPipe previewPipe, boolean rendersMechanicalPump) {
-        if (previewPipe.missingMaterial()) {
-            return MISSING_OUTLINE_BLUE;
-        }
-        return rendersMechanicalPump ? PUMP_OUTLINE_BLUE : OUTLINE_BLUE;
-    }
-
-    /**
-     * Separa geometria normal e insuficiente para aplicar tintes estables sin
-     * reconstruir los modelos subyacentes.
-     */
-    private record PreviewBufferCache(Map<RenderType, SuperByteBuffer> base, Map<RenderType, SuperByteBuffer> missing) {
-        /** Crea una cache vacia e inmutable. */
-        private static PreviewBufferCache empty() {
-            return new PreviewBufferCache(Map.of(), Map.of());
+    /** Tinte de cuerpo convertido una sola vez al rango de ocho bits. */
+    private record GhostTint(int red, int green, int blue, int alpha) {
+        /** Crea un tinte desde canales normalizados. */
+        private static GhostTint fromNormalized(float red, float green, float blue, float alpha) {
+            return new GhostTint(
+                    colorChannel(red),
+                    colorChannel(green),
+                    colorChannel(blue),
+                    colorChannel(alpha)
+            );
         }
 
-        /** Indica si ninguna de las dos colecciones contiene geometria. */
-        private boolean isEmpty() {
-            return base.isEmpty() && missing.isEmpty();
+        /** Convierte un canal normalizado al rango valido del buffer. */
+        private static int colorChannel(float value) {
+            return Math.max(0, Math.min(255, Math.round(value * 255.0F)));
         }
     }
 
-    /**
-     * Reutiliza objetos mutables de renderizado sin compartirlos entre hilos.
-     */
-    private static final class ThreadLocalObjects {
-        private final PoseStack poseStack = new PoseStack();
-        private final RandomSource random = RandomSource.createNewThreadLocalInstance();
-        private final BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
-
-        // Ponder 1.0.91 solo ofrece este constructor para modelos de bloque con sombreado compatible.
-        @SuppressWarnings("removal")
-        private final ShadedBlockSbbBuilder sbbBuilder = ShadedBlockSbbBuilder.create();
+    /** Color lineal normalizado de un contorno. */
+    private record OutlineColor(float red, float green, float blue) {
     }
 }

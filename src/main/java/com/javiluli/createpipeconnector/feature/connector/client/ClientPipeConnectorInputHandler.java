@@ -54,6 +54,8 @@ import java.util.List;
  */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ClientPipeConnectorInputHandler {
+    private static final String NO_ROUTE_MESSAGE = "hud.createpipeconnector.no_route";
+    private static final int MANUAL_MARKER_SNAP_DISTANCE = 3;
     private static boolean showingPipeStatus;
     private static boolean previewTargetLocked;
     private static PlacementTarget lockedPreviewTarget;
@@ -305,7 +307,7 @@ public final class ClientPipeConnectorInputHandler {
             ClientPipeConnectorState.setMaterialStatus(null);
                     showPipeStatus(
                             minecraft.player,
-                            Component.translatable(Constants.HUD_NO_ROUTE).withStyle(ChatFormatting.RED)
+                            Component.translatable(NO_ROUTE_MESSAGE).withStyle(ChatFormatting.RED)
                     );
             return;
         }
@@ -396,13 +398,17 @@ public final class ClientPipeConnectorInputHandler {
 
     /** Calcula materiales y publica las piezas definitivas del preview. */
     private static void updatePreview(Minecraft minecraft, Selection selection, ConnectionPlan plan) {
-        ClientPipeConnectorState.setPreviewPipes(ClientMaterialPreview.markMissingMaterials(
+        ClientPipeConnectorState.MaterialStatus materialStatus = ClientMaterialPreview.createStatus(
                 minecraft.player,
                 selection,
+                plan
+        );
+        ClientPipeConnectorState.setPreviewPipes(ClientMaterialPreview.markMissingMaterials(
                 plan,
-                PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock())
+                PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock()),
+                materialStatus
         ));
-        ClientMaterialPreview.updateStatus(minecraft.player, selection, plan);
+        ClientPipeConnectorState.setMaterialStatus(materialStatus);
     }
 
     /** Obtiene o reutiliza el plan base para una seleccion y objetivo. */
@@ -533,7 +539,7 @@ public final class ClientPipeConnectorInputHandler {
                 closestDistance = distance;
             }
         }
-        return closestDistance <= Constants.MANUAL_MARKER_SNAP_DISTANCE ? closestPosition : null;
+        return closestDistance <= MANUAL_MARKER_SNAP_DISTANCE ? closestPosition : null;
     }
 
     /** Busca la posicion recta mas cercana para marcar una bomba. */
@@ -558,7 +564,7 @@ public final class ClientPipeConnectorInputHandler {
                 closestDistance = distance;
             }
         }
-        return closestDistance <= Constants.MANUAL_MARKER_SNAP_DISTANCE ? closestPosition : null;
+        return closestDistance <= MANUAL_MARKER_SNAP_DISTANCE ? closestPosition : null;
     }
 
     /** Resuelve un objetivo de bloque o aire para el preview activo. */

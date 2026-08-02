@@ -1,6 +1,5 @@
 package com.javiluli.createpipeconnector.feature.style;
 
-import com.javiluli.createpipeconnector.core.Constants;
 import com.javiluli.createpipeconnector.core.create.CreatePipeBlocks;
 import com.javiluli.createpipeconnector.feature.pipe.PipeNetworkUpdater;
 import net.minecraft.core.BlockPos;
@@ -24,6 +23,9 @@ import java.util.Set;
  * <p>El recorrido se detiene en bombas mecanicas para no alterar otros tramos.</p>
  */
 public final class PipeDisplayToggler {
+    private static final String FLUID_TRANSPORT_CLASS = "com.simibubi.create.content.fluids.FluidTransportBehaviour";
+    private static final String CACHE_FLOWS_METHOD = "cacheFlows";
+    private static final String LOAD_FLOWS_METHOD = "loadFlows";
     private static final int MAX_TOGGLE_BLOCKS = 512;
     private static final Direction[] DIRECTIONS = Direction.values();
 
@@ -111,18 +113,18 @@ public final class PipeDisplayToggler {
 
     /** Conserva los flujos internos antes de sustituir el bloque. */
     private static void cacheFluidFlows(LevelAccessor level, BlockPos position) {
-        invokeFluidTransportMethod(Constants.CACHE_FLOWS, level, position);
+        invokeFluidTransportMethod(CACHE_FLOWS_METHOD, level, position);
     }
 
     /** Restaura los flujos internos despues de sustituir el bloque. */
     private static void loadFluidFlows(LevelAccessor level, BlockPos position) {
-        invokeFluidTransportMethod(Constants.LOAD_FLOWS, level, position);
+        invokeFluidTransportMethod(LOAD_FLOWS_METHOD, level, position);
     }
 
     /** Invoca de forma compatible una operacion interna de transporte de Create. */
     private static void invokeFluidTransportMethod(String methodName, LevelAccessor level, BlockPos position) {
         try {
-            Class<?> fluidTransport = Class.forName(Constants.CREATE_FLUID_TRANSPORT);
+            Class<?> fluidTransport = Class.forName(FLUID_TRANSPORT_CLASS);
             Method method = fluidTransport.getMethod(methodName, LevelAccessor.class, BlockPos.class);
             method.invoke(null, level, position);
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {

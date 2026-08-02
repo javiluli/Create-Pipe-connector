@@ -86,8 +86,10 @@ Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps
 
 Open `Mods -> Create: Pipe Connector -> Config` to change how confirmed routes are built.
 
-- Keep **Progressive construction** enabled for the animated building effect.
+- Keep **Animate route construction** enabled for the animated building effect.
 - Choose from `1` to `20` pieces per second (`20` by default).
+- The remaining speed and preview controls become unavailable when route animation is disabled.
+- Independently show or hide the complete outline-free route and the highlighted next piece.
 - Pieces always appear individually; the mod never places animation batches in the same tick.
 - Disable it to place the complete route instantly.
 - Changes are saved and synchronized as soon as you adjust them.

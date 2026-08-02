@@ -1,6 +1,7 @@
 package com.javiluli.createpipeconnector.bootstrap;
 
-import com.javiluli.createpipeconnector.feature.placement.client.PlacementAnimationConfigScreen;
+import com.javiluli.createpipeconnector.core.Constants;
+import net.createmod.catnip.config.ui.BaseConfigScreen;
 import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
@@ -14,7 +15,9 @@ public final class ForgeClientBootstrap {
     public static void register(FMLJavaModLoadingContext loadingContext) {
         loadingContext.registerExtensionPoint(
                 ConfigScreenHandler.ConfigScreenFactory.class,
-                () -> new ConfigScreenHandler.ConfigScreenFactory(PlacementAnimationConfigScreen::new)
+                () -> new ConfigScreenHandler.ConfigScreenFactory(
+                        (minecraft, parent) -> new BaseConfigScreen(parent, Constants.MOD_ID)
+                )
         );
     }
 }

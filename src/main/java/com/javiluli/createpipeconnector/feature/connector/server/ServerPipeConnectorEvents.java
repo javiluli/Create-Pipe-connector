@@ -35,6 +35,12 @@ import java.util.UUID;
  * Gestiona en Forge el ciclo de ruta, la colocacion y el doble clic con la llave.
  */
 public final class ServerPipeConnectorEvents {
+    private static final String FIRST_POINT_SELECTED_MESSAGE = "hud.createpipeconnector.first_point_selected";
+    private static final String PIPE_STYLE_CLICK_AGAIN_MESSAGE = "hud.createpipeconnector.pipe_style_click_again";
+    private static final String PIPE_STYLE_NO_CHANGES_MESSAGE = "hud.createpipeconnector.pipe_style_no_changes";
+    private static final String PIPE_STYLE_TO_GLASS_MESSAGE = "hud.createpipeconnector.pipe_style_to_glass";
+    private static final String PIPE_STYLE_TO_DEFAULT_MESSAGE = "hud.createpipeconnector.pipe_style_to_default";
+    private static final int WRENCH_DOUBLE_CLICK_TICKS = 10;
     private static final Map<UUID, WrenchPipeClick> WRENCH_PIPE_CLICKS = new HashMap<>();
 
     /** Impide crear instancias del manejador de eventos. */
@@ -98,22 +104,22 @@ public final class ServerPipeConnectorEvents {
         WrenchPipeClick previousClick = WRENCH_PIPE_CLICKS.get(playerId);
         if (previousClick == null
                 || !previousClick.position().equals(position)
-                || gameTime - previousClick.gameTime() > Constants.WRENCH_DOUBLE_CLICK_TICKS) {
+                || gameTime - previousClick.gameTime() > WRENCH_DOUBLE_CLICK_TICKS) {
             WRENCH_PIPE_CLICKS.put(playerId, new WrenchPipeClick(position, gameTime));
-            player.displayClientMessage(Component.translatable(Constants.HUD_PIPE_STYLE_CLICK_AGAIN), true);
+            player.displayClientMessage(Component.translatable(PIPE_STYLE_CLICK_AGAIN_MESSAGE), true);
             return;
         }
 
         WRENCH_PIPE_CLICKS.remove(playerId);
         PipeDisplayToggleResult result = PipeConnectorLogic.togglePipeDisplaySegment(serverLevel, position);
         if (result.changed() <= 0) {
-            player.displayClientMessage(Component.translatable(Constants.HUD_PIPE_STYLE_NO_CHANGES), true);
+            player.displayClientMessage(Component.translatable(PIPE_STYLE_NO_CHANGES_MESSAGE), true);
             return;
         }
 
         String translationKey = result.glassMode()
-                ? Constants.HUD_PIPE_STYLE_TO_GLASS
-                : Constants.HUD_PIPE_STYLE_TO_DEFAULT;
+                ? PIPE_STYLE_TO_GLASS_MESSAGE
+                : PIPE_STYLE_TO_DEFAULT_MESSAGE;
         player.displayClientMessage(Component.translatable(translationKey, result.changed()), true);
     }
 
@@ -169,7 +175,7 @@ public final class ServerPipeConnectorEvents {
 
         if (currentSelection == null) {
             ConnectorSessionStore.setSelection(player.getUUID(), new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
-            player.displayClientMessage(Component.translatable(Constants.HUD_FIRST_POINT_SELECTED), true);
+            player.displayClientMessage(Component.translatable(FIRST_POINT_SELECTED_MESSAGE), true);
             return true;
         }
 
@@ -302,7 +308,7 @@ public final class ServerPipeConnectorEvents {
         Iterator<Map.Entry<UUID, WrenchPipeClick>> iterator = WRENCH_PIPE_CLICKS.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<UUID, WrenchPipeClick> entry = iterator.next();
-            if (gameTime - entry.getValue().gameTime() > Constants.WRENCH_DOUBLE_CLICK_TICKS) {
+            if (gameTime - entry.getValue().gameTime() > WRENCH_DOUBLE_CLICK_TICKS) {
                 iterator.remove();
             }
         }

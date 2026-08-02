@@ -28,6 +28,11 @@ public record PreviewPipe(
         return new PreviewPipe(position, state, mechanicalPumpFacing, missingMaterial);
     }
 
+    /** Indica si la pieza representa una bomba mecanica. */
+    public boolean isMechanicalPump() {
+        return mechanicalPumpFacing != null;
+    }
+
     /** Valida los datos obligatorios de la pieza de preview. */
     public PreviewPipe {
         Objects.requireNonNull(position, "position");

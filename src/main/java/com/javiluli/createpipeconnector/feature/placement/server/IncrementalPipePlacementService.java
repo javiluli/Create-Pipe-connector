@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -79,26 +80,52 @@ public final class IncrementalPipePlacementService {
         return true;
     }
 
-    /** Avanza como maximo una pieza de la ruta durante el tick del jugador. */
+    /** Avanza de forma independiente todas las rutas pendientes del jugador. */
     public static void tick(Player player) {
         Queue<PendingPlacement> queue = PENDING_PLACEMENTS.get(player.getUUID());
         if (queue == null || queue.isEmpty()) {
             return;
         }
 
-        PendingPlacement pendingPlacement = queue.peek();
-        PlacementProgress progress = pendingPlacement.placeNextTick();
-        if (progress == PlacementProgress.CONTINUE) {
+        Iterator<PendingPlacement> iterator = queue.iterator();
+        while (iterator.hasNext()) {
+            PendingPlacement pendingPlacement = iterator.next();
+            PlacementProgress progress = pendingPlacement.placeNextTick();
+            if (progress == PlacementProgress.CONTINUE) {
+                continue;
+            }
+
+            iterator.remove();
+            pendingPlacement.finish();
+            if (progress == PlacementProgress.BLOCKED) {
+                pendingPlacement.refundRemaining(player);
+            }
+        }
+
+        if (queue.isEmpty()) {
+            PENDING_PLACEMENTS.remove(player.getUUID());
+        }
+    }
+
+    /**
+     * Aplica una preferencia nueva a todas las rutas que ya estan en marcha.
+     *
+     * <p>El acumulador de cada ruta se conserva al cambiar la velocidad para
+     * evitar saltos o reinicios visuales. Desactivar la animacion completa de
+     * inmediato todas las construcciones pendientes.</p>
+     */
+    public static void applySettings(Player player, PlacementAnimationSettings settings) {
+        if (!settings.enabled()) {
+            completeAllImmediately(player);
             return;
         }
 
-        queue.remove();
-        pendingPlacement.finish();
-        if (progress == PlacementProgress.BLOCKED) {
-            pendingPlacement.refundRemaining(player);
+        Queue<PendingPlacement> queue = PENDING_PLACEMENTS.get(player.getUUID());
+        if (queue == null) {
+            return;
         }
-        if (queue.isEmpty()) {
-            PENDING_PLACEMENTS.remove(player.getUUID());
+        for (PendingPlacement pendingPlacement : queue) {
+            pendingPlacement.updateSpeed(settings.piecesPerSecond());
         }
     }
 
@@ -116,7 +143,7 @@ public final class IncrementalPipePlacementService {
     }
 
     /** Finaliza al instante las rutas pendientes cuando el jugador desactiva la animacion. */
-    public static void completeAllImmediately(Player player) {
+    private static void completeAllImmediately(Player player) {
         Queue<PendingPlacement> queue = PENDING_PLACEMENTS.remove(player.getUUID());
         if (queue == null) {
             return;
@@ -195,7 +222,7 @@ public final class IncrementalPipePlacementService {
         private final List<BlockPos> path;
         private final Block pipeBlock;
         private final List<PlacementStep> steps;
-        private final int piecesPerSecond;
+        private int piecesPerSecond;
         private int nextStepIndex;
         private int placementProgress;
 
@@ -210,6 +237,11 @@ public final class IncrementalPipePlacementService {
             this.path = List.copyOf(path);
             this.pipeBlock = pipeBlock;
             this.steps = steps;
+            this.piecesPerSecond = piecesPerSecond;
+        }
+
+        /** Cambia la velocidad sin perder el progreso parcial del intervalo. */
+        private void updateSpeed(int piecesPerSecond) {
             this.piecesPerSecond = piecesPerSecond;
         }
 

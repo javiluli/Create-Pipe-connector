@@ -6,7 +6,9 @@ import com.javiluli.createpipeconnector.feature.routing.PipePathfinder;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -21,6 +23,8 @@ public final class ClientPlacementLeadPreview {
     private static final Deque<PendingPreview> PENDING_PREVIEWS = new ArrayDeque<>();
     private static Level activeLevel;
     private static int nextVersion;
+    private static long cachedGameTime = Long.MIN_VALUE;
+    private static List<ActivePreview> cachedActivePreviews = List.of();
 
     /** Impide crear instancias del estado global de cliente. */
     private ClientPlacementLeadPreview() {
@@ -40,46 +44,67 @@ public final class ClientPlacementLeadPreview {
             clear();
             activeLevel = level;
         }
-        PENDING_PREVIEWS.addLast(new PendingPreview(List.copyOf(pieces), ++nextVersion));
+        PENDING_PREVIEWS.addLast(new PendingPreview(
+                List.copyOf(pieces),
+                ++nextVersion,
+                level.getGameTime()
+        ));
+        invalidateSnapshot();
     }
 
     /**
-     * Devuelve la siguiente pieza pendiente y descarta las rutas completadas.
+     * Devuelve todas las rutas activas y descarta las que ya terminaron.
      *
-     * @return preview activo o {@code null} si no queda ninguna pieza
+     * @return copia inmutable de los previews que avanzan en paralelo
      */
-    public static ActivePreview getActive(Level level) {
+    public static List<ActivePreview> getActivePreviews(Level level) {
         if (level != activeLevel) {
             clear();
-            return null;
+            return List.of();
         }
 
-        while (!PENDING_PREVIEWS.isEmpty()) {
-            PendingPreview pending = PENDING_PREVIEWS.peekFirst();
-            long gameTime = level.getGameTime();
-            pending.startIfNeeded(gameTime);
+        long gameTime = level.getGameTime();
+        if (cachedGameTime == gameTime) {
+            return cachedActivePreviews;
+        }
+
+        List<ActivePreview> activePreviews = new ArrayList<>(PENDING_PREVIEWS.size());
+        Iterator<PendingPreview> iterator = PENDING_PREVIEWS.iterator();
+        while (iterator.hasNext()) {
+            PendingPreview pending = iterator.next();
             pending.advancePlacedPieces(level, gameTime);
 
             if (pending.isComplete()) {
-                PENDING_PREVIEWS.removeFirst();
+                iterator.remove();
                 continue;
             }
             if (pending.hasTimedOut(gameTime)
                     || !PipePathfinder.isTraversableBlock(level, pending.activePiece().position())) {
-                PENDING_PREVIEWS.removeFirst();
+                iterator.remove();
                 continue;
             }
-            return new ActivePreview(pending.pieces, pending.nextPieceIndex, pending.version);
+            activePreviews.add(new ActivePreview(pending.pieces, pending.nextPieceIndex, pending.version));
         }
 
-        activeLevel = null;
-        return null;
+        if (PENDING_PREVIEWS.isEmpty()) {
+            activeLevel = null;
+        }
+        cachedGameTime = gameTime;
+        cachedActivePreviews = List.copyOf(activePreviews);
+        return cachedActivePreviews;
     }
 
     /** Elimina cualquier preview de construccion pendiente. */
     public static void clear() {
         PENDING_PREVIEWS.clear();
         activeLevel = null;
+        invalidateSnapshot();
+    }
+
+    /** Invalida la instantanea compartida por las dos fases de render del frame. */
+    private static void invalidateSnapshot() {
+        cachedGameTime = Long.MIN_VALUE;
+        cachedActivePreviews = List.of();
     }
 
     /** Datos inmutables que necesita el renderizador para dibujar una pieza. */
@@ -96,19 +121,11 @@ public final class ClientPlacementLeadPreview {
         private final int version;
         private int nextPieceIndex;
         private long lastProgressTick;
-        private boolean started;
 
-        private PendingPreview(List<PreviewPipe> pieces, int version) {
+        private PendingPreview(List<PreviewPipe> pieces, int version, long gameTime) {
             this.pieces = pieces;
             this.version = version;
-        }
-
-        /** Inicia el control de espera solamente cuando la ruta llega al frente. */
-        private void startIfNeeded(long gameTime) {
-            if (!started) {
-                started = true;
-                lastProgressTick = gameTime;
-            }
+            lastProgressTick = gameTime;
         }
 
         /** Avanza mientras el servidor ya haya colocado las piezas esperadas. */

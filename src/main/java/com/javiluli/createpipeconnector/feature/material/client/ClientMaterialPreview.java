@@ -31,29 +31,25 @@ public final class ClientMaterialPreview {
      * Marca las posiciones que no pueden cubrirse con el inventario de supervivencia.
      */
     public static List<PreviewPipe> markMissingMaterials(
-            LocalPlayer player,
-            Selection selection,
             ConnectionPlan plan,
-            List<PreviewPipe> previewPipes
+            List<PreviewPipe> previewPipes,
+            ClientPipeConnectorState.MaterialStatus materialStatus
     ) {
-        if (player.getAbilities().instabuild || previewPipes.isEmpty()) {
+        if (materialStatus.creative() || previewPipes.isEmpty()) {
             return previewPipes;
         }
 
-        int availablePipes = PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock());
-        int availablePumps = PipeConnectorLogic.countAvailablePumps(player);
-        int availableCopperCasings = PipeConnectorLogic.countAvailableCopperCasings(player);
-        if (availablePipes >= plan.requiredPipes()
-                && availablePumps >= plan.requiredPumps()
-                && availableCopperCasings >= plan.requiredCopperCasings()) {
+        if (materialStatus.availablePipes() >= plan.requiredPipes()
+                && materialStatus.availablePumps() >= plan.requiredPumps()
+                && materialStatus.availableCopperCasings() >= plan.requiredCopperCasings()) {
             return previewPipes;
         }
 
         Set<BlockPos> missingPositions = missingMaterialPositions(
                 plan,
-                availablePipes,
-                availablePumps,
-                availableCopperCasings
+                materialStatus.availablePipes(),
+                materialStatus.availablePumps(),
+                materialStatus.availableCopperCasings()
         );
         if (missingPositions.isEmpty()) {
             return previewPipes;
@@ -66,13 +62,13 @@ public final class ClientMaterialPreview {
         return markedPreviewPipes;
     }
 
-    /** Actualiza los contadores consumidos por el HUD del conector. */
-    public static void updateStatus(LocalPlayer player, Selection selection, ConnectionPlan plan) {
+    /** Calcula una sola vez los contadores compartidos por HUD y preview. */
+    public static ClientPipeConnectorState.MaterialStatus createStatus(LocalPlayer player, Selection selection, ConnectionPlan plan) {
         int requiredPipes = plan.requiredPipes();
         int requiredPumps = plan.requiredPumps();
         int requiredCopperCasings = plan.requiredCopperCasings();
         if (player.getAbilities().instabuild) {
-            ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
+            return new ClientPipeConnectorState.MaterialStatus(
                     selection.pipeBlock(),
                     requiredPipes,
                     Integer.MAX_VALUE,
@@ -81,11 +77,10 @@ public final class ClientMaterialPreview {
                     requiredCopperCasings,
                     Integer.MAX_VALUE,
                     true
-            ));
-            return;
+            );
         }
 
-        ClientPipeConnectorState.setMaterialStatus(new ClientPipeConnectorState.MaterialStatus(
+        return new ClientPipeConnectorState.MaterialStatus(
                 selection.pipeBlock(),
                 requiredPipes,
                 PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock()),
@@ -94,7 +89,7 @@ public final class ClientMaterialPreview {
                 requiredCopperCasings,
                 PipeConnectorLogic.countAvailableCopperCasings(player),
                 false
-        ));
+        );
     }
 
     /**

@@ -162,33 +162,23 @@ public final class ConnectorSessionStore {
 
     /** Devuelve una copia inmutable de las anclas del jugador. */
     public static List<PlacementTarget> getAnchors(UUID playerId) {
-        return List.copyOf(ANCHORS.getOrDefault(playerId, List.of()));
+        return getValues(ANCHORS, playerId);
     }
 
     /** Anade un ancla o reemplaza la ultima si ocupa el mismo bloque. */
     public static void addAnchor(UUID playerId, PlacementTarget anchor) {
-        List<PlacementTarget> anchors = new ArrayList<>(ANCHORS.getOrDefault(playerId, List.of()));
+        List<PlacementTarget> anchors = new ArrayList<>(getValues(ANCHORS, playerId));
         if (!anchors.isEmpty() && anchors.get(anchors.size() - 1).position().equals(anchor.position())) {
             anchors.set(anchors.size() - 1, anchor);
         } else {
             anchors.add(anchor);
         }
-        ANCHORS.put(playerId, List.copyOf(anchors));
+        storeValues(ANCHORS, playerId, anchors);
     }
 
     /** Elimina la ultima ancla conservando el orden de las restantes. */
     public static void removeLastAnchor(UUID playerId) {
-        List<PlacementTarget> anchors = new ArrayList<>(ANCHORS.getOrDefault(playerId, List.of()));
-        if (anchors.isEmpty()) {
-            return;
-        }
-
-        anchors.remove(anchors.size() - 1);
-        if (anchors.isEmpty()) {
-            ANCHORS.remove(playerId);
-        } else {
-            ANCHORS.put(playerId, List.copyOf(anchors));
-        }
+        removeLastValue(ANCHORS, playerId);
     }
 
     /** Elimina todas las anclas de la seleccion activa. */
@@ -198,75 +188,64 @@ public final class ConnectorSessionStore {
 
     /** Devuelve una copia inmutable de las bombas manuales. */
     public static List<BlockPos> getManualPumps(UUID playerId) {
-        return List.copyOf(MANUAL_PUMPS.getOrDefault(playerId, List.of()));
+        return getValues(MANUAL_PUMPS, playerId);
     }
 
     /** Anade o retira una marca manual de bomba. */
     public static void toggleManualPump(UUID playerId, BlockPos position) {
-        List<BlockPos> manualPumps = new ArrayList<>(MANUAL_PUMPS.getOrDefault(playerId, List.of()));
-        if (manualPumps.remove(position)) {
-            updateManualPumps(playerId, manualPumps);
-            return;
-        }
-
-        manualPumps.add(position);
-        MANUAL_PUMPS.put(playerId, List.copyOf(manualPumps));
+        toggleValue(MANUAL_PUMPS, playerId, position);
     }
 
     /** Elimina la ultima marca manual de bomba. */
     public static void removeLastManualPump(UUID playerId) {
-        List<BlockPos> manualPumps = new ArrayList<>(MANUAL_PUMPS.getOrDefault(playerId, List.of()));
-        if (manualPumps.isEmpty()) {
-            return;
-        }
-
-        manualPumps.remove(manualPumps.size() - 1);
-        updateManualPumps(playerId, manualPumps);
-    }
-
-    /** Sustituye las bombas o elimina su entrada cuando queda vacia. */
-    private static void updateManualPumps(UUID playerId, List<BlockPos> manualPumps) {
-        if (manualPumps.isEmpty()) {
-            MANUAL_PUMPS.remove(playerId);
-        } else {
-            MANUAL_PUMPS.put(playerId, List.copyOf(manualPumps));
-        }
+        removeLastValue(MANUAL_PUMPS, playerId);
     }
 
     /** Devuelve una copia inmutable de los revestimientos manuales. */
     public static List<BlockPos> getCopperCasings(UUID playerId) {
-        return List.copyOf(COPPER_CASINGS.getOrDefault(playerId, List.of()));
+        return getValues(COPPER_CASINGS, playerId);
     }
 
     /** Anade o retira una marca manual de revestimiento. */
     public static void toggleCopperCasing(UUID playerId, BlockPos position) {
-        List<BlockPos> copperCasings = new ArrayList<>(COPPER_CASINGS.getOrDefault(playerId, List.of()));
-        if (copperCasings.remove(position)) {
-            updateCopperCasings(playerId, copperCasings);
-            return;
-        }
-
-        copperCasings.add(position);
-        COPPER_CASINGS.put(playerId, List.copyOf(copperCasings));
+        toggleValue(COPPER_CASINGS, playerId, position);
     }
 
     /** Elimina la ultima marca manual de revestimiento. */
     public static void removeLastCopperCasing(UUID playerId) {
-        List<BlockPos> copperCasings = new ArrayList<>(COPPER_CASINGS.getOrDefault(playerId, List.of()));
-        if (copperCasings.isEmpty()) {
-            return;
-        }
-
-        copperCasings.remove(copperCasings.size() - 1);
-        updateCopperCasings(playerId, copperCasings);
+        removeLastValue(COPPER_CASINGS, playerId);
     }
 
-    /** Sustituye los revestimientos o elimina su entrada cuando queda vacia. */
-    private static void updateCopperCasings(UUID playerId, List<BlockPos> copperCasings) {
-        if (copperCasings.isEmpty()) {
-            COPPER_CASINGS.remove(playerId);
+    /** Devuelve una copia inmutable de los valores asociados al jugador. */
+    private static <T> List<T> getValues(Map<UUID, List<T>> valuesByPlayer, UUID playerId) {
+        return List.copyOf(valuesByPlayer.getOrDefault(playerId, List.of()));
+    }
+
+    /** Anade o retira un valor y normaliza su almacenamiento. */
+    private static <T> void toggleValue(Map<UUID, List<T>> valuesByPlayer, UUID playerId, T value) {
+        List<T> values = new ArrayList<>(getValues(valuesByPlayer, playerId));
+        if (!values.remove(value)) {
+            values.add(value);
+        }
+        storeValues(valuesByPlayer, playerId, values);
+    }
+
+    /** Retira el ultimo valor cuando existe. */
+    private static <T> void removeLastValue(Map<UUID, List<T>> valuesByPlayer, UUID playerId) {
+        List<T> values = new ArrayList<>(getValues(valuesByPlayer, playerId));
+        if (values.isEmpty()) {
+            return;
+        }
+        values.remove(values.size() - 1);
+        storeValues(valuesByPlayer, playerId, values);
+    }
+
+    /** Guarda una lista inmutable o elimina su entrada cuando queda vacia. */
+    private static <T> void storeValues(Map<UUID, List<T>> valuesByPlayer, UUID playerId, List<T> values) {
+        if (values.isEmpty()) {
+            valuesByPlayer.remove(playerId);
         } else {
-            COPPER_CASINGS.put(playerId, List.copyOf(copperCasings));
+            valuesByPlayer.put(playerId, List.copyOf(values));
         }
     }
 }
