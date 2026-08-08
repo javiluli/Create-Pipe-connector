@@ -107,12 +107,8 @@ public final class ClientPlacementLeadPreview {
         cachedActivePreviews = List.of();
     }
 
-    /** Datos inmutables que necesita el renderizador para dibujar una pieza. */
+    /** Datos inmutables que necesita el renderizador para dibujar una ruta activa. */
     public record ActivePreview(List<PreviewPipe> pieces, int pieceIndex, int version) {
-        /** Devuelve la pieza que debe aparecer antes del siguiente bloque real. */
-        public PreviewPipe activePiece() {
-            return pieces.get(pieceIndex);
-        }
     }
 
     /** Estado mutable de una ruta confirmada que espera actualizaciones del mundo. */

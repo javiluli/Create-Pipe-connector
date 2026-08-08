@@ -48,7 +48,7 @@ public final class PipePreviewBuilder {
 
     /** Calcula estados de tuberia coherentes para todo el recorrido. */
     public static Map<BlockPos, BlockState> buildConnectionStates(Level level, ConnectionPlan plan, Block pipeBlock) {
-        Map<BlockPos, BlockState> connectionStates = new HashMap<>();
+        Map<BlockPos, BlockState> connectionStates = new HashMap<>(plan.path().size());
         for (BlockPos position : plan.path()) {
             BlockState currentState = level.getBlockState(position);
             connectionStates.put(position, CreatePipeBlocks.isConnectablePipe(currentState) ? currentState : CreatePipeBlocks.createPipeState(pipeBlock, currentState));

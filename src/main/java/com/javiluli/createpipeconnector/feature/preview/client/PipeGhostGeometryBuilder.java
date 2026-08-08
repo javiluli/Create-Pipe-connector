@@ -2,26 +2,22 @@ package com.javiluli.createpipeconnector.feature.preview.client;
 
 import com.javiluli.createpipeconnector.core.Constants;
 import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import net.createmod.catnip.client.render.model.ForgeBakedModelBufferer;
+import net.createmod.catnip.client.render.model.ShadeSeparatedResultConsumer;
 import net.createmod.catnip.levelWrappers.SchematicLevel;
-import net.createmod.catnip.render.ShadedBlockSbbBuilder;
 import net.createmod.catnip.render.SuperByteBuffer;
+import net.createmod.catnip.render.SuperByteBufferBuilder;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.client.model.data.ModelData;
@@ -53,7 +49,7 @@ final class PipeGhostGeometryBuilder {
 
     /**
      * Construye la ruta confirmada por pieza para poder ocultar las posiciones
-     * ya materializadas sin volver a teselar el recorrido durante la animacion.
+     * ya materializadas sin volver a procesar el recorrido durante la animacion.
      */
     static PipeGhostGeometryCache buildProgressive(Minecraft minecraft, Level level, List<PreviewPipe> previewPipes) {
         return build(minecraft, level, previewPipes, true);
@@ -64,35 +60,52 @@ final class PipeGhostGeometryBuilder {
             Minecraft minecraft,
             Level level,
             List<PreviewPipe> previewPipes,
-            boolean onePiecePerSection
+            boolean progressive
     ) {
         SchematicLevel schematicLevel = buildPreviewWorld(level, previewPipes);
-        BlockRenderDispatcher dispatcher = minecraft.getBlockRenderer();
-        ModelBlockRenderer renderer = dispatcher.getModelRenderer();
         BakedModel pumpModel = minecraft.getModelManager().getModel(MECHANICAL_PUMP_ITEM_MODEL);
         ReusableObjects objects = REUSABLE_OBJECTS.get();
 
         schematicLevel.renderMode = true;
-        ModelBlockRenderer.enableCaching();
         try {
-            List<PipeGhostGeometryCache.Section> sections = new ArrayList<>();
-            for (List<PreviewPipe> sectionPipes : partition(previewPipes, onePiecePerSection)) {
-                sections.add(buildSection(
-                        dispatcher,
-                        renderer,
-                        pumpModel,
-                        schematicLevel,
-                        level,
-                        sectionPipes,
-                        objects
-                ));
+            int expectedSections = progressive
+                    ? previewPipes.size()
+                    : Math.max(1, (previewPipes.size() + SECTION_SIZE - 1) / SECTION_SIZE);
+            List<PipeGhostGeometryCache.Section> sections = new ArrayList<>(expectedSections);
+            if (progressive) {
+                List<PreviewPipe> singlePiece = objects.singlePiece;
+                for (PreviewPipe previewPipe : previewPipes) {
+                    singlePiece.clear();
+                    singlePiece.add(previewPipe);
+                    sections.add(buildSection(
+                            pumpModel,
+                            schematicLevel,
+                            level,
+                            singlePiece,
+                            objects,
+                            true
+                    ));
+                }
+            } else {
+                for (List<PreviewPipe> sectionPipes : partitionSpatially(previewPipes)) {
+                    sections.add(buildSection(
+                            pumpModel,
+                            schematicLevel,
+                            level,
+                            sectionPipes,
+                            objects,
+                            false
+                    ));
+                }
             }
-            return new PipeGhostGeometryCache(
-                    List.copyOf(sections),
-                    PipeGhostFluidClassifier.routeMask(level, previewPipes)
-            );
+            List<PipeGhostGeometryCache.Section> immutableSections = List.copyOf(sections);
+            return progressive
+                    ? PipeGhostGeometryCache.progressive(immutableSections)
+                    : PipeGhostGeometryCache.editable(
+                            immutableSections,
+                            PipeGhostFluidClassifier.routeMask(level, previewPipes)
+                    );
         } finally {
-            ModelBlockRenderer.clearCache();
             schematicLevel.renderMode = false;
         }
     }
@@ -111,16 +124,8 @@ final class PipeGhostGeometryBuilder {
         return schematicLevel;
     }
 
-    /** Divide por pieza las rutas progresivas y por region el preview editable. */
-    private static List<List<PreviewPipe>> partition(List<PreviewPipe> previewPipes, boolean onePiecePerSection) {
-        if (onePiecePerSection) {
-            List<List<PreviewPipe>> pieces = new ArrayList<>(previewPipes.size());
-            for (PreviewPipe previewPipe : previewPipes) {
-                pieces.add(List.of(previewPipe));
-            }
-            return pieces;
-        }
-
+    /** Divide el preview editable por regiones descartables mediante frustum. */
+    private static List<List<PreviewPipe>> partitionSpatially(List<PreviewPipe> previewPipes) {
         Map<SectionKey, List<PreviewPipe>> sections = new LinkedHashMap<>();
         for (PreviewPipe previewPipe : previewPipes) {
             BlockPos position = previewPipe.position();
@@ -136,183 +141,98 @@ final class PipeGhostGeometryBuilder {
 
     /** Construye las capas normal e insuficiente de una seccion. */
     private static PipeGhostGeometryCache.Section buildSection(
-            BlockRenderDispatcher dispatcher,
-            ModelBlockRenderer renderer,
             BakedModel pumpModel,
             SchematicLevel schematicLevel,
             Level level,
             List<PreviewPipe> previewPipes,
-            ReusableObjects objects
+            ReusableObjects objects,
+            boolean progressive
     ) {
-        boolean hasMissingMaterials = hasMissingMaterials(previewPipes);
-        Map<RenderType, SuperByteBuffer> baseCache = new LinkedHashMap<>(RenderType.chunkBufferLayers().size());
-        Map<RenderType, SuperByteBuffer> missingCache = hasMissingMaterials
-                ? new LinkedHashMap<>(RenderType.chunkBufferLayers().size())
-                : Map.of();
-        for (RenderType layer : RenderType.chunkBufferLayers()) {
-            SuperByteBuffer buffer = drawLayer(
-                    layer,
-                    dispatcher,
-                    renderer,
-                    pumpModel,
-                    schematicLevel,
-                    previewPipes,
-                    objects,
-                    false
-            );
-            if (!buffer.isEmpty()) {
-                baseCache.put(layer, buffer);
-            }
-            if (hasMissingMaterials) {
-                SuperByteBuffer missingBuffer = drawLayer(
-                        layer,
-                        dispatcher,
-                        renderer,
-                        pumpModel,
-                        schematicLevel,
-                        previewPipes,
-                        objects,
-                        true
-                );
-                if (!missingBuffer.isEmpty()) {
-                    missingCache.put(layer, missingBuffer);
-                }
-            }
-        }
+        List<SuperByteBuffer> baseCache = buildBuffers(
+                pumpModel,
+                schematicLevel,
+                previewPipes,
+                objects,
+                false
+        );
+        List<SuperByteBuffer> missingCache = hasMissingMaterials(previewPipes)
+                ? buildBuffers(pumpModel, schematicLevel, previewPipes, objects, true)
+                : List.of();
         return new PipeGhostGeometryCache.Section(
                 sectionBounds(previewPipes),
-                List.copyOf(previewPipes),
+                PipeGhostOutlineBuilder.build(level, previewPipes),
                 baseCache,
                 missingCache,
-                PipeGhostFluidClassifier.routeMask(level, previewPipes)
+                progressive
+                        ? PipeGhostFluidClassifier.routeMask(level, previewPipes)
+                        : 0
         );
     }
 
-    /** Emite los modelos de una capa y filtra opcionalmente materiales faltantes. */
-    @SuppressWarnings("removal")
-    private static SuperByteBuffer drawLayer(
-            RenderType layer,
-            BlockRenderDispatcher dispatcher,
-            ModelBlockRenderer renderer,
+    /** Procesa cada modelo una vez y agrupa la geometria por capa de render. */
+    private static List<SuperByteBuffer> buildBuffers(
             BakedModel pumpModel,
             SchematicLevel schematicLevel,
             List<PreviewPipe> previewPipes,
             ReusableObjects objects,
             boolean missingOnly
     ) {
-        PoseStack poseStack = objects.poseStack;
-        RandomSource random = objects.random;
-        BlockPos.MutableBlockPos mutableBlockPos = objects.mutableBlockPos;
-        ShadedBlockSbbBuilder bufferBuilder = objects.bufferBuilder;
-        bufferBuilder.begin();
+        GeometryCollector collector = objects.collector;
+        collector.reset();
+        List<BlockPos> regularPipePositions = objects.regularPipePositions;
+        regularPipePositions.clear();
 
         for (PreviewPipe previewPipe : previewPipes) {
             if (missingOnly && !previewPipe.missingMaterial()) {
                 continue;
             }
 
-            BlockPos localPosition = previewPipe.position();
-            BlockPos worldPosition = mutableBlockPos.set(
-                    localPosition.getX(),
-                    localPosition.getY(),
-                    localPosition.getZ()
-            );
-            BlockState state = schematicLevel.getBlockState(worldPosition);
-            if (state.getRenderShape() != RenderShape.MODEL) {
-                continue;
-            }
-
-            boolean mechanicalPump = previewPipe.isMechanicalPump();
-            BakedModel model = mechanicalPump ? pumpModel : dispatcher.getBlockModel(state);
-            ModelData modelData = modelData(model, schematicLevel, worldPosition, state, mechanicalPump);
-            long seed = state.getSeed(worldPosition);
-            random.setSeed(seed);
-            if (!model.getRenderTypes(state, random, modelData).contains(layer)) {
-                continue;
-            }
-
-            poseStack.pushPose();
-            poseStack.translate(localPosition.getX(), localPosition.getY(), localPosition.getZ());
-            if (mechanicalPump) {
-                renderPump(
-                        poseStack,
-                        bufferBuilder,
-                        renderer,
-                        model,
-                        modelData,
-                        schematicLevel,
-                        worldPosition,
-                        state,
-                        layer,
-                        previewPipe.mechanicalPumpFacing().getOpposite()
-                );
+            if (previewPipe.isMechanicalPump()) {
+                bufferPump(pumpModel, schematicLevel, previewPipe, objects.poseStack, collector);
             } else {
-                renderer.tesselateBlock(
-                        schematicLevel,
-                        model,
-                        state,
-                        worldPosition,
-                        poseStack,
-                        bufferBuilder,
-                        true,
-                        random,
-                        seed,
-                        OverlayTexture.NO_OVERLAY,
-                        modelData,
-                        layer
-                );
+                regularPipePositions.add(previewPipe.position());
             }
+        }
+
+        if (!regularPipePositions.isEmpty()) {
+            ForgeBakedModelBufferer.bufferBlocks(
+                    regularPipePositions.iterator(),
+                    schematicLevel,
+                    null,
+                    null,
+                    false,
+                    collector
+            );
+        }
+        return collector.build();
+    }
+
+    /** Incorpora el modelo de item de una bomba con la orientacion prevista. */
+    private static void bufferPump(
+            BakedModel pumpModel,
+            SchematicLevel schematicLevel,
+            PreviewPipe previewPipe,
+            PoseStack poseStack,
+            GeometryCollector collector
+    ) {
+        BlockPos position = previewPipe.position();
+        BlockState state = schematicLevel.getBlockState(position);
+        poseStack.pushPose();
+        try {
+            poseStack.translate(position.getX(), position.getY(), position.getZ());
+            applyPumpFacingTransform(poseStack, previewPipe.mechanicalPumpFacing().getOpposite());
+            ForgeBakedModelBufferer.bufferModel(
+                    pumpModel,
+                    position,
+                    schematicLevel,
+                    state,
+                    poseStack,
+                    ModelData.EMPTY,
+                    collector
+            );
+        } finally {
             poseStack.popPose();
         }
-        return bufferBuilder.end();
-    }
-
-    /** Resuelve datos de modelo evitando consultar entidades para bombas parciales. */
-    private static ModelData modelData(
-            BakedModel model,
-            SchematicLevel schematicLevel,
-            BlockPos position,
-            BlockState state,
-            boolean mechanicalPump
-    ) {
-        ModelData modelData = ModelData.EMPTY;
-        if (!mechanicalPump) {
-            BlockEntity blockEntity = schematicLevel.getBlockEntity(position);
-            if (blockEntity != null) {
-                modelData = blockEntity.getModelData();
-            }
-        }
-        return model.getModelData(schematicLevel, position, state, modelData);
-    }
-
-    /** Renderiza el modelo parcial de bomba con la orientacion del recorrido. */
-    @SuppressWarnings("removal")
-    private static void renderPump(
-            PoseStack poseStack,
-            ShadedBlockSbbBuilder bufferBuilder,
-            ModelBlockRenderer renderer,
-            BakedModel model,
-            ModelData modelData,
-            SchematicLevel schematicLevel,
-            BlockPos position,
-            BlockState state,
-            RenderType layer,
-            Direction facing
-    ) {
-        applyPumpFacingTransform(poseStack, facing);
-        renderer.renderModel(
-                poseStack.last(),
-                bufferBuilder,
-                state,
-                model,
-                1.0F,
-                1.0F,
-                1.0F,
-                LevelRenderer.getLightColor(schematicLevel, position),
-                OverlayTexture.NO_OVERLAY,
-                modelData,
-                layer
-        );
     }
 
     /** Orienta la bomba dentro de su bloque fantasma. */
@@ -365,14 +285,72 @@ final class PipeGhostGeometryBuilder {
     private record SectionKey(int x, int y, int z) {
     }
 
-    /** Reutiliza objetos mutables usados durante la teselacion. */
+    /** Reutiliza objetos mutables temporales entre secciones reconstruidas. */
     private static final class ReusableObjects {
         private final PoseStack poseStack = new PoseStack();
-        private final RandomSource random = RandomSource.createNewThreadLocalInstance();
-        private final BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
+        private final List<PreviewPipe> singlePiece = new ArrayList<>(1);
+        private final List<BlockPos> regularPipePositions = new ArrayList<>();
+        private final GeometryCollector collector = new GeometryCollector();
+    }
 
-        // Ponder 1.0.91 solo ofrece este constructor compatible con sombreado de bloque.
-        @SuppressWarnings("removal")
-        private final ShadedBlockSbbBuilder bufferBuilder = ShadedBlockSbbBuilder.create();
+    /** Acumula las salidas modernas de Catnip y conserva sus grupos de sombreado. */
+    private static final class GeometryCollector implements ShadeSeparatedResultConsumer {
+        private final Map<RenderType, LayerBufferBuilder> builders = new LinkedHashMap<>();
+
+        @Override
+        public void accept(RenderType renderType, boolean shaded, BufferBuilder.RenderedBuffer data) {
+            builders.computeIfAbsent(renderType, ignored -> new LayerBufferBuilder())
+                    .add(data, shaded);
+        }
+
+        /** Prepara los acumuladores para otra seccion sin volver a crearlos. */
+        private void reset() {
+            builders.values().forEach(LayerBufferBuilder::reset);
+        }
+
+        /** Finaliza cada capa y descarta las que no contienen vertices. */
+        private List<SuperByteBuffer> build() {
+            if (builders.isEmpty()) {
+                return List.of();
+            }
+
+            List<SuperByteBuffer> buffers = new ArrayList<>(builders.size());
+            builders.forEach((ignored, builder) -> {
+                if (!builder.hasGeometry()) {
+                    return;
+                }
+                SuperByteBuffer buffer = builder.build();
+                if (!buffer.isEmpty()) {
+                    buffers.add(buffer);
+                }
+            });
+            return List.copyOf(buffers);
+        }
+    }
+
+    /** Inicializa el acumulador con el mismo estado de sombreado que Catnip. */
+    private static final class LayerBufferBuilder extends SuperByteBufferBuilder {
+        private boolean hasGeometry;
+
+        private LayerBufferBuilder() {
+            prepare();
+        }
+
+        @Override
+        public void add(BufferBuilder.RenderedBuffer data, boolean shaded) {
+            super.add(data, shaded);
+            hasGeometry = true;
+        }
+
+        /** Limpia la malla mutable despues de copiarla al buffer inmutable. */
+        private void reset() {
+            prepare();
+            hasGeometry = false;
+        }
+
+        /** Indica si esta capa recibio vertices durante la reconstruccion actual. */
+        private boolean hasGeometry() {
+            return hasGeometry;
+        }
     }
 }
