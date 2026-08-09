@@ -5,12 +5,20 @@
 
 **Build Create fluid pipe routes faster: preview the path, adjust it, and place it in one action.**
 
-Forge build for Minecraft `1.20.1`.
+A utility addon for [Create](https://github.com/Creators-of-Create/Create). Available builds are listed below.
 
-![Version](https://img.shields.io/badge/Version-1.0.0-2E7D32?style=for-the-badge)
-![Create](https://img.shields.io/badge/Create-6.0.8-7B4F1D?style=for-the-badge)
-![Minecraft Version](https://img.shields.io/badge/Minecraft-1.20.1-2E7D32?style=for-the-badge&logo=minecraft&logoColor=white)
-![Loader](https://img.shields.io/badge/Loader-Forge-E65100?style=for-the-badge&logo=forge&logoColor=white)
+![Version](https://img.shields.io/badge/Version-1.1.0-2E7D32?style=for-the-badge)
+<a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
+<img src="https://img.shields.io/curseforge/dt/1610354?style=for-the-badge&color=242629&labelColor=F16436&logo=curseforge&logoColor=white&label=" alt="CurseForge">
+</a>
+<a href="https://modrinth.com/mod/create-pipe-connector">
+<img src="https://img.shields.io/modrinth/dt/create-pipe-connector?logo=modrinth&label=&suffix=%20&style=for-the-badge&color=242629&labelColor=5CA424&logoColor=1C1C1C" alt="Modrinth">
+</a>
+![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
+![NeoForge](https://img.shields.io/badge/NeoForge-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
+![Forge](https://img.shields.io/badge/Forge-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
+![Fabric](https://img.shields.io/badge/Fabric-not%20available-757575?style=for-the-badge)
+
 </div>
 
 ---
@@ -24,6 +32,8 @@ Instead of placing long pipe lines block by block, you select a start point, aim
 ## Main Features
 
 - **Ghost preview:** See the route before spending items.
+- **Progressive construction:** Confirmed routes appear at a configurable speed instead of all at once.
+- **Animation settings:** Choose Very slow (`1`), Slow (`5`), Normal (`10`), Fast (`15`), or Very fast (`20` pieces/s), or disable the animation for instant placement.
 - **Smart routing:** Finds a valid path around obstacles.
 - **Anchors:** Add waypoints to force turns or guide the route.
 - **Radial menu:** Change route style, pumps, flow direction, casing, and pipe style.
@@ -49,14 +59,14 @@ Optional features use:
 
 Only the most important controls are bound by default:
 
-| Action | Default |
-| --- | --- |
-| Toggle Connector Pipe mode | `B` |
-| Start / confirm route | Right-click |
-| Open radial menu | `N` |
-| Add anchor | `C` |
-| Lock preview target / freecam-style planning | `Left Alt` |
-| Cancel current route | Left-click |
+| Action                                       | Default     |
+| -------------------------------------------- | ----------- |
+| Toggle Connector Pipe mode                   | `B`         |
+| Start / confirm route                        | Right-click |
+| Open radial menu                             | `N`         |
+| Add anchor                                   | `C`         |
+| Lock preview target / freecam-style planning | `Left Alt`  |
+| Cancel current route                         | Left-click  |
 
 Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps, and undo actions are available in Minecraft's Controls menu but are **unassigned by default**. You can use the radial menu instead, or bind them yourself.
 
@@ -71,6 +81,19 @@ Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps
 7. Optional: press `N` to open the radial menu.
 8. Right-click again to place the route.
 9. Left-click during preview to cancel only the current route.
+
+### Placement Animation
+
+Open `Mods -> Create: Pipe Connector -> Config` to change how confirmed routes are built.
+
+- Keep **Animate route construction** enabled for the animated building effect.
+- Choose Very slow (`1`), Slow (`5`), Normal (`10`), Fast (`15`), or Very fast (`20` pieces/s, the default).
+- The remaining speed and preview controls become unavailable when route animation is disabled.
+- Independently show or hide the complete outline-free route and the highlighted next piece.
+- Pieces always appear individually; the mod never places animation batches in the same tick.
+- Disable it to place the complete route instantly.
+- Changes are saved and synchronized as soon as you adjust them.
+- In multiplayer, each route uses the preference of the player who confirmed it.
 10. Press `B` again to leave Connector Pipe mode.
 
 ## Radial Menu Options
@@ -98,9 +121,8 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 ## Requirements
 
 - **Minecraft:** `1.20.1`
-- **Loader:** `Forge`
 - **Forge:** `47.4.20` or compatible `47.x`
-- **Create:** `6.0.8-289` or compatible `6.0.x`
+- **Create:** `6.0.6` or compatible `6.0.x`
 - **Java:** `17`
 
 ## Modpack Notes
@@ -108,21 +130,31 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 - Install on both client and server.
 - Requires Create at runtime.
 - No extra runtime dependencies beyond Minecraft, Forge, and Create.
-- Current Forge version: **`1.0.0`**.
-- This build matches the current NeoForge gameplay feature set, adapted for Forge `1.20.1`.
+- Current Forge version: **`1.1.0`**.
+- Report route or preview edge cases with screenshots and the relevant client or server log.
 
 ## Developer Notes
 
-This branch is Forge-only for Minecraft `1.20.1`. Shared connector logic lives in `common`; Forge input, networking, events, HUD, and rendering live in `forge`.
+This branch targets Forge for Minecraft `1.20.1` as a single Gradle module. The code uses a Create-inspired, feature-first structure under `src/main/java`: gameplay mechanics stay together, shared foundations remain small, and Forge registration is isolated from feature logic.
 
-- Core routing: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
-- Preview state building: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipePreviewBuilder.java`
-- Forge client input: `forge/src/main/java/com/javiluli/createpipeconnector/client/input`
-- Ghost preview renderer: `forge/src/main/java/com/javiluli/createpipeconnector/client/render/PipeGhostRenderer.java`
-- Radial menu: `forge/src/main/java/com/javiluli/createpipeconnector/client/screen/ConnectorOptionsRadialScreen.java`
+- Shared immutable plan: `src/main/java/com/javiluli/createpipeconnector/core/model/ConnectionPlan.java`
+- Connector facade, planning, selection, and sessions: `src/main/java/com/javiluli/createpipeconnector/feature/connector`
+- Player session state: `src/main/java/com/javiluli/createpipeconnector/feature/connector/session`
+- Routing and preview building: `src/main/java/com/javiluli/createpipeconnector/feature/routing` and `src/main/java/com/javiluli/createpipeconnector/feature/preview`
+- Ghost preview renderer: `src/main/java/com/javiluli/createpipeconnector/feature/preview/client/PipeGhostRenderer.java`
+- Radial menu and HUD: `src/main/java/com/javiluli/createpipeconnector/feature/ui/client`
+- Payload registration: `src/main/java/com/javiluli/createpipeconnector/bootstrap/ForgePayloadRegistry.java`
+- Feature-independent Forge infrastructure: `src/main/java/com/javiluli/createpipeconnector/platform`
 
 Build commands:
 
-- Run client: `./gradlew :forge:Client`
-- Build jar: `./gradlew :forge:build`
-- Build release copy: `./gradlew buildAll`
+- Run client: `./gradlew runClient`
+- Build jar: `./gradlew build`
+- Build release copy: `./gradlew buildRelease`
+
+More docs:
+
+- `docs/PLAYER_GUIDE.md`
+- `docs/MODPACK_GUIDE.md`
+- `docs/DEV_GUIDE.md`
+- `docs/API.md`
