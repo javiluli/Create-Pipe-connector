@@ -1,89 +1,83 @@
 # Development guide
 
-## Goal
+## Project layout
 
-Keep the project focused on the NeoForge runtime while preserving shared logic in `common`.
+The NeoForge edition is a single-module project:
 
-## Main folders
+- `src/main/java`: gameplay, client, network, render, and NeoForge bootstrap code
+- `src/main/resources`: mod metadata, translations, and the in-game icon
+- `docs`: player, modpack, API, and development notes
 
-- `common/`: shared gameplay and placement logic
-- `neoforge/`: NeoForge entrypoints, input handling, preview rendering, and server placement
+The project is organized by feature. Stable adapters remain in `core`; connector flow, progressive placement, preview rendering, materials, anchors, pumps, casing, styles, and UI each have focused packages.
 
-## Key classes
+## Main areas
 
-- `common/.../connector/PipeConnectorLogic.java`
-- `common/.../connector/PipePathfinder.java`: obstacle-aware route search and route priorities
-- `common/.../connector/PipeRouteGeometry.java`: path directions, corners, and pump orientation
-- `common/.../connector/PlayerInteractionRange.java`: Minecraft 1.21.1 reach resolution
-- `neoforge/.../client/input/ClientMaterialPreview.java`: material warnings and HUD counts
-  - public connector facade
-  - pathfinding and connection plan creation
-  - route style selection and axis ordering
-  - preview world generation
-- `common/.../connector/CreatePipeBlocks.java`
-  - Create block/item lookup
-  - pipe, pump, and encased fluid pipe block state helpers
-- `common/.../connector/AutoPumpPlanner.java`
-  - automatic Mechanical Pump slot generation, pump density modes, and direction reversal
-- `common/.../connector/PipePreviewBuilder.java`
-  - ghost preview block states and preview world proxy
-- `common/.../connector/PipeDisplayToggler.java`
-  - pipe display segment toggling between default and glass
-- `common/.../connector/PipeInventory.java`
-  - survival inventory counting and item consumption
-- `common/.../connector/PipeConnectorSessions.java`
-  - server-side connector mode, selections, anchors, manual pump marks, copper casing marks, and pump mode state
-- `neoforge/.../client/input/ClientPipeConnectorInputHandler.java`
-  - first selection
-  - live preview refresh
-  - key-driven anchors and preview locking
-- `neoforge/.../client/render/PipeGhostRenderer.java`
-  - blueprint-style preview rendering
-- `neoforge/.../client/render/hud/PipeConnectorControlsHud.java`
-  - active connector controls above the hotbar
-- `neoforge/.../client/screen/ConnectorOptionsRadialScreen.java`
-  - non-pausing connector options radial selector
-- `neoforge/.../network/CreatePipeConnectorNetwork.java`
-  - client-to-server mode, anchor, manual pump, copper casing, target, route style, pump mode, pump direction, and wrench shortcut sync
-- `neoforge/.../connector/ServerPipeConnectorEvents.java`
-  - server-side placement, wrench double-click handling, and pipe refresh
+- `feature/connector/PipeConnectorLogic.java`: public connector facade
+- `feature/connector/planning/ConnectionPlanBuilder.java`: route and waypoint orchestration
+- `feature/connector/session/ConnectorSessionStore.java`: transient per-player state
+- `feature/routing/PipePathfinder.java`: obstacle-aware route search
+- `feature/routing/PipeRouteGeometry.java`: directions, corners, and pump orientation
+- `core/create/CreatePipeBlocks.java`: Create registry and block-state interoperability
+- `feature/material/PipeInventory.java`: survival counting, reservation, consumption, and refunds
+- `feature/connector`: client controls, server interaction flow, and connector state
+- `feature/material`: client material evaluation and survival warnings
+- `feature/placement`: progressive construction settings, synchronization, previews, and server queues
+- `feature/preview`: cached ghost geometry, fluid classification, outlines, and render layers
+- `feature/anchor`: anchor overlay rendering
+- `feature/ui`: radial options and connector HUD
+- `platform/network`: NeoForge payload registration
+- `feature/*/network`: compact payload records and server handlers owned by each feature
 
-## Feature flow
+## Route flow
 
-1. Player toggles Connector Pipe mode with the configurable `B` key.
-2. Client syncs the mode state to the server.
-3. Player starts a route by targeting a reachable block with a pipe in either hand.
-4. Client sends the selected target to the server and stores the local selection.
-5. Crosshair or air target plus optional anchors drive preview generation.
-6. Route style radial updates preferred axis ordering before preview and placement.
-7. If an automatic pump mode is enabled, the connection plan marks straight pipe slots for Mechanical Pumps.
-8. The optional reversed pump direction state flips planned pump facings on client and server.
-9. Optional manual pump marks add Mechanical Pumps to straight route slots independently from automatic pump mode.
-10. Optional copper casing marks convert planned regular fluid pipe positions into Create encased fluid pipe states.
-11. Manual pump and copper casing marks are stored by world position and filtered against the active plan, so route recalculation does not delete inactive marks.
-12. Mechanical Pump slots take priority over copper casing marks when both target the same position.
-13. The preview world is built from the computed placement plan and marks unaffordable pieces as missing.
-14. Right-click confirms the current preview; left-click cancels the current route.
-15. Server validates mode, anchors, inventory, pumps, copper casings, and placement before consuming items.
-16. Server placement fills the path and refreshes Create connections.
-17. With a wrench in Connector Pipe mode, client sends a pipe display payload and the server requires two clicks on the same pipe before converting the connected segment.
+1. The client enables Connector Pipe mode and synchronizes it with the server.
+2. A reachable first target creates the selection and immediate one-piece preview.
+3. Crosshair movement, route priority, and anchors rebuild the connection plan.
+4. Pump, casing, and glass rules transform valid route positions.
+5. The preview builder applies final connection states and material warnings.
+6. Confirmation sends the target to the server for reach, route, and inventory validation.
+7. The server reserves materials and either places instantly or enqueues progressive construction.
+8. Completed or blocked routes refresh Create connections; blocked pending materials are refunded.
 
-## Useful commands
+## Preview architecture
 
-- `./gradlew :neoforge:runClient`
-- `./gradlew :neoforge:build`
+`PipeGhostRenderer` uses Create and Catnip model buffering through `SchematicLevel`, `BakedModelBufferer`, and `SuperByteBuffer`.
 
-## Extension points
+- Editable routes are cached in spatial sections for frustum culling.
+- Confirmed progressive routes are cached by piece so placed sections disappear without rebuilding every frame.
+- Body geometry and outline geometry are cached separately.
+- Fluid groups choose the correct world render stage across water and other fluid surfaces.
+- Anchor overlays redraw nearby pipe outlines without changing established preview colors.
+- TODO: evaluate an optional contrast improvement for previews viewed through water without changing the established palette or reducing shader compatibility.
 
-- Add more connectable blocks in `CreatePipeBlocks`.
-- Keep Create-specific block IDs and state helpers in `CreatePipeBlocks`.
-- Keep inventory rules in `PipeInventory`.
-- Keep display-style conversion rules in `PipeDisplayToggler`.
-- Tune pathfinding without touching the renderer.
-- Split visual behavior from placement behavior if the addon grows.
+## Commands
 
-## Beta notes
+- Run client: `./gradlew runClient`
+- Run dedicated server: `./gradlew runServer`
+- Build jar: `./gradlew build`
+- Copy release jar: `./gradlew buildRelease`
 
-- Keep changes small and easy to validate.
-- If you touch preview or pathfinding, verify with a NeoForge build.
-- Avoid broad refactors unless they directly support the connector feature.
+## Maintenance rules
+
+- Keep loader APIs out of connector algorithms when possible.
+- Keep Create block-state compatibility in `CreatePipeBlocks`.
+- Keep material rules in `PipeInventory` and preview availability helpers.
+- Add concise Spanish ASCII Javadocs to new public classes and methods.
+- Validate client, dedicated server, survival materials, waterlogging, and long previews after relevant changes.
+
+## Commit and changelog style
+
+Follow Create's concise changelog style so Git history and release notes remain easy to match:
+
+- Write commit subjects in the imperative form: `Add`, `Fix`, `Optimize`, `Update`, `Remove`, or `Reorganize`.
+- Do not add Conventional Commit prefixes or scopes.
+- Keep one coherent behavior, fix, or maintenance change per commit when practical.
+- Reuse the commit subject, or a very close version of it, as the related changelog bullet.
+- Group release bullets under `Additions`, `Art Changes`, `Gameplay Changes`, `Optimizations`, `Bug Fixes`, or `API Changes`.
+- Omit empty changelog categories.
+
+Examples:
+
+- `Add progressive route construction`
+- `Optimize cached preview geometry`
+- `Fix previews across fluid surfaces`

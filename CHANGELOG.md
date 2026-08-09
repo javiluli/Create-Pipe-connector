@@ -1,40 +1,60 @@
-## 1.1.0
+# Create: Pipe Connector - NeoForge Changelog
 
-### Gameplay Changes
+------------------------------------------------------
+Create: Pipe Connector 1.1.0 - NeoForge
+------------------------------------------------------
 
-- Glass pipe styling now uses regular fluid pipes as its only consumable material.
-- Copper casing continues to require one casing in the inventory without consuming one casing per pipe.
-- Expanded Create compatibility from `6.0.10` to `6.0.6+`.
-- Expanded NeoForge compatibility to include `21.1.218+`.
+#### Additions
 
-### Optimizations
+- Add progressive route construction that places confirmed pipes one piece at a time
+- Add five construction speed presets: Very slow (`1` piece/s), Slow (`5` pieces/s), Normal (`10` pieces/s), Fast (`15` pieces/s), and Very fast (`20` pieces/s)
+- Add an option to disable progressive construction for instant placement
+- Synchronize per-player animation preferences with multiplayer servers
+- Apply animation setting changes to routes already being constructed
+- Add independent settings for the complete outline-free construction preview and the highlighted next-piece preview
+- Allow several confirmed routes to animate at the same time
 
-- Reorganized pathfinding, route geometry, interaction range, material evaluation, and shared constants into focused utilities.
-- Moved client material evaluation into a dedicated preview helper.
-- Added concise Javadocs and package documentation for future contributors.
-- Removed unused connector members and obsolete translation entries.
-- Added dedicated ghost and anchor render types to make preview rendering more predictable across modpacks.
-- Applied ghost transparency directly to preview vertices instead of relying on global shader color state.
-- Reused cached preview geometry while preserving separate colors for valid and missing materials.
-- Reduced temporary allocations while redrawing pipe outlines around anchors.
-- Rendered the preview at the appropriate world stage when the camera and route are separated by water or another fluid.
+#### Art Changes
 
-### Bug Fixes
+- Add dedicated ghost and anchor render types while preserving the established cyan, yellow, pump, and missing-material colors
+- Restore transparent ghost models so rear pipe edges remain visible through the preview
+- Improve anchor layering so pipe models and cyan outlines remain visible through the yellow overlay
+- Keep preview colors and transparency consistent when routes cross water or other fluid surfaces
 
-- Fixed the initial pipe preview not appearing until the route contained at least two positions.
-- Fixed preview pipes becoming opaque or partially invisible with Embeddium, Sodium-derived renderers, shaders, and other rendering modifications.
-- Fixed hidden pipe outlines inside the yellow anchor overlay.
-- Fixed triangular gaps and malformed faces in the translucent anchor cube.
-- Fixed preview transparency changing after adding or removing an anchor.
-- Fixed previews disappearing across the water surface when the player and route were in different environments.
-- Fixed placed pipes, elbows, pumps, and encased sections not consistently preserving waterlogging.
-- Fixed anchor positions occasionally leaving an empty gap in the placed route.
-- Fixed the all-glass style requesting and consuming separate glass pipe items.
-- Fixed missing-material highlighting so styled glass sections count against the available regular pipes.
-- Fixed the addon rejecting modpacks using NeoForge `21.1.218` even when their Create version was supported.
+#### Gameplay Changes
 
-### Art Changes
+- Support Create versions from `6.0.6` up to, but not including, `6.1.0`
+- Require one copper casing in the inventory without consuming one casing for every encased pipe
+- Use regular Create fluid pipes as the only route material for glass styling
 
-- Preserved the established cyan pipe outlines, yellow anchor overlay, pump highlights, and red missing-material tint.
-- Restored transparent ghost models so rear pipe edges remain visible through the preview.
-- Improved anchor layering so the route remains visible without changing the original preview colors.
+#### Optimizations
+
+- Reorganize routing, geometry, interaction range, materials, sessions, payload handling, and UI code into focused feature packages
+- Convert the legacy multiloader workspace into a standard single-module NeoForge project
+- Remove obsolete loader scaffolding, package metadata, unused code, and stale project files
+- Document mod classes and methods with concise Spanish Javadocs
+- Reuse Create and Catnip model buffering through `SchematicLevel`, `BakedModelBufferer`, and `SuperByteBuffer`
+- Cache preview geometry, fluid groups, outline boxes, outline colors, anchor lookups, and visible sections instead of recalculating them every frame
+- Reuse prepared route modifiers and rebuild preview states only when the route, inventory, or surrounding blocks change
+- Precompute pipe refresh directions and cache Create connection methods so completing long routes remains linear
+- Reduce temporary allocations and duplicate work while building routes, drawing outlines, updating anchors, and rendering long previews
+- Optimize progressive placement updates to reduce per-piece frame hitches
+- Update the README and NeoForge documentation for the final project structure, Create compatibility, controls, and placement animation settings
+
+#### Bug Fixes
+
+- Fix the initial pipe preview not appearing until the route contains at least two positions
+- Fix preview pipes becoming opaque, partially invisible, or losing transparency with Sodium-derived renderers, shaders, and other rendering modifications
+- Fix hidden cyan pipe outlines inside the yellow anchor overlay
+- Fix triangular gaps and malformed faces in the translucent anchor cube
+- Fix preview transparency and colors changing after adding or removing anchors
+- Fix previews disappearing when the camera and route are on opposite sides of a water or fluid surface
+- Fix placed pipes, elbows, pumps, and encased sections not consistently preserving waterlogging
+- Fix progressive pieces using stale waterlogging when the fluid changes before their placement tick
+- Fix anchor positions occasionally leaving an empty gap in the placed route
+- Fix the all-glass style requesting or consuming separate glass pipe items instead of regular fluid pipes
+- Fix missing-material highlighting so glass-styled sections use the available regular pipe count
+- Fix placement animation settings not applying reliably after joining, closing the config screen, or changing an active route
+- Fix disabling progressive construction not finishing already queued routes immediately
+- Fix completed pieces remaining visible in the construction preview after being placed
+- Fix the addon rejecting NeoForge `21.1.218` installations when their Create version is supported

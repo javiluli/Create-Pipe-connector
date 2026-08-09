@@ -3,50 +3,32 @@
 ## Requirements
 
 - Minecraft `1.21.1`
-- NeoForge `21.1.219` or compatible
-- Create `6.0.6-107` or compatible `6.0.x`
+- NeoForge `21.1.218` or newer compatible `21.1.x`
+- Create `6.0.6` up to, but not including, `6.1.0`
 - Java `21`
 
-## Runtime dependencies
+Install the addon on both client and server. Create is the only gameplay mod required at runtime.
 
-- `Create` is the only gameplay mod required at runtime.
-- No extra runtime mods are required for the connector feature.
+## Included behavior
 
-## What the addon does
+- Obstacle-aware fluid pipe routing with anchors
+- Cached ghost preview and survival material warnings
+- Automatic and manual Mechanical Pump placement
+- Optional copper casing and glass straight sections
+- Progressive or instant construction with five speed presets
+- Independent complete-route and next-piece construction previews
+- Create wrench shortcut for default/glass straight pipe segments
 
-- Connects two Create fluid pipes automatically
-- Finds the shortest valid route around obstacles
-- Shows a ghost preview before placement
-- Supports anchor waypoints and configurable key binds
-- Lets players choose route styles from a radial selector for different axis orders
-- Can optionally insert Create Mechanical Pumps along long routes with several pump density modes
-- Lets players mark individual straight route slots as Mechanical Pumps
-- Lets players reverse planned Mechanical Pump direction before confirming
-- Lets players mark individual regular fluid pipes as copper-cased before confirming
-- Adds a Connector Pipe mode wrench shortcut to toggle straight pipe segments between default and glass
-- Checks survival inventory before placing pipes, pumps, and copper casings, with missing preview pieces tinted red
+## Compatibility notes
 
-## Pack integration
+- The renderer uses Create/Catnip model buffering and dedicated translucent layers.
+- It is designed for Sodium-derived renderers, shaders, and large modpacks, but unusual render pipelines can still require testing.
+- Test long routes, water crossings, anchors, casing, pumps, and glass style before publishing a pack update.
+- Report visual issues with screenshots, the exact shader or renderer versions, and the client log.
 
-- Include Create in the pack.
-- This addon already declares Create as a required NeoForge dependency.
-- Auto-pumps use `create:mechanical_pump`; no additional mod dependency is added.
-- Manual pump marks also use `create:mechanical_pump`; no additional mod dependency is added.
-- Copper casing marks use `create:copper_casing` and produce `create:encased_fluid_pipe`; no additional mod dependency is added.
-- Test the mod with Create pipe variants and long routes before releasing the pack.
+## Material rules
 
-## Not yet provided
-
-- No public API
-- No config screen beyond vanilla key binding options
-- No compatibility promise with every render or optimization mod
-
-## Recommended version
-
-- Use `Create 6.0.6-107` as the minimum validated NeoForge build; compatible `6.0.x` releases are accepted.
-
-## For modders
-
-- The path and placement logic lives in `common/.../connector/PipeConnectorLogic.java`.
-- The ghost preview lives in `neoforge/.../client/render/PipeGhostRenderer.java`.
-- Reuse the existing selection and pathfinding flow instead of duplicating it.
+- Route and glass-style sections consume regular `create:fluid_pipe` items.
+- Mechanical Pumps consume `create:mechanical_pump` items.
+- Copper casing requires at least one `create:copper_casing`, but does not consume one casing per pipe.
+- Missing materials block confirmation in survival and tint affected preview pieces red.

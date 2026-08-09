@@ -31,6 +31,8 @@ Instead of placing long pipe lines block by block, you select a start point, aim
 ## Main Features
 
 - **Ghost preview:** See the route before spending items.
+- **Progressive construction:** Confirmed routes can build one visible piece at a time.
+- **Animation settings:** Choose five speeds, instant placement, and independent construction previews.
 - **Smart routing:** Finds a valid path around obstacles.
 - **Anchors:** Add waypoints to force turns or guide the route.
 - **Radial menu:** Change route style, pumps, flow direction, casing, and pipe style.
@@ -90,6 +92,17 @@ Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps
 
 Tip: `Avoid vertical` is useful for natural terrain, but very long or complex routes can be heavier than the other route modes.
 
+## Placement Animation
+
+Open **Mods > Create: Pipe Connector > Config** to configure confirmed route construction:
+
+- Enable or disable progressive construction. Disabled routes are placed instantly.
+- Choose Very slow (`1` piece/s), Slow (`5` pieces/s), Normal (`10` pieces/s), Fast (`15` pieces/s), or Very fast (`20` pieces/s).
+- Keep the complete unbuilt route visible without outlines.
+- Highlight the next piece immediately before it is placed.
+
+Speed changes apply to routes already being built. Multiple players and multiple confirmed routes can progress independently.
+
 ## Survival Materials
 
 The HUD shows material counts as:
@@ -104,17 +117,15 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 
 ## Requirements
 
-- **Java:** `21`
-
-| Loader | Minecraft | Mod Version | Status |
-| --- | --- | --- | --- |
-| NeoForge | `1.21.1` | `1.1.0` | Supported |
-| Forge | `1.20.1` | `1.1.0` | Supported |
-| Fabric | - | - | Not available yet |
+| Loader | Minecraft | Java | Mod Version | Status |
+| --- | --- | --- | --- | --- |
+| NeoForge | `1.21.1` | `21` | `1.1.0` | Supported |
+| Forge | `1.20.1` | `17` | `1.1.0` | Supported |
+| Fabric | - | - | - | Not available yet |
 
 For the NeoForge build:
 
-- **NeoForge:** `21.1.219` or compatible
+- **NeoForge:** `21.1.218` or newer compatible `21.1.x`
 - **Create:** `6.0.6` or compatible `6.0.x`
 
 ## Modpack Notes
@@ -127,25 +138,26 @@ For the NeoForge build:
 
 ## Developer Notes
 
-This branch is NeoForge-only. Shared connector logic lives in `common`; NeoForge input, networking, events, HUD, and rendering live in `neoforge`.
+This branch is a NeoForge-only, single-module project. Gameplay, client, network, and render code live under `src/main`.
 
-- Route orchestration: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
-- Pathfinding: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipePathfinder.java`
-- Route geometry: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeRouteGeometry.java`
-- Preview state building: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipePreviewBuilder.java`
-- Material preview: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/input/ClientMaterialPreview.java`
-- NeoForge client input: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/input`
-- Ghost preview renderer: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/render/PipeGhostRenderer.java`
-- Radial menu: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/screen/ConnectorOptionsRadialScreen.java`
+- Route orchestration: `src/main/java/com/javiluli/createpipeconnector/feature/connector/PipeConnectorLogic.java`
+- Route planning: `src/main/java/com/javiluli/createpipeconnector/feature/connector/planning/ConnectionPlanBuilder.java`
+- Pathfinding: `src/main/java/com/javiluli/createpipeconnector/feature/routing/PipePathfinder.java`
+- Create interoperability: `src/main/java/com/javiluli/createpipeconnector/core/create/CreatePipeBlocks.java`
+- Progressive placement: `src/main/java/com/javiluli/createpipeconnector/feature/placement`
+- Ghost preview renderer: `src/main/java/com/javiluli/createpipeconnector/feature/preview/client/PipeGhostRenderer.java`
+- NeoForge networking: `src/main/java/com/javiluli/createpipeconnector/platform/network`
+- Radial menu: `src/main/java/com/javiluli/createpipeconnector/feature/ui/client/ConnectorOptionsRadialScreen.java`
 
 Build commands:
 
-- Run client: `./gradlew :neoforge:runClient`
-- Build jar: `./gradlew :neoforge:build`
-- Build release copy: `./gradlew buildAll`
+- Run client: `./gradlew runClient`
+- Build jar: `./gradlew build`
+- Build release copy: `./gradlew buildRelease`
 
 More docs:
 
+- `CHANGELOG.md`
 - `docs/PLAYER_GUIDE.md`
 - `docs/MODPACK_GUIDE.md`
 - `docs/DEV_GUIDE.md`
