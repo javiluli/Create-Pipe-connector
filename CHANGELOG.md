@@ -1,53 +1,58 @@
 # Create: Pipe Connector - Forge Changelog
 
-All notable changes to the Forge edition are documented manually in this file.
+------------------------------------------------------
+Create: Pipe Connector 1.1.0 - Forge
+------------------------------------------------------
 
-Versions are listed from newest to oldest. Changes that have not been released yet are collected under **Unreleased**. Release entries use **Features**, **Bug Fixes**, and **Changes** so their wording can stay aligned with the related Git commits.
+#### Additions
 
-## Unreleased
+- Add an immediate ghost preview for the first selected pipe position
+- Add progressive route construction that places confirmed pipes one piece at a time
+- Add five construction speed presets: Very slow (`1` piece/s), Slow (`5` pieces/s), Normal (`10` pieces/s), Fast (`15` pieces/s), and Very fast (`20` pieces/s)
+- Add an option to disable progressive construction for instant placement
+- Synchronize per-player animation preferences with multiplayer servers
+- Apply animation setting changes to routes already being constructed
+- Add independent settings for the complete outline-free construction preview and the highlighted next-piece preview
+- Allow several confirmed routes to animate at the same time
 
-## 1.1.0 - 2026-08-09
+#### Art Changes
 
-### Features
+- Add dedicated ghost and anchor render types while preserving the established cyan, yellow, pump, and missing-material colors
+- Restore transparent ghost models so rear pipe edges remain visible through the preview
+- Improve anchor layering so pipe models and cyan outlines remain visible through the yellow overlay
+- Keep preview colors and transparency consistent when routes cross water or other fluid surfaces
 
-- Added an immediate ghost preview for the first selected pipe position.
-- Added progressive route construction that places confirmed pipes one piece at a time.
-- Added five construction speed presets: Very slow (`1` piece/s), Slow (`5` pieces/s), Normal (`10` pieces/s), Fast (`15` pieces/s), and Very fast (`20` pieces/s).
-- Added an instant placement option by disabling progressive construction.
-- Added per-player animation preferences synchronized with multiplayer servers.
-- Added live animation setting updates for routes that are already being constructed.
-- Added independent settings for the complete outline-free construction preview and the highlighted next-piece preview.
-- Added support for several animated routes progressing at the same time.
+#### Gameplay Changes
 
-### Bug Fixes
+- Support Create versions from `6.0.6` up to, but not including, `6.1.0`
+- Require one copper casing in the inventory without consuming one casing for every encased pipe
+- Use regular Create fluid pipes as the only route material for glass styling
 
-- Fixed Forge production jars not being reobfuscated correctly.
-- Fixed runtime crashes caused by incompatible `ResourceLocation` helper methods in Forge `1.20.1` modpacks.
-- Fixed preview pipes becoming opaque, partially invisible, or losing transparency with Embeddium, Oculus, shaders, and other rendering modifications.
-- Fixed hidden cyan pipe outlines inside the yellow anchor overlay.
-- Fixed triangular gaps and malformed faces in the translucent anchor cube.
-- Fixed preview transparency and colors changing after adding or removing anchors.
-- Fixed previews disappearing when the camera and route were on opposite sides of a water or fluid surface.
-- Fixed placed pipes, elbows, pumps, and encased sections not consistently preserving waterlogging.
-- Fixed anchor positions occasionally leaving an empty gap in the placed route.
-- Fixed the all-glass style requesting or consuming separate glass pipe items instead of regular fluid pipes.
-- Fixed missing-material highlighting so glass-styled sections use the available regular pipe count.
-- Fixed placement animation settings not applying reliably after joining, closing the config screen, or changing an active route.
-- Fixed disabling progressive construction not finishing already queued routes immediately.
-- Fixed completed pieces remaining visible in the construction preview after being placed.
+#### Optimizations
 
-### Changes
+- Reorganize routing, geometry, interaction range, materials, sessions, payload handling, and UI code into focused feature packages
+- Convert the legacy multiloader workspace into a standard single-module Forge project
+- Remove the stale NeoForge module, obsolete loader scaffolding, package metadata, unused code, translations, and project files
+- Document mod classes and methods with concise Spanish Javadocs
+- Simplify the Gradle tasks used to run and package the Forge build
+- Reuse Create and Catnip model buffering through `SchematicLevel`, `ForgeBakedModelBufferer`, and `SuperByteBuffer`
+- Cache preview geometry, fluid groups, outline boxes, outline colors, anchor lookups, and visible sections instead of recalculating them every frame
+- Reduce temporary allocations and duplicate work while building routes, drawing outlines, updating anchors, and rendering long previews
+- Update the README and Forge documentation for the final project structure, Create compatibility, controls, and placement animation settings
 
-- Expanded Create compatibility to versions from `6.0.6` up to, but not including, `6.1.0`.
-- Copper casing now follows Create behavior: one casing is required in the inventory, but casing is not consumed for every pipe.
-- Glass styling now uses regular Create fluid pipes as its only route material.
-- Reorganized routing, geometry, interaction range, materials, sessions, payload handling, and UI code into focused feature packages.
-- Converted the legacy multiloader workspace into a standard single-module Forge project.
-- Removed the stale NeoForge module, obsolete loader scaffolding, unused code, translations, package metadata, and project files.
-- Added concise Spanish Javadocs to the mod classes and methods for future maintenance.
-- Simplified the Gradle tasks used to run and package the Forge build.
-- Added dedicated ghost and anchor render types while preserving the established cyan, yellow, pump, and missing-material colors.
-- Reused Create and Catnip model buffering through `SchematicLevel`, `ForgeBakedModelBufferer`, and `SuperByteBuffer`.
-- Cached preview geometry, fluid groups, outline boxes, outline colors, anchor lookups, and visible sections instead of recalculating them every frame.
-- Reduced temporary allocations and duplicate work while building routes, drawing outlines, updating anchors, and rendering long previews.
-- Updated the README and Forge documentation for the final project structure, Create compatibility, controls, and placement animation settings.
+#### Bug Fixes
+
+- Fix Forge production jars not being reobfuscated correctly
+- Fix the initial pipe preview not appearing until the route contains at least two positions
+- Fix preview pipes becoming opaque, partially invisible, or losing transparency with Embeddium, Oculus, shaders, and other rendering modifications
+- Fix hidden cyan pipe outlines inside the yellow anchor overlay
+- Fix triangular gaps and malformed faces in the translucent anchor cube
+- Fix preview transparency and colors changing after adding or removing anchors
+- Fix previews disappearing when the camera and route are on opposite sides of a water or fluid surface
+- Fix placed pipes, elbows, pumps, and encased sections not consistently preserving waterlogging
+- Fix anchor positions occasionally leaving an empty gap in the placed route
+- Fix the all-glass style requesting or consuming separate glass pipe items instead of regular fluid pipes
+- Fix missing-material highlighting so glass-styled sections use the available regular pipe count
+- Fix placement animation settings not applying reliably after joining, closing the config screen, or changing an active route
+- Fix disabling progressive construction not finishing already queued routes immediately
+- Fix completed pieces remaining visible in the construction preview after being placed
