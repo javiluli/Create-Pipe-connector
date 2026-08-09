@@ -7,14 +7,14 @@
 
 A utility addon for [Create](https://github.com/Creators-of-Create/Create). Available builds are listed below.
 
-![Version](https://img.shields.io/badge/Version-1.0.0-2E7D32?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-1.1.0-2E7D32?style=for-the-badge)
 <a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
 <img src="https://img.shields.io/curseforge/dt/1610354?style=for-the-badge&color=242629&labelColor=F16436&logo=curseforge&logoColor=white&label=" alt="CurseForge">
 </a>
 <a href="https://modrinth.com/mod/create-pipe-connector">
 <img src="https://img.shields.io/modrinth/dt/create-pipe-connector?logo=modrinth&label=&suffix=%20&style=for-the-badge&color=242629&labelColor=5CA424&logoColor=1C1C1C" alt="Modrinth">
 </a>
-![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
+![Create](https://img.shields.io/badge/Create-6.0.6+-7B4F1D?style=for-the-badge)
 ![NeoForge](https://img.shields.io/badge/NeoForge-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
 ![Forge](https://img.shields.io/badge/Forge-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
 ![Fabric](https://img.shields.io/badge/Fabric-not%20available-757575?style=for-the-badge)
@@ -32,6 +32,8 @@ Instead of placing long pipe lines block by block, you select a start point, aim
 ## Main Features
 
 - **Ghost preview:** See the route before spending items.
+- **Progressive construction:** Confirmed routes can build one visible piece at a time.
+- **Animation settings:** Choose five speeds, instant placement, and independent construction previews.
 - **Smart routing:** Finds a valid path around obstacles.
 - **Anchors:** Add waypoints to force turns or guide the route.
 - **Radial menu:** Change route style, pumps, flow direction, casing, and pipe style.
@@ -91,6 +93,17 @@ Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps
 
 Tip: `Avoid vertical` is useful for natural terrain, but very long or complex routes can be heavier than the other route modes.
 
+## Placement Animation
+
+Open **Mods > Create: Pipe Connector > Config** to configure confirmed route construction:
+
+- Enable or disable progressive construction. Disabled routes are placed instantly.
+- Choose Very slow (`1` piece/s), Slow (`5` pieces/s), Normal (`10` pieces/s), Fast (`15` pieces/s), or Very fast (`20` pieces/s).
+- Keep the complete unbuilt route visible without outlines.
+- Highlight the next piece immediately before it is placed.
+
+Speed changes apply to routes already being built. Multiple players and multiple confirmed routes can progress independently.
+
 ## Survival Materials
 
 The HUD shows material counts as:
@@ -105,45 +118,47 @@ Copper casing works like Create: you only need at least one `create:copper_casin
 
 ## Requirements
 
-- **Java:** `21`
-
-| Loader   | Minecraft | Mod Version  | Status                      |
-| -------- | --------- | ------------ | --------------------------- |
-| NeoForge | `1.21.1`  | `1.0.0`      | Main supported build        |
-| Forge    | `1.20.1`  | `0.2.0-beta` | Separate Forge branch/build |
-| Fabric   | -         | -            | Not available yet           |
+| Loader | Minecraft | Java | Mod Version | Status |
+| --- | --- | --- | --- | --- |
+| NeoForge | `1.21.1` | `21` | `1.1.0` | Supported |
+| Forge | `1.20.1` | `17` | `1.1.0` | Supported |
+| Fabric | - | - | - | Not available yet |
 
 For the NeoForge build:
 
-- **NeoForge:** `21.1.219` or compatible
-- **Create:** `6.0.10-280` or compatible
+- **NeoForge:** `21.1.218` or newer compatible `21.1.x`
+- **Create:** `6.0.6` or compatible `6.0.x`
 
 ## Modpack Notes
 
 - Install on both client and server.
 - Requires Create at runtime.
 - No extra runtime dependencies beyond Minecraft, the selected loader, and Create.
-- Current NeoForge version: **`1.0.0`**.
-- This is still beta software, so route edge cases can happen. Screenshots help a lot when reporting bugs.
+- Current NeoForge version: **`1.1.0`**.
+- Report route or preview edge cases with screenshots and the relevant client or server log.
 
 ## Developer Notes
 
-This branch is NeoForge-only. Shared connector logic lives in `common`; NeoForge input, networking, events, HUD, and rendering live in `neoforge`.
+This branch is a NeoForge-only, single-module project. Gameplay, client, network, and render code live under `src/main`.
 
-- Core routing: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipeConnectorLogic.java`
-- Preview state building: `common/src/main/java/com/javiluli/createpipeconnector/connector/PipePreviewBuilder.java`
-- NeoForge client input: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/input`
-- Ghost preview renderer: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/render/PipeGhostRenderer.java`
-- Radial menu: `neoforge/src/main/java/com/javiluli/createpipeconnector/client/screen/ConnectorOptionsRadialScreen.java`
+- Route orchestration: `src/main/java/com/javiluli/createpipeconnector/feature/connector/PipeConnectorLogic.java`
+- Route planning: `src/main/java/com/javiluli/createpipeconnector/feature/connector/planning/ConnectionPlanBuilder.java`
+- Pathfinding: `src/main/java/com/javiluli/createpipeconnector/feature/routing/PipePathfinder.java`
+- Create interoperability: `src/main/java/com/javiluli/createpipeconnector/core/create/CreatePipeBlocks.java`
+- Progressive placement: `src/main/java/com/javiluli/createpipeconnector/feature/placement`
+- Ghost preview renderer: `src/main/java/com/javiluli/createpipeconnector/feature/preview/client/PipeGhostRenderer.java`
+- NeoForge networking: `src/main/java/com/javiluli/createpipeconnector/platform/network`
+- Radial menu: `src/main/java/com/javiluli/createpipeconnector/feature/ui/client/ConnectorOptionsRadialScreen.java`
 
 Build commands:
 
-- Run client: `./gradlew :neoforge:runClient`
-- Build jar: `./gradlew :neoforge:build`
-- Build release copy: `./gradlew buildAll`
+- Run client: `./gradlew runClient`
+- Build jar: `./gradlew build`
+- Build release copy: `./gradlew buildRelease`
 
 More docs:
 
+- `CHANGELOG.md`
 - `docs/PLAYER_GUIDE.md`
 - `docs/MODPACK_GUIDE.md`
 - `docs/DEV_GUIDE.md`

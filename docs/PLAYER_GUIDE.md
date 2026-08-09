@@ -15,7 +15,8 @@
 - Advanced direct shortcuts for pump/casing actions exist in Minecraft's Controls menu, but are unassigned by default.
 - With Create's wrench, double right-click a pipe to toggle a straight connected segment between default and glass.
 - The connector HUD shows item icons with `required/available` counts in survival.
-- Missing pipes, glass pipes, pumps, or required copper casing access are tinted red in the ghost preview.
+- Confirmed routes can be built progressively instead of appearing all at once.
+- Missing pipes, pumps, or required copper casing access are tinted red in the ghost preview.
 
 ## Supported pipes
 
@@ -39,6 +40,17 @@
 12. Right-click again to place the planned route, even if no block is targeted.
 13. Left-click during a preview to cancel only the current route.
 14. Press `B` again to disable Connector Pipe mode.
+
+## Construction animation
+
+Open **Mods > Create: Pipe Connector > Config** to choose how confirmed routes are built.
+
+- **Animate route construction:** enables progressive one-piece-at-a-time placement.
+- **Construction speed:** Very slow, Slow, Normal, Fast, or Very fast.
+- **Complete construction preview:** keeps all unbuilt pieces visible without outlines.
+- **Next piece preview:** highlights the piece that will be placed next.
+
+Disabling the animation places new routes instantly and immediately completes routes already in progress. Speed changes also apply to active routes.
 
 ## Route styles
 
@@ -64,7 +76,8 @@
 - If survival inventory is insufficient, the required count turns red and placement is cancelled.
 - Missing pipe, pump, or casing preview pieces are tinted red so you can see what cannot be afforded.
 - If you confirm without enough materials, the route stays active and the HUD shows what is missing.
-- With pump modes, glass style, or copper casing enabled, material requirements are shown separately.
+- Glass style uses the same regular `create:fluid_pipe` inventory as default style; it does not require a separate glass item.
+- Pump and copper casing requirements are shown separately when those features are enabled.
 - Manual pumps use Create's `create:mechanical_pump` item and only apply to straight route slots.
 - Copper casing requires at least one Create `create:copper_casing` item in your inventory, but it is not consumed.
 - Copper casing applies to regular `create:fluid_pipe` routes, producing `create:encased_fluid_pipe`.
@@ -79,8 +92,7 @@
 - The connected straight segment toggles between default and glass.
 - The shortcut stops at Mechanical Pumps and leaves elbows unchanged when glass cannot represent the shape.
 
-## Beta status
+## Release status
 
-- This addon is in beta.
-- The name and visuals may still change later.
-- If something looks wrong, report it with a screenshot and the approximate location.
+- The `1.x` line is the stable public release of the addon.
+- If something looks wrong, report it with a screenshot, the approximate location, and the relevant client or server log.
