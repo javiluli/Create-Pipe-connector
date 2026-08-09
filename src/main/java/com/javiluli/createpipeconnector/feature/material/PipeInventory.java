@@ -1,0 +1,177 @@
+package com.javiluli.createpipeconnector.feature.material;
+
+import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
+import com.javiluli.createpipeconnector.core.create.CreatePipeBlocks;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+
+import java.util.List;
+
+/** Cuenta, consume y devuelve materiales respetando el modo creativo. */
+public final class PipeInventory {
+    /** Impide crear instancias del servicio de inventario. */
+    private PipeInventory() {
+    }
+
+    /** Cuenta las tuberias compatibles disponibles para colocar. */
+    public static int countAvailablePipes(Player player, Block pipeBlock) {
+        if (player.getAbilities().instabuild) {
+            return Integer.MAX_VALUE;
+        }
+
+        Item pipeItem = pipeBlock.asItem();
+        if (pipeItem == Items.AIR) {
+            return 0;
+        }
+
+        return countAvailableItems(player, pipeItem);
+    }
+
+    /** Cuenta las bombas mecanicas disponibles para colocar. */
+    public static int countAvailablePumps(Player player) {
+        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
+        if (pumpBlock == null) {
+            return 0;
+        }
+
+        return countAvailableItems(player, pumpBlock.asItem());
+    }
+
+    /** Indica mediante un contador si hay revestimiento de cobre disponible. */
+    public static int countAvailableCopperCasings(Player player) {
+        Block casingBlock = CreatePipeBlocks.getCopperCasingBlock();
+        if (casingBlock == null) {
+            return 0;
+        }
+
+        return countAvailableItems(player, casingBlock.asItem());
+    }
+
+    /** Comprueba todos los materiales exigidos por el plan. */
+    public static boolean hasEnoughItems(Player player, Block pipeBlock, ConnectionPlan plan) {
+        return player.getAbilities().instabuild
+                || (countAvailablePipes(player, pipeBlock) >= plan.requiredPipes()
+                && countAvailablePumps(player) >= plan.requiredPumps()
+                && countAvailableCopperCasings(player) >= plan.requiredCopperCasings());
+    }
+
+    /** Consume unicamente las tuberias solicitadas, salvo en creativo. */
+    public static boolean consumePipes(Player player, Block pipeBlock, int requiredPipes) {
+        if (requiredPipes <= 0 || player.getAbilities().instabuild) {
+            return true;
+        }
+
+        if (countAvailablePipes(player, pipeBlock) < requiredPipes) {
+            return false;
+        }
+
+        Item pipeItem = pipeBlock.asItem();
+        int remaining = requiredPipes;
+        remaining = consumeMatchingStacks(player.getInventory().items, pipeItem, remaining);
+        remaining = consumeMatchingStacks(player.getInventory().offhand, pipeItem, remaining);
+        player.getInventory().setChanged();
+        return remaining == 0;
+    }
+
+    /** Consume de forma conjunta los materiales de un plan ya validado. */
+    public static boolean consumeItems(Player player, Block pipeBlock, ConnectionPlan plan) {
+        if (player.getAbilities().instabuild) {
+            return true;
+        }
+        if (!hasEnoughItems(player, pipeBlock, plan)) {
+            return false;
+        }
+
+        int remainingPipes = plan.requiredPipes();
+        if (remainingPipes > 0) {
+            Item pipeItem = pipeBlock.asItem();
+            remainingPipes = consumeMatchingStacks(player.getInventory().items, pipeItem, remainingPipes);
+            remainingPipes = consumeMatchingStacks(player.getInventory().offhand, pipeItem, remainingPipes);
+        }
+
+        int remainingPumps = plan.requiredPumps();
+        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
+        if (remainingPumps > 0 && pumpBlock != null) {
+            Item pumpItem = pumpBlock.asItem();
+            remainingPumps = consumeMatchingStacks(player.getInventory().items, pumpItem, remainingPumps);
+            remainingPumps = consumeMatchingStacks(player.getInventory().offhand, pumpItem, remainingPumps);
+        }
+
+        player.getInventory().setChanged();
+        return remainingPipes == 0 && remainingPumps == 0;
+    }
+
+    /** Devuelve al inventario los materiales reservados que no llegaron a colocarse. */
+    public static void refundItems(Player player, Block pipeBlock, int pipeCount, int pumpCount) {
+        if (player.getAbilities().instabuild) {
+            return;
+        }
+        refundItem(player, pipeBlock.asItem(), pipeCount);
+        Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
+        if (pumpBlock != null) {
+            refundItem(player, pumpBlock.asItem(), pumpCount);
+        }
+    }
+
+    /** Inserta un material reservado o lo deja caer si el inventario esta lleno. */
+    private static void refundItem(Player player, Item item, int count) {
+        if (item == Items.AIR || count <= 0) {
+            return;
+        }
+        int remaining = count;
+        while (remaining > 0) {
+            ItemStack stack = new ItemStack(item, Math.min(item.getDefaultMaxStackSize(), remaining));
+            remaining -= stack.getCount();
+            if (!player.getInventory().add(stack)) {
+                player.drop(stack, false);
+            }
+        }
+        player.getInventory().setChanged();
+    }
+
+    /** Cuenta un tipo de objeto entre manos e inventario. */
+    private static int countAvailableItems(Player player, Item item) {
+        if (player.getAbilities().instabuild) {
+            return Integer.MAX_VALUE;
+        }
+        if (item == Items.AIR) {
+            return 0;
+        }
+
+        int count = 0;
+        count += countMatchingStacks(player.getInventory().items, item);
+        count += countMatchingStacks(player.getInventory().offhand, item);
+        return count;
+    }
+
+    /** Suma las unidades coincidentes de una coleccion de pilas. */
+    private static int countMatchingStacks(List<ItemStack> stacks, Item item) {
+        int count = 0;
+        for (ItemStack stack : stacks) {
+            if (stack.is(item)) {
+                count += stack.getCount();
+            }
+        }
+        return count;
+    }
+
+    /** Retira unidades coincidentes y devuelve la cantidad pendiente. */
+    private static int consumeMatchingStacks(List<ItemStack> stacks, Item item, int remaining) {
+        for (ItemStack stack : stacks) {
+            if (remaining <= 0) {
+                return 0;
+            }
+            if (!stack.is(item)) {
+                continue;
+            }
+            int consumed = Math.min(remaining, stack.getCount());
+            stack.shrink(consumed);
+            remaining -= consumed;
+        }
+        return remaining;
+    }
+}
+
