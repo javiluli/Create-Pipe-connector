@@ -1,7 +1,6 @@
 package com.javiluli.createpipeconnector.feature.placement.config;
 
 import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSettings;
-import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSpeed;
 import net.createmod.catnip.config.ui.ConfigHelper;
 import net.minecraftforge.common.ForgeConfigSpec;
 
@@ -11,7 +10,7 @@ public final class PlacementAnimationClientConfig {
     private static final ForgeConfigSpec.BooleanValue ANIMATION_ENABLED;
     private static final ForgeConfigSpec.BooleanValue FULL_ROUTE_PREVIEW;
     private static final ForgeConfigSpec.BooleanValue NEXT_PIECE_PREVIEW;
-    private static final ForgeConfigSpec.EnumValue<PlacementAnimationSpeed> SPEED_PRESET;
+    private static final ForgeConfigSpec.IntValue DELAY_TIME;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -20,14 +19,19 @@ public final class PlacementAnimationClientConfig {
                 .comment("Build confirmed routes progressively instead of placing every piece immediately.")
                 .translation("config.createpipeconnector.placement_animation.enabled")
                 .define("animateRouteConstruction", PlacementAnimationSettings.DEFAULT_ENABLED);
-        SPEED_PRESET = builder
+        DELAY_TIME = builder
                 .comment(
-                        "Closed construction speed preset.",
-                        "Very slow: 1 piece/s, Slow: 5 pieces/s, Normal: 10 pieces/s,",
-                        "Fast: 15 pieces/s, Very fast: 20 pieces/s."
+                        "Delay in milliseconds between the start of two consecutive pieces.",
+                        "Lower values build the route faster. Range: 50-1000 ms.",
+                        "The minimum matches one Minecraft game tick to avoid placement batches."
                 )
-                .translation("config.createpipeconnector.placement_animation.speed_preset")
-                .defineEnum("constructionSpeed", PlacementAnimationSpeed.VERY_FAST);
+                .translation("config.createpipeconnector.placement_animation.delay_time")
+                .defineInRange(
+                        "delayTimeMilliseconds",
+                        PlacementAnimationSettings.DEFAULT_DELAY_MILLISECONDS,
+                        PlacementAnimationSettings.MINIMUM_DELAY_MILLISECONDS,
+                        PlacementAnimationSettings.MAXIMUM_DELAY_MILLISECONDS
+                );
         FULL_ROUTE_PREVIEW = builder
                 .comment(
                         "Keep the complete unbuilt route visible without outlines during construction.",
@@ -54,7 +58,7 @@ public final class PlacementAnimationClientConfig {
     public static PlacementAnimationSettings get() {
         return new PlacementAnimationSettings(
                 ANIMATION_ENABLED.get(),
-                SPEED_PRESET.get().piecesPerSecond()
+                DELAY_TIME.get()
         );
     }
 
@@ -82,7 +86,7 @@ public final class PlacementAnimationClientConfig {
     /** Guarda las preferencias elegidas desde la pantalla del mod. */
     public static void save(PlacementAnimationSettings settings) {
         ANIMATION_ENABLED.set(settings.enabled());
-        SPEED_PRESET.set(PlacementAnimationSpeed.fromPiecesPerSecond(settings.piecesPerSecond()));
+        DELAY_TIME.set(settings.delayMilliseconds());
         SPEC.save();
     }
 }

@@ -1,16 +1,22 @@
 package com.javiluli.createpipeconnector.feature.placement;
 
-/** Preferencias inmutables que controlan la velocidad de construccion progresiva. */
-public record PlacementAnimationSettings(boolean enabled, int piecesPerSecond) {
+/** Preferencias inmutables que controlan la construccion progresiva. */
+public record PlacementAnimationSettings(boolean enabled, int delayMilliseconds) {
     public static final boolean DEFAULT_ENABLED = true;
-    public static final int GAME_TICKS_PER_SECOND = 20;
+    public static final int MILLISECONDS_PER_GAME_TICK = 50;
+    public static final int MINIMUM_DELAY_MILLISECONDS = MILLISECONDS_PER_GAME_TICK;
+    public static final int MAXIMUM_DELAY_MILLISECONDS = 1_000;
+    public static final int DEFAULT_DELAY_MILLISECONDS = MINIMUM_DELAY_MILLISECONDS;
     public static final PlacementAnimationSettings DEFAULT = new PlacementAnimationSettings(
             DEFAULT_ENABLED,
-            PlacementAnimationSpeed.VERY_FAST.piecesPerSecond()
+            DEFAULT_DELAY_MILLISECONDS
     );
 
-    /** Ajusta valores antiguos o externos al preset de velocidad mas cercano. */
+    /** Limita valores externos al intervalo ofrecido por la configuracion. */
     public PlacementAnimationSettings {
-        piecesPerSecond = PlacementAnimationSpeed.fromPiecesPerSecond(piecesPerSecond).piecesPerSecond();
+        delayMilliseconds = Math.max(
+                MINIMUM_DELAY_MILLISECONDS,
+                Math.min(MAXIMUM_DELAY_MILLISECONDS, delayMilliseconds)
+        );
     }
 }

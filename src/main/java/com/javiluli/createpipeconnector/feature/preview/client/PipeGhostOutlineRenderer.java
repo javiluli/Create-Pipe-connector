@@ -2,6 +2,7 @@ package com.javiluli.createpipeconnector.feature.preview.client;
 
 import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.ActivePreview;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.AnimatedPiece;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -11,6 +12,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 
 import java.util.HashSet;
 import java.util.List;
@@ -62,9 +64,11 @@ final class PipeGhostOutlineRenderer {
     static void renderLeadPieces(
             PoseStack poseStack,
             MultiBufferSource.BufferSource bufferSource,
+            Level level,
             List<ActivePreview> leadPreviews,
             Map<Integer, PipeGhostGeometryCache> bufferCaches,
-            Frustum frustum
+            Frustum frustum,
+            float partialTick
     ) {
         if (leadPreviews.isEmpty()) {
             return;
@@ -74,21 +78,41 @@ final class PipeGhostOutlineRenderer {
         boolean rendered = false;
         for (ActivePreview leadPreview : leadPreviews) {
             PipeGhostGeometryCache bufferCache = bufferCaches.get(leadPreview.version());
-            int pieceIndex = leadPreview.pieceIndex();
-            if (bufferCache == null || pieceIndex < 0 || pieceIndex >= bufferCache.sections().size()) {
+            if (bufferCache == null) {
                 continue;
             }
 
-            PipeGhostGeometryCache.Section section = bufferCache.sections().get(pieceIndex);
-            if (!frustum.isVisible(section.bounds())) {
-                continue;
-            }
-            for (PipeGhostGeometryCache.OutlinePiece outline : section.outlines()) {
-                if (lineBuffer == null) {
-                    lineBuffer = bufferSource.getBuffer(RenderType.lines());
+            List<PipeGhostGeometryCache.Section> sections = bufferCache.sections();
+            for (AnimatedPiece animatedPiece : leadPreview.animatedPieces()) {
+                int pieceIndex = animatedPiece.pieceIndex();
+                if (pieceIndex < 0 || pieceIndex >= sections.size()) {
+                    continue;
                 }
-                renderPiece(poseStack, lineBuffer, outline);
-                rendered = true;
+
+                PipeGhostGeometryCache.Section section = sections.get(pieceIndex);
+                if (!frustum.isVisible(section.bounds())) {
+                    continue;
+                }
+
+                BlockPos position = leadPreview.pieces().get(pieceIndex).position();
+                float animatedScale = PipeGhostCascadeAnimation.scale(
+                        level,
+                        animatedPiece,
+                        partialTick
+                );
+                poseStack.pushPose();
+                try {
+                    PipeGhostCascadeAnimation.applyCentered(poseStack, position, animatedScale);
+                    for (PipeGhostGeometryCache.OutlinePiece outline : section.outlines()) {
+                        if (lineBuffer == null) {
+                            lineBuffer = bufferSource.getBuffer(RenderType.lines());
+                        }
+                        renderPiece(poseStack, lineBuffer, outline);
+                        rendered = true;
+                    }
+                } finally {
+                    poseStack.popPose();
+                }
             }
         }
         endLineBatch(bufferSource, rendered);
@@ -152,6 +176,16 @@ final class PipeGhostOutlineRenderer {
             VertexConsumer lineBuffer,
             PipeGhostGeometryCache.OutlinePiece outline
     ) {
+        renderPiece(poseStack, lineBuffer, outline, OUTLINE_ALPHA);
+    }
+
+    /** Dibuja una pieza con la opacidad indicada por su fase de animacion. */
+    private static void renderPiece(
+            PoseStack poseStack,
+            VertexConsumer lineBuffer,
+            PipeGhostGeometryCache.OutlinePiece outline,
+            float alpha
+    ) {
         for (PipeGhostGeometryCache.OutlineBox box : outline.boxes()) {
             LevelRenderer.renderLineBox(
                     poseStack,
@@ -160,7 +194,7 @@ final class PipeGhostOutlineRenderer {
                     box.red(),
                     box.green(),
                     box.blue(),
-                    OUTLINE_ALPHA
+                    alpha
             );
         }
     }

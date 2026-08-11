@@ -72,12 +72,15 @@ record PipeGhostGeometryCache(
         return suffixFluidMasks[index];
     }
 
-    /** Devuelve el fluido de una pieza concreta del preview progresivo. */
-    int fluidMaskAt(int sectionIndex) {
-        if (sectionIndex < 0 || sectionIndex >= sections.size()) {
-            return 0;
+    /** Combina los fluidos de un rango pequeno de piezas animadas. */
+    int fluidMaskRange(int firstSection, int lastSection) {
+        int startIndex = Math.max(0, firstSection);
+        int endIndex = Math.min(lastSection, sections.size());
+        int mask = 0;
+        for (int index = startIndex; index < endIndex; index++) {
+            mask |= sections.get(index).fluidMask();
         }
-        return sections.get(sectionIndex).fluidMask();
+        return mask;
     }
 
     /** Localiza un contorno sin recorrer toda la ruta. */

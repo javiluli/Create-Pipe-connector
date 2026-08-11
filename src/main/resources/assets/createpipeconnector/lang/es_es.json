@@ -70,5 +70,5 @@
   "config.createpipeconnector.placement_animation.enabled": "Animar construcción de la ruta",
   "config.createpipeconnector.placement_animation.full_route_preview": "Mostrar preview completo de construcción",
   "config.createpipeconnector.placement_animation.next_piece_preview": "Mostrar preview de la siguiente pieza",
-  "config.createpipeconnector.placement_animation.speed_preset": "Velocidad de construcción"
+  "config.createpipeconnector.placement_animation.delay_time": "Tiempo de espera (ms)"
 }

@@ -4,10 +4,10 @@ import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSett
 import net.minecraft.network.FriendlyByteBuf;
 
 /** Envia al servidor la preferencia local de construccion progresiva. */
-public record PlacementAnimationSettingsPayload(boolean enabled, int piecesPerSecond) {
+public record PlacementAnimationSettingsPayload(boolean enabled, int delayMilliseconds) {
     /** Crea el payload desde una configuracion ya saneada. */
     public PlacementAnimationSettingsPayload(PlacementAnimationSettings settings) {
-        this(settings.enabled(), settings.piecesPerSecond());
+        this(settings.enabled(), settings.delayMilliseconds());
     }
 
     /** Decodifica el estado y la velocidad solicitados. */
@@ -18,6 +18,6 @@ public record PlacementAnimationSettingsPayload(boolean enabled, int piecesPerSe
     /** Codifica el estado y la velocidad solicitados. */
     public static void encode(PlacementAnimationSettingsPayload payload, FriendlyByteBuf buffer) {
         buffer.writeBoolean(payload.enabled());
-        buffer.writeVarInt(payload.piecesPerSecond());
+        buffer.writeVarInt(payload.delayMilliseconds());
     }
 }
