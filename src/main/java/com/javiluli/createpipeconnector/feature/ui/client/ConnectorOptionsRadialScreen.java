@@ -37,7 +37,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static final String MECHANIC_KEY_PREFIX = "screen.createpipeconnector.options.mechanic.";
     private static final String OPTION_KEY_PREFIX = "screen.createpipeconnector.options.option.";
     private static final String DESCRIPTION_KEY_PREFIX = "screen.createpipeconnector.options.description.";
-    private static final int BACKGROUND_COLOR = 0x33000000;
+    private static final int BACKGROUND_COLOR = 0x4D000000;
     private static final int MECHANIC_COLOR = 0x73000000;
     private static final int ACTIVE_COLOR = 0xA64A3518;
     private static final int HOVERED_COLOR = 0x59000000;
@@ -66,7 +66,9 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static final int OPTION_LABEL_MAX_WIDTH = 74;
     private static final float MECHANIC_LABEL_SCALE = 0.68F;
     private static final float OPTION_LABEL_SCALE = 0.62F;
-    private static final float SMALL_TEXT_SCALE = 0.68F;
+    private static final float TITLE_TEXT_SCALE = 1.15F;
+    private static final float BODY_TEXT_SCALE = 1.0F;
+    private static final float HINT_TEXT_SCALE = 0.68F;
     private static final Mechanic[] MECHANICS = Mechanic.values();
     private static final RingCells MECHANIC_RING = RingCells.create(MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS, MECHANICS.length);
     private static final Map<Integer, RingCells> OPTION_RINGS = Map.of(
@@ -94,13 +96,14 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         int centerY = wheelCenterY();
         Font font = Minecraft.getInstance().font;
 
-        guiGraphics.drawCenteredString(font, title, centerX, centerY - OPTION_OUTER_RADIUS - 30, TITLE_TEXT_COLOR);
+        int titleY = centerY - OPTION_OUTER_RADIUS - 48;
+        drawScaledCenteredString(guiGraphics, font, title, centerX, titleY, TITLE_TEXT_COLOR, TITLE_TEXT_SCALE);
+        renderTooltip(guiGraphics, font, centerX, titleY + 19);
         renderWheel(guiGraphics, centerX, centerY);
         renderLabels(guiGraphics, font, centerX, centerY);
-        renderTooltip(guiGraphics, font, centerX, centerY);
 
         Component hint = Component.translatable(HINT_KEY);
-        drawScaledCenteredString(guiGraphics, font, hint, centerX, centerY + OPTION_OUTER_RADIUS + 44, HINT_COLOR, SMALL_TEXT_SCALE);
+        drawScaledCenteredString(guiGraphics, font, hint, centerX, centerY + OPTION_OUTER_RADIUS + 44, HINT_COLOR, HINT_TEXT_SCALE);
     }
 
     /** Actualiza la mecanica u opcion situada bajo el cursor. */
@@ -222,15 +225,14 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         }
     }
 
-    /** Dibuja el titulo y la descripcion de la opcion relevante. */
-    private void renderTooltip(GuiGraphics guiGraphics, Font font, int centerX, int centerY) {
+    /** Dibuja bajo el encabezado el nombre y la descripcion de la opcion relevante. */
+    private void renderTooltip(GuiGraphics guiGraphics, Font font, int centerX, int optionTitleY) {
         RadialOption option = hoveredOption == null ? selectedMechanic.activeOption() : hoveredOption;
         Component optionTitle = Component.translatable(option.translationKey());
         Component description = Component.translatable(option.descriptionTranslationKey());
 
-        int tooltipY = centerY + OPTION_OUTER_RADIUS + 15;
-        drawScaledCenteredString(guiGraphics, font, optionTitle, centerX, tooltipY, TEXT_COLOR, SMALL_TEXT_SCALE);
-        drawScaledCenteredString(guiGraphics, font, description, centerX, tooltipY + 11, HINT_COLOR, SMALL_TEXT_SCALE);
+        drawScaledCenteredString(guiGraphics, font, optionTitle, centerX, optionTitleY, TEXT_COLOR, BODY_TEXT_SCALE);
+        drawScaledCenteredString(guiGraphics, font, description, centerX, optionTitleY + 12, HINT_COLOR, BODY_TEXT_SCALE);
     }
 
     /** Dibuja el borde blanco de la mecanica situada bajo el cursor. */
@@ -259,7 +261,10 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     /** Dibuja el borde de la opcion actualmente aplicada. */
     private void renderSelectedBorder(GuiGraphics guiGraphics, int centerX, int centerY) {
         RadialOption[] options = selectedMechanic.options();
-        renderPixelatedOptionOutline(guiGraphics, centerX, centerY, optionIndex(selectedMechanic.activeOption(), options), SELECTED_BORDER_COLOR);
+        int activeIndex = optionIndex(selectedMechanic.activeOption(), options);
+        if (activeIndex >= 0) {
+            renderPixelatedOptionOutline(guiGraphics, centerX, centerY, activeIndex, SELECTED_BORDER_COLOR);
+        }
     }
 
     /** Dibuja unicamente las celdas de borde de una opcion. */
@@ -444,7 +449,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
                 return index;
             }
         }
-        return 0;
+        return -1;
     }
 
     /** Devuelve la geometria cacheada del anillo con el numero de sectores indicado. */
@@ -620,13 +625,13 @@ public final class ConnectorOptionsRadialScreen extends Screen {
             /** Devuelve los modos de revestimiento disponibles. */
             @Override
             RadialOption[] options() {
-                return CopperCasingModeOption.VALUES;
+                return CopperCasingModeOption.RADIAL_VALUES;
             }
 
             /** Devuelve el modo de revestimiento aplicado actualmente. */
             @Override
             RadialOption activeOption() {
-                for (CopperCasingModeOption option : CopperCasingModeOption.VALUES) {
+                for (CopperCasingModeOption option : CopperCasingModeOption.ALL_VALUES) {
                     if (option.mode == ClientPipeConnectorState.getCopperCasingMode()) {
                         return option;
                     }
@@ -680,6 +685,9 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         RadialOption nextOption() {
             RadialOption[] options = options();
             int currentIndex = optionIndex(activeOption(), options);
+            if (currentIndex < 0) {
+                return options[0];
+            }
             return options[(currentIndex + 1) % options.length];
         }
 
@@ -687,6 +695,9 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         RadialOption previousOption() {
             RadialOption[] options = options();
             int currentIndex = optionIndex(activeOption(), options);
+            if (currentIndex < 0) {
+                return options[options.length - 1];
+            }
             return options[(currentIndex - 1 + options.length) % options.length];
         }
 
@@ -702,7 +713,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
                     return index;
                 }
             }
-            return 0;
+            return -1;
         }
     }
 
@@ -837,13 +848,14 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         }
     }
 
-    /** Opciones visuales de aplicacion del revestimiento de cobre. */
+    /** Opciones de revestimiento; el modo manual solo se muestra como estado contextual. */
     private enum CopperCasingModeOption implements RadialOption {
         NONE(CopperCasingMode.NONE),
         MANUAL(CopperCasingMode.MANUAL),
         ALL(CopperCasingMode.ALL);
 
-        private static final CopperCasingModeOption[] VALUES = values();
+        private static final CopperCasingModeOption[] ALL_VALUES = values();
+        private static final CopperCasingModeOption[] RADIAL_VALUES = {NONE, ALL};
         private final CopperCasingMode mode;
 
         /** Crea una opcion asociada a un modo de revestimiento. */
