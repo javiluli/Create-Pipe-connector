@@ -2,9 +2,66 @@
 
 All notable changes to the Forge edition are documented manually in this file.
 
-Versions are listed from newest to oldest. Changes that have not been released yet are collected under **Unreleased**. Release entries use **Features**, **Bug Fixes**, and **Changes** so their wording can stay aligned with the related Git commits.
+Versions are listed from newest to oldest. Changes that have not been released yet are collected under **Unreleased**. New release entries follow Create-inspired sections so gameplay, rendering, optimization, fixes, and internal additions remain easy to identify.
 
 ## Unreleased
+
+## 1.2.0 - 2026-08-15
+
+### Gameplay Changes
+
+- Added a unified manual tool for anchors, mechanical pumps, and copper casing, selected from the radial menu and used with the same contextual control.
+- Added chronological undo for manual route edits, allowing the latest anchor, pump, or casing mark to be removed with one control regardless of its type.
+- Added an optional setting that lets manual pumps and casing marks guide the route as anchors without changing their placement behavior.
+- Added direct access to pipe and pump items, plus copper casing availability, inside carried vanilla shulker boxes.
+- Added a client option to disable shulker material access; loose inventory items always remain the first source consumed.
+- Added cascading construction with configurable `50`-`1000` ms delay, optional zoom, complete-route preview, and next-piece preview settings.
+- Added contextual route interactions: a pipe is required only to start, while the active preview remains available after switching held items.
+- Preserved normal use of chests, shulker boxes, Create machines, AE2 terminals, and other inventory blocks while routing.
+- Added air confirmation, selected-pipe confirmation over normal blocks, and `Shift` + right-click as an explicit confirmation override.
+- Kept active routes paused instead of cleared while inventory and configuration screens are open.
+- Added a short error sound when placement is rejected because required materials are missing.
+
+### Optimizations
+
+- Counted direct inventory and shulker materials in shared passes while retaining inventory-first consumption.
+- Cached repeated route plans and reused preview geometry and render paths across the normal, construction, and zoom previews.
+- Limited the controls HUD to actions that are relevant to the current route and split long control rows before reducing text size.
+- Scaled the radial menu automatically on displays with limited vertical space.
+- Simplified payloads, route-state helpers, render parameters, enum methods, and repeated block-state lookups.
+- Removed unused constants, overloads, imports, payload classes, and other dead code found during the project-wide cleanup.
+
+### Bug Fixes
+
+- Fixed route previews being cleared when the player stopped holding the selected pipe.
+- Fixed inventories, modded terminals, machines, and shulker placement being blocked by route confirmation.
+- Fixed selected-pipe confirmation being lost after restoring normal block interaction priority.
+- Fixed anchor and freecam combinations recalculating routes from stale or inconsistent targets.
+- Fixed undo stopping at an anchor when manual pumps and casing marks were also acting as route anchors.
+- Fixed manual pump direction not following the shared reverse-pump setting.
+- Fixed missing-material feedback highlighting the wrong material source or destabilizing the rest of the HUD.
+- Fixed the Pipe Connector `OFF` message failing to appear and fixed the status text briefly returning at full opacity when its fade ended.
+- Fixed construction settings and previews not updating consistently while an animated route was already active.
+- Fixed overlapping construction previews remaining visible after their corresponding pipe pieces were placed.
+
+### API Changes and Additions
+
+- Added focused feature packages for manual route actions, shulker material access, interaction resolution, status feedback, and missing-material alerts.
+- Added synchronized per-player shulker preferences so servers consume stored materials only when the owning player allows it.
+- Added client configuration entries for shulker access, manual support anchors, cascade delay, zoom animation, full-route preview, and next-piece preview.
+- Consolidated manual route history and pump direction payloads around shared action models.
+- Added concise Spanish Javadocs to the new and changed gameplay, networking, rendering, configuration, and material classes.
+
+### Art Changes
+
+- Refined the radial menu layout, title hierarchy, selected-option description, background opacity, and responsive scaling.
+- Added a permanent central manual-tool indicator and direct left/right cycling without opening another radial category.
+- Simplified pump and casing disabled options with Minecraft item icons and removed pump direction from the radial menu in favor of `R`.
+- Reworked the materials HUD to separate required, inventory, shulker, and reserved counts with consistent colors and spacing.
+- Added stacked, color-preserving shulker icons with overflow counts and a compact casing availability indicator.
+- Added a subtle shake and color pulse to missing-material feedback while keeping all other material values stable.
+- Added a Pipe Connector `ON`/`OFF` status message that appears immediately, remains readable, and fades out smoothly.
+- Added a smoother overlapping zoom and settling effect to progressive route construction.
 
 ## 1.1.0 - 2026-08-09
 

@@ -1,161 +1,113 @@
 <div align="center">
-<a><img src="./public/icon.png" width="180" /></a>
+<a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
+<img src="https://raw.githubusercontent.com/javiluli/Create-Pipe-connector/master/public/icon.png" width="180" alt="Create: Pipe Connector icon" />
+</a>
 
 # Create: Pipe Connector
 
-**Build Create fluid pipe routes faster: preview the path, adjust it, and place it in one action.**
+**Plan and place complete Create fluid pipe routes in seconds.**
 
-A utility addon for [Create](https://github.com/Creators-of-Create/Create). Available builds are listed below.
+A building utility addon for [Create](https://github.com/Creators-of-Create/Create), available for Forge and NeoForge.
 
-![Version](https://img.shields.io/badge/Version-1.1.0-2E7D32?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-1.2.0-2E7D32?style=for-the-badge)
 <a href="https://www.curseforge.com/minecraft/mc-mods/create-pipe-connector">
 <img src="https://img.shields.io/curseforge/dt/1610354?style=for-the-badge&color=242629&labelColor=F16436&logo=curseforge&logoColor=white&label=" alt="CurseForge">
 </a>
 <a href="https://modrinth.com/mod/create-pipe-connector">
 <img src="https://img.shields.io/modrinth/dt/create-pipe-connector?logo=modrinth&label=&suffix=%20&style=for-the-badge&color=242629&labelColor=5CA424&logoColor=1C1C1C" alt="Modrinth">
 </a>
-![Create](https://img.shields.io/badge/Create-6.0.10-7B4F1D?style=for-the-badge)
-![NeoForge](https://img.shields.io/badge/NeoForge-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
-![Forge](https://img.shields.io/badge/Forge-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
-![Fabric](https://img.shields.io/badge/Fabric-not%20available-757575?style=for-the-badge)
+![Create](https://img.shields.io/badge/Create-6.0.6+-7B4F1D?style=for-the-badge)
+![NeoForge](https://img.shields.io/badge/NeoForge--21.1.219-MC%201.21.1-E65100?style=for-the-badge&logo=forge&logoColor=white)
+![Forge](https://img.shields.io/badge/Forge--47.4.20-MC%201.20.1-8B3DFF?style=for-the-badge&logo=forge&logoColor=white)
 
 </div>
 
 ---
 
-## What Is It?
+## What Does It Do?
 
-**Create: Pipe Connector** adds a dedicated pipe-connection mode for Create fluid pipes.
-
-Instead of placing long pipe lines block by block, you select a start point, aim where the route should go, preview the result, and confirm once. The addon can also add pumps, casing, and glass pipe styling while showing material requirements before placement.
+**Create: Pipe Connector** replaces block-by-block pipe building with a simple workflow: select a start, preview the route, adjust it, and confirm. The addon routes Create fluid pipes around obstacles and can include pumps, casing, and glass sections.
 
 ## Main Features
 
-- **Ghost preview:** See the route before spending items.
-- **Progressive construction:** Confirmed routes appear at a configurable speed instead of all at once.
-- **Animation settings:** Choose a delay from `50 ms` to `1000 ms` between consecutive pieces, or disable the animation for instant placement.
-- **Smart routing:** Finds a valid path around obstacles.
-- **Anchors:** Add waypoints to force turns or guide the route.
-- **Radial menu:** Change route style, pumps, flow direction, casing, and pipe style.
-- **Survival checks:** Shows required/available materials and blocks placement if items are missing.
-- **Create wrench shortcut:** Toggle straight pipe segments between default and glass style.
-
-## Supported Create Blocks
-
-The connector places and routes:
-
-- `create:fluid_pipe`
-
-Optional features use:
-
-- `create:mechanical_pump`
-- `create:glass_fluid_pipe`
-- `create:copper_casing`
-- `create:encased_fluid_pipe`
-
-`create:smart_fluid_pipe` is intentionally not used as a route pipe because it is a filtering pipe, not a normal connector pipe.
-
-## Default Controls
-
-Only the most important controls are bound by default:
-
-| Action                                       | Default     |
-| -------------------------------------------- | ----------- |
-| Toggle Connector Pipe mode                   | `B`         |
-| Start / confirm route                        | Right-click |
-| Open radial menu                             | `N`         |
-| Add anchor                                   | `C`         |
-| Lock preview target / freecam-style planning | `Left Alt`  |
-| Cancel current route                         | Left-click  |
-
-Extra shortcuts for pump mode, pump direction, casing, glass style, manual pumps, and undo actions are available in Minecraft's Controls menu but are **unassigned by default**. You can use the radial menu instead, or bind them yourself.
+- **Live preview and smart routing:** See a valid path around obstacles before placing anything.
+- **Anchors:** Add waypoints to guide turns and complex routes.
+- **Pumps and styles:** Add automatic pumps, glass sections, or copper casing.
+- **Manual tool:** Add anchors, pumps, or casing marks with the same contextual control.
+- **Survival checks:** See required materials and prevent incomplete placement.
+- **Shulker support:** Use materials stored inside vanilla shulker boxes without unpacking them first.
+- **Construction animation:** Place routes progressively with an adjustable delay, or instantly.
+- **Radial menu:** Change route, pump, casing, style, and manual tool options in-game.
+- **Context-aware interactions:** Keep routes active while using inventories, machines, or other held items.
 
 ## Quick Start
 
-1. Press `B` to enable **Connector Pipe** mode.
-2. Hold a `create:fluid_pipe` in either hand.
-3. Right-click a reachable block or pipe face to start.
-4. Move your crosshair to preview the route.
-5. Optional: press `C` to add anchors.
-6. Optional: press `Left Alt` to lock the preview target while moving.
-7. Optional: press `N` to open the radial menu.
-8. Right-click again to place the route.
-9. Left-click during preview to cancel only the current route.
+1. Hold a `create:fluid_pipe` and press `B` to enable **Pipe Connector mode**.
+2. Right-click a reachable block or pipe face to start the route.
+3. Aim at the destination and review the preview.
+4. Use `C` for the selected manual tool or `N` for route options when needed.
+5. Press `V` to undo the latest anchor, pump, or casing mark.
+6. Right-click to confirm, or left-click to cancel the current route.
+7. Press `B` again to return to normal gameplay.
 
-### Placement Animation
+## Main Controls
 
-Open `Mods -> Create: Pipe Connector -> Config` to change how confirmed routes are built.
+All keyboard shortcuts can be changed under **Options → Controls → Key Binds → Create: Pipe Connector**.
 
-- Keep **Animate route construction** enabled for the animated building effect.
-- Set **Delay time** between `50 ms` (fastest and default) and `1000 ms` (slowest).
-- Every zoom overlaps the next one by `50%`, preserving the same visual rhythm at every delay.
-- The remaining speed and preview controls become unavailable when route animation is disabled.
-- Independently show or hide the complete outline-free route and the highlighted next piece.
-- One piece starts per game tick at maximum, avoiding visual batches and unnecessary update spikes.
-- Disable it to place the complete route instantly.
-- Changes are saved and synchronized as soon as you adjust them.
-- In multiplayer, each route uses the preference of the player who confirmed it.
-10. Press `B` again to leave Connector Pipe mode.
+| Action | Default control | What it does |
+| ------ | --------------- | ------------ |
+| Toggle Pipe Connector mode | `B` | Enables or disables all Pipe Connector interactions. |
+| Start or confirm route | Right-click | Starts on a targeted block while holding a fluid pipe. During a route, confirm in the air or while holding the selected pipe. |
+| Cancel current route | Left-click | Clears the active route without disabling Pipe Connector mode. |
+| Open Pipe Connector options | `N` | Opens the radial menu for route, pump, casing, style, and manual-tool options. |
+| Use selected manual tool | `C` | Places the selected anchor, mechanical pump, or copper casing mark. |
+| Undo last manual placement | `V` | Removes the latest anchor, manual pump, or manual casing mark, regardless of its type. |
+| Lock route preview | `Left Alt` | Fixes the current preview target so the player can move and look around freely; press again to unlock it. |
+| Reverse pump direction | `R` | Reverses automatic and manual mechanical pumps in the planned route. |
+| Cycle manual tool | Unassigned | Cycles between anchor, mechanical pump, and copper casing. |
+| Toggle manual copper casing | Unassigned | Adds or removes a casing mark at the preview position; hold Shift to remove the latest casing mark. |
+| Remove last manual copper casing | Unassigned | Removes the most recently placed manual casing mark. |
+| Toggle manual mechanical pump | Unassigned | Adds or removes a pump at the preview position; hold Shift to remove the latest manual pump. |
+| Remove last manual mechanical pump | Unassigned | Removes the most recently placed manual pump. |
+| Cycle automatic pump placement | Unassigned | Cycles through disabled, efficient, and safe automatic pump spacing. |
+| Cycle automatic casing mode | Unassigned | Switches between no automatic casing and casing across the complete route. |
+| Cycle pipe style | Unassigned | Switches between default pipes and glass straight sections. |
 
-## Radial Menu Options
+## Interactions While Routing
 
-- **Route:** Auto, horizontal first, vertical first, X first, Z first, or avoid vertical.
-- **Pumps:** Off, efficient spacing, or safer shorter spacing.
-- **Flow:** Normal or reversed automatic pump direction.
-- **Casing:** No casing, manual casing marks, or full-route casing.
+- A fluid pipe is required only to start a route. After that, changing the held item does not clear the preview.
+- Chests, shulker boxes, Create machines, AE2 terminals, and other inventory blocks keep their normal right-click interaction.
+- Placeable items such as shulker boxes can still be placed while a route is active.
+- Right-click in the air to confirm without targeting a block.
+- Hold the selected fluid pipe and right-click a normal block to confirm as before.
+- Use `Shift` + right-click to force route confirmation over an interactive block.
+- Opening an inventory or configuration screen pauses route input without discarding the current route.
+
+## Pipe Connector Options
+
+- **Route:** Automatic, horizontal first, vertical first, X first, Z first, or avoid vertical.
+- **Pumps:** Disabled, efficient spacing, or safer shorter spacing. Press `R` to reverse pump direction.
+- **Casing:** None or the complete route.
 - **Style:** Default pipes or glass straight sections.
+- **Manual Tool:** Anchor, pump, or casing. In its inner radial control, right-click advances and left-click goes back.
 
-Tip: `Avoid vertical` is useful for natural terrain, but very long or complex routes can be heavier than the other route modes.
+Animation, shulker-material, and manual-anchor settings are available under **Mods → Create: Pipe Connector → Config**. Shulker access can be disabled. Manual pumps and casing create route anchors by default, but this can also be disabled without removing their manual placement behavior.
 
-## Survival Materials
+## Compatible Versions
 
-The HUD shows material counts as:
+| Edition  | Minecraft | Loader              | Java | Create           | Mod     |
+| -------- | --------- | ------------------- | ---- | ---------------- | ------- |
+| NeoForge | `1.21.1`  | NeoForge `21.1.219` | `21` | `6.0.6`–`6.0.10` | `1.1.0` |
+| Forge    | `1.20.1`  | Forge `47.4.20`     | `17` | `6.0.6`–`6.0.10` | `1.2.0` |
 
-```txt
-required/available
-```
+Download the file matching your loader. Fabric is not currently supported.
 
-If a route needs more items than you have, missing preview pieces are tinted red and placement is blocked.
+## Modpacks and Shaders
 
-Copper casing works like Create: you only need at least one `create:copper_casing` in your inventory to apply casing. It is not consumed per pipe.
+- Install the addon on **both the client and server**.
+- Create is the only required dependency.
+- The preview supports common renderer mods and shaders, although transparency can vary between shader packs.
+- For visual issues, test without shaders and report the renderer, shader, screenshot, and client log.
+- Very long **Avoid vertical** routes are more demanding; anchors or a simpler route mode can improve performance.
 
-## Requirements
-
-- **Minecraft:** `1.20.1`
-- **Forge:** `47.4.20` or compatible `47.x`
-- **Create:** `6.0.6` or compatible `6.0.x`
-- **Java:** `17`
-
-## Modpack Notes
-
-- Install on both client and server.
-- Requires Create at runtime.
-- No extra runtime dependencies beyond Minecraft, Forge, and Create.
-- Current Forge version: **`1.1.0`**.
-- Report route or preview edge cases with screenshots and the relevant client or server log.
-
-## Developer Notes
-
-This branch targets Forge for Minecraft `1.20.1` as a single Gradle module. The code uses a Create-inspired, feature-first structure under `src/main/java`: gameplay mechanics stay together, shared foundations remain small, and Forge registration is isolated from feature logic.
-
-- Shared immutable plan: `src/main/java/com/javiluli/createpipeconnector/core/model/ConnectionPlan.java`
-- Connector facade, planning, selection, and sessions: `src/main/java/com/javiluli/createpipeconnector/feature/connector`
-- Player session state: `src/main/java/com/javiluli/createpipeconnector/feature/connector/session`
-- Routing and preview building: `src/main/java/com/javiluli/createpipeconnector/feature/routing` and `src/main/java/com/javiluli/createpipeconnector/feature/preview`
-- Ghost preview renderer: `src/main/java/com/javiluli/createpipeconnector/feature/preview/client/PipeGhostRenderer.java`
-- Radial menu and HUD: `src/main/java/com/javiluli/createpipeconnector/feature/ui/client`
-- Payload registration: `src/main/java/com/javiluli/createpipeconnector/bootstrap/ForgePayloadRegistry.java`
-- Feature-independent Forge infrastructure: `src/main/java/com/javiluli/createpipeconnector/platform`
-
-Build commands:
-
-- Run client: `./gradlew runClient`
-- Build jar: `./gradlew build`
-- Build release copy: `./gradlew buildRelease`
-
-More docs:
-
-- `docs/PLAYER_GUIDE.md`
-- `docs/MODPACK_GUIDE.md`
-- `docs/DEV_GUIDE.md`
-- `docs/API.md`
+This project is still improving. Bug reports and gameplay suggestions are welcome on the project pages.
