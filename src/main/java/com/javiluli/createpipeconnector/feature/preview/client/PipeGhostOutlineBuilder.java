@@ -95,10 +95,9 @@ final class PipeGhostOutlineBuilder {
         int sector = Math.min(5, Math.max(0, (int) sectorValue));
         float fraction = sectorValue - sector;
         return switch (sector) {
-            case 0 -> 1.0F;
+            case 0, 5 -> 1.0F;
             case 1 -> 1.0F - fraction;
             case 4 -> fraction;
-            case 5 -> 1.0F;
             default -> 0.0F;
         };
     }

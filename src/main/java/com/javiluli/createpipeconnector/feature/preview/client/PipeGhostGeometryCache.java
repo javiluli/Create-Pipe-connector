@@ -50,6 +50,17 @@ record PipeGhostGeometryCache(
         return sections.isEmpty();
     }
 
+    /** Combina los fluidos de un rango pequeno de piezas animadas. */
+    int fluidMaskRange(int firstSection, int lastSection) {
+        int startIndex = Math.max(0, firstSection);
+        int endIndex = Math.min(lastSection, sections.size());
+        int mask = 0;
+        for (int index = startIndex; index < endIndex; index++) {
+            mask |= sections.get(index).fluidMask();
+        }
+        return mask;
+    }
+
     /** Localiza un contorno sin recorrer toda la ruta. */
     OutlinePiece outlineAt(BlockPos position) {
         return outlinesByPosition.get(position);
