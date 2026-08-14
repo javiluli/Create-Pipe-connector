@@ -1,16 +1,17 @@
 package com.javiluli.createpipeconnector.feature.ui.client;
 
+import com.javiluli.createpipeconnector.feature.casing.CopperCasingMode;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorKeyMappings;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorState;
-import com.javiluli.createpipeconnector.feature.casing.CopperCasingMode;
+import com.javiluli.createpipeconnector.feature.manual.ManualAction;
+import com.javiluli.createpipeconnector.feature.manual.config.ManualAnchorClientConfig;
 import com.javiluli.createpipeconnector.feature.pump.PumpMode;
 import com.javiluli.createpipeconnector.feature.routing.RoutePriority;
 import com.javiluli.createpipeconnector.feature.style.PipeStyleMode;
 import com.javiluli.createpipeconnector.feature.casing.network.CopperCasingModePayload;
-import com.javiluli.createpipeconnector.feature.style.network.PipeStyleModePayload;
 import com.javiluli.createpipeconnector.feature.pump.network.PumpModePayload;
-import com.javiluli.createpipeconnector.feature.pump.network.ReverseAutoPumpDirectionPayload;
 import com.javiluli.createpipeconnector.feature.routing.network.RoutePriorityPayload;
+import com.javiluli.createpipeconnector.feature.style.network.PipeStyleModePayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -18,6 +19,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -37,7 +40,8 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static final String MECHANIC_KEY_PREFIX = "screen.createpipeconnector.options.mechanic.";
     private static final String OPTION_KEY_PREFIX = "screen.createpipeconnector.options.option.";
     private static final String DESCRIPTION_KEY_PREFIX = "screen.createpipeconnector.options.description.";
-    private static final int BACKGROUND_COLOR = 0x33000000;
+    private static final String MANUAL_INDICATOR_KEY = "screen.createpipeconnector.options.manual_indicator";
+    private static final int BACKGROUND_COLOR = 0x4D000000;
     private static final int MECHANIC_COLOR = 0x73000000;
     private static final int ACTIVE_COLOR = 0xA64A3518;
     private static final int HOVERED_COLOR = 0x59000000;
@@ -45,6 +49,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static final int TITLE_TEXT_COLOR = 0xFFFFFFFF;
     private static final int HINT_COLOR = 0xFFE2C783;
     private static final int ACCENT_COLOR = 0xFFC69C5D;
+    private static final int ANCHOR_INDICATOR_COLOR = 0xFFFFD84A;
     private static final int DIVIDER_COLOR = 0xFF000000;
     private static final int HOVER_BORDER_COLOR = 0xFFFFFFFF;
     private static final int SELECTED_BORDER_COLOR = 0xFFC69C5D;
@@ -53,6 +58,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static final int OPTION_SELECTED_COLOR = 0xA64A3518;
     private static final int RADIAL_GRID_UNIT = 2;
     private static final int MECHANIC_INNER_RADIUS = RADIAL_GRID_UNIT * 20;
+    private static final int CENTER_RADIUS = RADIAL_GRID_UNIT * 16;
     private static final int MECHANIC_OUTER_RADIUS = RADIAL_GRID_UNIT * 40;
     private static final int RING_GAP = RADIAL_GRID_UNIT * 4;
     private static final int OPTION_INNER_RADIUS = MECHANIC_OUTER_RADIUS + RING_GAP;
@@ -66,9 +72,15 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     private static final int OPTION_LABEL_MAX_WIDTH = 74;
     private static final float MECHANIC_LABEL_SCALE = 0.68F;
     private static final float OPTION_LABEL_SCALE = 0.62F;
-    private static final float SMALL_TEXT_SCALE = 0.68F;
+    private static final float TITLE_TEXT_SCALE = 1.15F;
+    private static final float BODY_TEXT_SCALE = 1.0F;
+    private static final float HINT_TEXT_SCALE = 0.68F;
+    private static final int RADIAL_SCREEN_MARGIN = 8;
+    private static final int RADIAL_HORIZONTAL_EXTENSION = 8;
+    private static final int RADIAL_VERTICAL_EXTENSION = 54;
     private static final Mechanic[] MECHANICS = Mechanic.values();
     private static final RingCells MECHANIC_RING = RingCells.create(MECHANIC_INNER_RADIUS, MECHANIC_OUTER_RADIUS, MECHANICS.length);
+    private static final CircleCells MANUAL_INDICATOR_CIRCLE = CircleCells.create(CENTER_RADIUS);
     private static final Map<Integer, RingCells> OPTION_RINGS = Map.of(
             2, RingCells.create(OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS, 2),
             3, RingCells.create(OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS, 3),
@@ -88,27 +100,38 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         guiGraphics.fill(0, 0, width, height, BACKGROUND_COLOR);
-        updateHover(mouseX, mouseY);
+        float radialScale = radialScale();
+        updateHover(mouseX, mouseY, radialScale);
 
         int centerX = wheelCenterX();
         int centerY = wheelCenterY();
         Font font = Minecraft.getInstance().font;
 
-        guiGraphics.drawCenteredString(font, title, centerX, centerY - OPTION_OUTER_RADIUS - 30, TITLE_TEXT_COLOR);
-        renderWheel(guiGraphics, centerX, centerY);
-        renderLabels(guiGraphics, font, centerX, centerY);
-        renderTooltip(guiGraphics, font, centerX, centerY);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(centerX, centerY, 0.0F);
+        guiGraphics.pose().scale(radialScale, radialScale, 1.0F);
+        guiGraphics.pose().translate(-centerX, -centerY, 0.0F);
+        try {
+            int titleY = centerY - OPTION_OUTER_RADIUS - 48;
+            drawScaledCenteredString(guiGraphics, font, title, centerX, titleY, TITLE_TEXT_COLOR, TITLE_TEXT_SCALE);
+            renderTooltip(guiGraphics, font, centerX, titleY + 19);
+            renderWheel(guiGraphics, centerX, centerY);
+            renderManualIndicator(guiGraphics, font, centerX, centerY);
+            renderLabels(guiGraphics, font, centerX, centerY);
 
-        Component hint = Component.translatable(HINT_KEY);
-        drawScaledCenteredString(guiGraphics, font, hint, centerX, centerY + OPTION_OUTER_RADIUS + 44, HINT_COLOR, SMALL_TEXT_SCALE);
+            Component hint = Component.translatable(HINT_KEY);
+            drawScaledCenteredString(guiGraphics, font, hint, centerX, centerY + OPTION_OUTER_RADIUS + 44, HINT_COLOR, HINT_TEXT_SCALE);
+        } finally {
+            guiGraphics.pose().popPose();
+        }
     }
 
     /** Actualiza la mecanica u opcion situada bajo el cursor. */
-    private void updateHover(int mouseX, int mouseY) {
+    private void updateHover(int mouseX, int mouseY, float radialScale) {
         int centerX = wheelCenterX();
         int centerY = wheelCenterY();
-        int deltaX = mouseX - centerX;
-        int deltaY = mouseY - centerY;
+        int deltaX = Math.round((mouseX - centerX) / radialScale);
+        int deltaY = Math.round((mouseY - centerY) / radialScale);
 
         hoveredMechanic = null;
         hoveredOption = null;
@@ -126,39 +149,39 @@ public final class ConnectorOptionsRadialScreen extends Screen {
 
     /** Dibuja ambos anillos y sus bordes de seleccion. */
     private void renderWheel(GuiGraphics guiGraphics, int centerX, int centerY) {
-        renderPixelatedMechanicRing(guiGraphics, centerX, centerY);
-        renderPixelatedOptionRing(guiGraphics, centerX, centerY);
-        renderSelectedBorder(guiGraphics, centerX, centerY);
-        renderHoveredBorder(guiGraphics, centerX, centerY);
+        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
+            renderPixelatedMechanicRing(pixelBatch, centerX, centerY);
+            renderPixelatedOptionRing(pixelBatch, centerX, centerY);
+            renderManualIndicatorCircle(pixelBatch, centerX, centerY);
+        }
     }
 
     /** Dibuja en un lote las celdas del anillo de mecanicas. */
-    private void renderPixelatedMechanicRing(GuiGraphics guiGraphics, int centerX, int centerY) {
-        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
-            for (RingCell cell : MECHANIC_RING.cells()) {
-                int color = pixelatedMechanicCellColor(MECHANICS[cell.sectorIndex()], cell);
-                pixelBatch.fill(centerX + cell.x(), centerY + cell.y(), centerX + cell.x() + PIXEL_RING_CELL_SIZE, centerY + cell.y() + PIXEL_RING_CELL_SIZE, color);
-            }
+    private void renderPixelatedMechanicRing(GuiPixelBatch pixelBatch, int centerX, int centerY) {
+        for (RingCell cell : MECHANIC_RING.cells()) {
+            int color = pixelatedMechanicCellColor(MECHANICS[cell.sectorIndex()], cell);
+            pixelBatch.fill(centerX + cell.x(), centerY + cell.y(), centerX + cell.x() + PIXEL_RING_CELL_SIZE, centerY + cell.y() + PIXEL_RING_CELL_SIZE, color);
         }
     }
 
     /** Resuelve el color de una celda del anillo interior. */
     private int pixelatedMechanicCellColor(Mechanic mechanic, RingCell cell) {
         if (cell.border()) {
+            if (mechanic == hoveredMechanic) {
+                return HOVER_BORDER_COLOR;
+            }
             return mechanic == selectedMechanic ? SELECTED_BORDER_COLOR : DIVIDER_COLOR;
         }
         return mechanicColorFor(mechanic);
     }
 
     /** Dibuja en un lote las celdas del anillo de opciones. */
-    private void renderPixelatedOptionRing(GuiGraphics guiGraphics, int centerX, int centerY) {
+    private void renderPixelatedOptionRing(GuiPixelBatch pixelBatch, int centerX, int centerY) {
         RadialOption[] options = selectedMechanic.options();
         RingCells ring = optionRing(options.length);
-        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
-            for (RingCell cell : ring.cells()) {
-                int color = pixelatedOptionCellColor(options[cell.sectorIndex()], cell);
-                pixelBatch.fill(centerX + cell.x(), centerY + cell.y(), centerX + cell.x() + PIXEL_RING_CELL_SIZE, centerY + cell.y() + PIXEL_RING_CELL_SIZE, color);
-            }
+        for (RingCell cell : ring.cells()) {
+            int color = pixelatedOptionCellColor(options[cell.sectorIndex()], cell);
+            pixelBatch.fill(centerX + cell.x(), centerY + cell.y(), centerX + cell.x() + PIXEL_RING_CELL_SIZE, centerY + cell.y() + PIXEL_RING_CELL_SIZE, color);
         }
     }
 
@@ -218,61 +241,72 @@ public final class ConnectorOptionsRadialScreen extends Screen {
             double angle = sectorCenterAngle(index, options.length);
             int labelX = Math.round(centerX + (float) Math.sin(angle) * OPTION_LABEL_RADIUS);
             int labelY = Math.round(centerY - (float) Math.cos(angle) * OPTION_LABEL_RADIUS);
+            ItemStack icon = option.icon();
+            if (!icon.isEmpty()) {
+                guiGraphics.renderItem(icon, labelX - 8, labelY - 8);
+                continue;
+            }
             drawFittedCenteredString(guiGraphics, font, Component.translatable(option.translationKey()), labelX, labelY, TEXT_COLOR, OPTION_LABEL_SCALE, OPTION_LABEL_MAX_WIDTH);
         }
     }
 
-    /** Dibuja el titulo y la descripcion de la opcion relevante. */
-    private void renderTooltip(GuiGraphics guiGraphics, Font font, int centerX, int centerY) {
-        RadialOption option = hoveredOption == null ? selectedMechanic.activeOption() : hoveredOption;
+    /** Dibuja bajo el encabezado el nombre y la descripcion de la opcion relevante. */
+    private void renderTooltip(GuiGraphics guiGraphics, Font font, int centerX, int optionTitleY) {
+        RadialOption option = relevantOption();
         Component optionTitle = Component.translatable(option.translationKey());
         Component description = Component.translatable(option.descriptionTranslationKey());
 
-        int tooltipY = centerY + OPTION_OUTER_RADIUS + 15;
-        drawScaledCenteredString(guiGraphics, font, optionTitle, centerX, tooltipY, TEXT_COLOR, SMALL_TEXT_SCALE);
-        drawScaledCenteredString(guiGraphics, font, description, centerX, tooltipY + 11, HINT_COLOR, SMALL_TEXT_SCALE);
+        drawScaledCenteredString(guiGraphics, font, optionTitle, centerX, optionTitleY, TEXT_COLOR, BODY_TEXT_SCALE);
+        drawScaledCenteredString(guiGraphics, font, description, centerX, optionTitleY + 12, HINT_COLOR, BODY_TEXT_SCALE);
     }
 
-    /** Dibuja el borde blanco de la mecanica situada bajo el cursor. */
-    private void renderHoveredBorder(GuiGraphics guiGraphics, int centerX, int centerY) {
-        if (hoveredOption != null) {
-            return;
-        }
-
-        if (hoveredMechanic != null) {
-            renderPixelatedMechanicOutline(guiGraphics, centerX, centerY, hoveredMechanic, HOVER_BORDER_COLOR);
-        }
-    }
-
-    /** Dibuja unicamente las celdas de borde de una mecanica. */
-    private static void renderPixelatedMechanicOutline(GuiGraphics guiGraphics, int centerX, int centerY, Mechanic mechanic, int color) {
-        int sectorIndex = mechanic.ordinal();
-        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
-            for (RingCell cell : MECHANIC_RING.cells()) {
-                if (cell.sectorIndex() == sectorIndex && cell.border()) {
-                    pixelBatch.fill(centerX + cell.x(), centerY + cell.y(), centerX + cell.x() + PIXEL_RING_CELL_SIZE, centerY + cell.y() + PIXEL_RING_CELL_SIZE, color);
-                }
-            }
+    /** Dibuja el fondo cacheado del indicador manual dentro del lote radial. */
+    private static void renderManualIndicatorCircle(GuiPixelBatch pixelBatch, int centerX, int centerY) {
+        for (CircleCell cell : MANUAL_INDICATOR_CIRCLE.cells()) {
+            pixelBatch.fill(
+                    centerX + cell.x(),
+                    centerY + cell.y(),
+                    centerX + cell.x() + PIXEL_RING_CELL_SIZE,
+                    centerY + cell.y() + PIXEL_RING_CELL_SIZE,
+                    cell.border() ? DIVIDER_COLOR : MECHANIC_COLOR
+            );
         }
     }
 
-    /** Dibuja el borde de la opcion actualmente aplicada. */
-    private void renderSelectedBorder(GuiGraphics guiGraphics, int centerX, int centerY) {
-        RadialOption[] options = selectedMechanic.options();
-        renderPixelatedOptionOutline(guiGraphics, centerX, centerY, optionIndex(selectedMechanic.activeOption(), options), SELECTED_BORDER_COLOR);
+    /** Dibuja los textos del tercer circulo no interactivo. */
+    private static void renderManualIndicator(GuiGraphics guiGraphics, Font font, int centerX, int centerY) {
+        String actionKey = OPTION_KEY_PREFIX + "manual_action_" + ClientPipeConnectorState.getManualAction().id();
+        drawFittedCenteredString(
+                guiGraphics,
+                font,
+                Component.translatable(MANUAL_INDICATOR_KEY),
+                centerX,
+                centerY - 7,
+                TEXT_COLOR,
+                0.68F,
+                CENTER_RADIUS * 2 - 8
+        );
+        Component actionLabel = Component.translatable(actionKey);
+        boolean createsSupportAnchor = ManualAnchorClientConfig.willCreateSupportAnchor(
+                ClientPipeConnectorState.getManualAction()
+        );
+        drawFittedCenteredSegments(
+                guiGraphics,
+                font,
+                actionLabel,
+                createsSupportAnchor ? Component.literal(" (+A)") : Component.empty(),
+                centerX,
+                centerY + 7,
+                TEXT_COLOR,
+                ANCHOR_INDICATOR_COLOR,
+                0.68F,
+                CENTER_RADIUS * 2 - 8
+        );
     }
 
-    /** Dibuja unicamente las celdas de borde de una opcion. */
-    private void renderPixelatedOptionOutline(GuiGraphics guiGraphics, int centerX, int centerY, int sectorIndex, int color) {
-        RadialOption[] options = selectedMechanic.options();
-        RingCells ring = optionRing(options.length);
-        try (GuiPixelBatch pixelBatch = new GuiPixelBatch(guiGraphics)) {
-            for (RingCell cell : ring.cells()) {
-                if (cell.sectorIndex() == sectorIndex && cell.border()) {
-                    pixelBatch.fill(centerX + cell.x(), centerY + cell.y(), centerX + cell.x() + PIXEL_RING_CELL_SIZE, centerY + cell.y() + PIXEL_RING_CELL_SIZE, color);
-                }
-            }
-        }
+    /** Devuelve la opcion activa o la opcion exterior situada bajo el cursor. */
+    private RadialOption relevantOption() {
+        return hoveredOption == null ? selectedMechanic.activeOption() : hoveredOption;
     }
 
     /** Reduce una etiqueta si supera el ancho disponible y la centra. */
@@ -283,6 +317,41 @@ public final class ConnectorOptionsRadialScreen extends Screen {
             scale = Math.min(baseScale, Math.max(0.34F, maxWidth / (float) labelWidth));
         }
         drawScaledCenteredString(guiGraphics, font, label, centerX, centerY, color, scale);
+    }
+
+    /** Dibuja dos segmentos centrados y conserva un color distinto en el segundo. */
+    private static void drawFittedCenteredSegments(
+            GuiGraphics guiGraphics,
+            Font font,
+            Component primary,
+            Component accent,
+            int centerX,
+            int centerY,
+            int primaryColor,
+            int accentColor,
+            float baseScale,
+            int maxWidth
+    ) {
+        int primaryWidth = font.width(primary);
+        int accentWidth = font.width(accent);
+        int totalWidth = primaryWidth + accentWidth;
+        float scale = totalWidth <= 0
+                ? baseScale
+                : Math.min(baseScale, Math.max(0.34F, maxWidth / (float) totalWidth));
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(scale, scale, 1.0F);
+        try {
+            int scaledCenterX = Math.round(centerX / scale);
+            int scaledY = Math.round(centerY / scale) - font.lineHeight / 2;
+            int startX = scaledCenterX - totalWidth / 2;
+            guiGraphics.drawString(font, primary, startX, scaledY, primaryColor, true);
+            if (!accent.getString().isEmpty()) {
+                guiGraphics.drawString(font, accent, startX + primaryWidth, scaledY, accentColor, true);
+            }
+        } finally {
+            guiGraphics.pose().popPose();
+        }
     }
 
     /** Dibuja una etiqueta centrada con una escala explicita. */
@@ -366,6 +435,18 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         return height / 2;
     }
 
+    /** Reduce uniformemente el radial cuando la resolucion de GUI no dispone de espacio suficiente. */
+    private float radialScale() {
+        int availableWidth = Math.max(1, width - RADIAL_SCREEN_MARGIN * 2);
+        int availableHeight = Math.max(1, height - RADIAL_SCREEN_MARGIN * 2);
+        int requiredWidth = (OPTION_OUTER_RADIUS + RADIAL_HORIZONTAL_EXTENSION) * 2;
+        int requiredHeight = (OPTION_OUTER_RADIUS + RADIAL_VERTICAL_EXTENSION) * 2;
+        return Math.min(1.0F, Math.min(
+                availableWidth / (float) requiredWidth,
+                availableHeight / (float) requiredHeight
+        ));
+    }
+
     /** Convierte un desplazamiento cartesiano en indice de sector. */
     private static int sectorIndexAtOffset(int x, int y, int sectorCount) {
         double angle = angleAtOffset(x, y);
@@ -437,27 +518,21 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         return (Math.PI * 2.0D) / sectorCount;
     }
 
-    /** Localiza el indice de una opcion dentro de su conjunto. */
-    private static int optionIndex(RadialOption option, RadialOption[] options) {
-        for (int index = 0; index < options.length; index++) {
-            if (options[index] == option) {
-                return index;
-            }
-        }
-        return 0;
-    }
-
     /** Devuelve la geometria cacheada del anillo con el numero de sectores indicado. */
     private static RingCells optionRing(int sectorCount) {
         RingCells cachedRing = OPTION_RINGS.get(sectorCount);
         return cachedRing == null ? RingCells.create(OPTION_INNER_RADIUS, OPTION_OUTER_RADIUS, sectorCount) : cachedRing;
     }
 
-    /** Celda de interfaz precalculada dentro de un sector pixelado. */
+    /**
+     * Celda de interfaz precalculada dentro de un sector pixelado.
+     */
     private record RingCell(int x, int y, int sectorIndex, double distance, boolean border) {
     }
 
-    /** Geometria inmutable compartida entre frames con igual numero de sectores. */
+    /**
+     * Geometria inmutable compartida entre frames con igual numero de sectores.
+     */
     private record RingCells(List<RingCell> cells) {
         /** Genera las celdas visibles y marca cuales pertenecen al borde. */
         private static RingCells create(int innerRadius, int outerRadius, int sectorCount) {
@@ -491,9 +566,41 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         }
     }
 
-    /** Aplica con clic izquierdo la opcion senalada o cierra con clic derecho. */
+    /** Celda precalculada del indicador circular central. */
+    private record CircleCell(int x, int y, boolean border) {
+    }
+
+    /** Geometria inmutable del indicador manual central. */
+    private record CircleCells(List<CircleCell> cells) {
+        /** Genera una vez las celdas visibles del circulo. */
+        private static CircleCells create(int circleRadius) {
+            int radius = circleRadius + PIXEL_RING_CELL_SIZE;
+            List<CircleCell> cells = new ArrayList<>();
+            for (int x = -radius; x <= radius; x += PIXEL_RING_CELL_SIZE) {
+                for (int y = -radius; y <= radius; y += PIXEL_RING_CELL_SIZE) {
+                    float cellCenterX = x + PIXEL_RING_CELL_SIZE / 2.0F;
+                    float cellCenterY = y + PIXEL_RING_CELL_SIZE / 2.0F;
+                    double distance = Math.sqrt(cellCenterX * cellCenterX + cellCenterY * cellCenterY);
+                    if (distance <= circleRadius) {
+                        cells.add(new CircleCell(
+                                x,
+                                y,
+                                Math.abs(distance - circleRadius) <= PIXEL_RING_BORDER_WIDTH
+                        ));
+                    }
+                }
+            }
+            return new CircleCells(List.copyOf(cells));
+        }
+    }
+
+    /** Aplica opciones o recorre la herramienta manual con ambos botones. */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if ((button == 0 || button == 1) && isManualShortcut(mouseX, mouseY)) {
+            cycleManualAction(button == 1);
+            return true;
+        }
         if (button == 0 && hoveredOption != null) {
             applyOption(hoveredOption);
             return true;
@@ -505,10 +612,30 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    /** Comprueba el circulo central y el sector interior de herramienta manual. */
+    private boolean isManualShortcut(double mouseX, double mouseY) {
+        float radialScale = radialScale();
+        double deltaX = (mouseX - wheelCenterX()) / radialScale;
+        double deltaY = (mouseY - wheelCenterY()) / radialScale;
+        boolean insideCenter = deltaX * deltaX + deltaY * deltaY <= CENTER_RADIUS * CENTER_RADIUS;
+        return insideCenter || hoveredMechanic == Mechanic.MANUAL_ACTION;
+    }
+
+    /**
+     * Recorre las acciones manuales sin exigir apuntar a una opcion exterior.
+     * El boton derecho avanza en sentido horario y el izquierdo retrocede.
+     */
+    private void cycleManualAction(boolean clockwise) {
+        RadialOption option = clockwise
+                ? Mechanic.MANUAL_ACTION.nextOption()
+                : Mechanic.MANUAL_ACTION.previousOption();
+        applyOption(option);
+    }
+
     /** Cierra el menu al soltar el boton de raton asignado. */
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (ClientPipeConnectorKeyMappings.cycleRoutePriorityKey().matchesMouse(button)) {
+        if (ClientPipeConnectorKeyMappings.openPipeConnectorOptionsKey().matchesMouse(button)) {
             onClose();
             return true;
         }
@@ -518,7 +645,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
     /** Cierra el menu al soltar la tecla asignada. */
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        if (ClientPipeConnectorKeyMappings.cycleRoutePriorityKey().matches(keyCode, scanCode)) {
+        if (ClientPipeConnectorKeyMappings.openPipeConnectorOptionsKey().matches(keyCode, scanCode)) {
             onClose();
             return true;
         }
@@ -564,13 +691,13 @@ public final class ConnectorOptionsRadialScreen extends Screen {
      */
     private enum Mechanic {
         ROUTE_STYLE("route_style") {
-            /** {@inheritDoc} */
+            /** Devuelve las prioridades de ruta disponibles. */
             @Override
             RadialOption[] options() {
                 return RouteStyleOption.VALUES;
             }
 
-            /** {@inheritDoc} */
+            /** Devuelve la prioridad de ruta aplicada actualmente. */
             @Override
             RadialOption activeOption() {
                 for (RouteStyleOption option : RouteStyleOption.VALUES) {
@@ -581,63 +708,32 @@ public final class ConnectorOptionsRadialScreen extends Screen {
                 return RouteStyleOption.AUTO;
             }
         },
-        AUTO_PUMPS("auto_pumps") {
-            /** {@inheritDoc} */
+        PUMPS("pumps") {
+            /** Devuelve los modos automaticos disponibles. */
             @Override
             RadialOption[] options() {
-                return PumpModeOption.VALUES;
+                return PumpConfigurationOption.VALUES;
             }
 
-            /** {@inheritDoc} */
+            /** Devuelve el modo de bombas aplicado actualmente. */
             @Override
             RadialOption activeOption() {
-                for (PumpModeOption option : PumpModeOption.VALUES) {
-                    if (option.mode == ClientPipeConnectorState.getPumpMode()) {
+                for (PumpConfigurationOption option : PumpConfigurationOption.VALUES) {
+                    if (option.matchesCurrentState()) {
                         return option;
                     }
                 }
-                return PumpModeOption.OFF;
-            }
-        },
-        PUMP_DIRECTION("pump_direction") {
-            /** {@inheritDoc} */
-            @Override
-            RadialOption[] options() {
-                return PumpDirectionOption.VALUES;
-            }
-
-            /** {@inheritDoc} */
-            @Override
-            RadialOption activeOption() {
-                return ClientPipeConnectorState.isAutoPumpDirectionReversed() ? PumpDirectionOption.REVERSED : PumpDirectionOption.NORMAL;
-            }
-        },
-        COPPER_CASING("copper_casing") {
-            /** {@inheritDoc} */
-            @Override
-            RadialOption[] options() {
-                return CopperCasingModeOption.VALUES;
-            }
-
-            /** {@inheritDoc} */
-            @Override
-            RadialOption activeOption() {
-                for (CopperCasingModeOption option : CopperCasingModeOption.VALUES) {
-                    if (option.mode == ClientPipeConnectorState.getCopperCasingMode()) {
-                        return option;
-                    }
-                }
-                return CopperCasingModeOption.MANUAL;
+                return PumpConfigurationOption.OFF;
             }
         },
         PIPE_STYLE("pipe_style") {
-            /** {@inheritDoc} */
+            /** Devuelve los estilos de tuberia disponibles. */
             @Override
             RadialOption[] options() {
                 return PipeStyleModeOption.VALUES;
             }
 
-            /** {@inheritDoc} */
+            /** Devuelve el estilo de tuberia aplicado actualmente. */
             @Override
             RadialOption activeOption() {
                 for (PipeStyleModeOption option : PipeStyleModeOption.VALUES) {
@@ -647,47 +743,88 @@ public final class ConnectorOptionsRadialScreen extends Screen {
                 }
                 return PipeStyleModeOption.DEFAULT;
             }
+        },
+        COPPER_CASING("copper_casing") {
+            /** Devuelve los modos de revestimiento disponibles. */
+            @Override
+            RadialOption[] options() {
+                return CopperCasingModeOption.RADIAL_VALUES;
+            }
+
+            /** Devuelve el modo de revestimiento aplicado actualmente. */
+            @Override
+            RadialOption activeOption() {
+                for (CopperCasingModeOption option : CopperCasingModeOption.VALUES) {
+                    if (option.mode == ClientPipeConnectorState.getCopperCasingMode()) {
+                        return option;
+                    }
+                }
+                return CopperCasingModeOption.NONE;
+            }
+        },
+        MANUAL_ACTION("manual_action") {
+            /** Devuelve las acciones puntuales disponibles. */
+            @Override
+            RadialOption[] options() {
+                return ManualActionOption.VALUES;
+            }
+
+            /** Devuelve la accion puntual seleccionada actualmente. */
+            @Override
+            RadialOption activeOption() {
+                for (ManualActionOption option : ManualActionOption.VALUES) {
+                    if (option.action == ClientPipeConnectorState.getManualAction()) {
+                        return option;
+                    }
+                }
+                return ManualActionOption.ANCHOR;
+            }
         };
 
-        /** Devuelve el identificador estable de la opcion. */
         private final String id;
 
-        /** Crea una categoria asociada a su identificador de traduccion. */
+        /** Crea una categoria con su identificador de traduccion. */
         Mechanic(String id) {
             this.id = id;
         }
 
-        /** Devuelve las opciones disponibles para la categoria. */
+        /** Devuelve las opciones polimorficas de la categoria. */
         abstract RadialOption[] options();
 
-        /** Devuelve la opcion actualmente aplicada. */
+        /** Devuelve la opcion aplicada actualmente en la categoria. */
         abstract RadialOption activeOption();
 
-        /** Avanza a la categoria siguiente con recorrido circular. */
+        /** Devuelve la siguiente categoria de forma circular. */
         Mechanic next() {
             return MECHANICS[(ordinal() + 1) % MECHANICS.length];
         }
 
-        /** Retrocede a la categoria anterior con recorrido circular. */
+        /** Devuelve la categoria anterior de forma circular. */
         Mechanic previous() {
             return MECHANICS[(ordinal() - 1 + MECHANICS.length) % MECHANICS.length];
         }
 
-        /** Avanza a la opcion siguiente de esta categoria. */
+        /** Devuelve la siguiente opcion de forma circular. */
         RadialOption nextOption() {
             RadialOption[] options = options();
             int currentIndex = optionIndex(activeOption(), options);
+            if (currentIndex < 0) {
+                return options[0];
+            }
             return options[(currentIndex + 1) % options.length];
         }
 
-        /** Retrocede a la opcion anterior de esta categoria. */
+        /** Devuelve la opcion anterior de forma circular. */
         RadialOption previousOption() {
             RadialOption[] options = options();
             int currentIndex = optionIndex(activeOption(), options);
+            if (currentIndex < 0) {
+                return options[options.length - 1];
+            }
             return options[(currentIndex - 1 + options.length) % options.length];
         }
 
-        /** Devuelve la clave traducible del nombre de la categoria. */
+        /** Construye la clave de traduccion de la categoria. */
         String translationKey() {
             return MECHANIC_KEY_PREFIX + id;
         }
@@ -699,7 +836,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
                     return index;
                 }
             }
-            return 0;
+            return -1;
         }
     }
 
@@ -713,15 +850,20 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         /** Indica si la opcion coincide con el estado actual. */
         boolean isActive();
 
-        /** Aplica la opcion localmente y la sincroniza cuando corresponde. */
+        /** Aplica y sincroniza la opcion. */
         boolean apply();
 
-        /** Devuelve la clave traducible del nombre visible. */
+        /** Devuelve el icono mostrado en el centro del radial. */
+        default ItemStack icon() {
+            return ItemStack.EMPTY;
+        }
+
+        /** Construye la clave de traduccion del nombre de la opcion. */
         default String translationKey() {
             return OPTION_KEY_PREFIX + id();
         }
 
-        /** Devuelve la clave traducible de la descripcion. */
+        /** Construye la clave de traduccion de la descripcion de la opcion. */
         default String descriptionTranslationKey() {
             return DESCRIPTION_KEY_PREFIX + id();
         }
@@ -739,7 +881,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         private static final RouteStyleOption[] VALUES = values();
         private final RoutePriority priority;
 
-        /** Asocia la opcion visual con una prioridad de ruta. */
+        /** Crea una opcion asociada a una prioridad de ruta. */
         RouteStyleOption(RoutePriority priority) {
             this.priority = priority;
         }
@@ -750,100 +892,80 @@ public final class ConnectorOptionsRadialScreen extends Screen {
             return "route_" + priority.name().toLowerCase(Locale.ROOT);
         }
 
-        /** Indica si la opcion coincide con el estado actual. */
+        /** Indica si esta prioridad esta activa. */
         @Override
         public boolean isActive() {
             return ClientPipeConnectorState.getRoutePriority() == priority;
         }
 
-        /** Aplica y sincroniza la opcion. */
+        /** Aplica y sincroniza esta prioridad. */
         @Override
         public boolean apply() {
             ClientPipeConnectorState.setRoutePriority(priority);
             PacketDistributor.sendToServer(new RoutePriorityPayload(priority));
             return true;
         }
+
     }
 
-    /** Opciones visuales que representan los modos de bombas. */
-    private enum PumpModeOption implements RadialOption {
+    /** Opciones de bombas automaticas; el sentido se controla mediante su tecla dedicada. */
+    private enum PumpConfigurationOption implements RadialOption {
         OFF(PumpMode.OFF),
         EFFICIENT(PumpMode.EFFICIENT),
         SAFE(PumpMode.SAFE);
 
-        private static final PumpModeOption[] VALUES = values();
+        private static final PumpConfigurationOption[] VALUES = values();
         private final PumpMode mode;
 
-        /** Asocia la opcion visual con un modo de bombas. */
-        PumpModeOption(PumpMode mode) {
+        /** Crea una opcion asociada a un modo de bombas. */
+        PumpConfigurationOption(PumpMode mode) {
             this.mode = mode;
         }
 
-        /** Devuelve el identificador derivado del modo. */
+        /** Devuelve el identificador estable del modo. */
         @Override
         public String id() {
-            return "pump_mode_" + mode.name().toLowerCase(Locale.ROOT);
+            return "pump_configuration_" + mode.name().toLowerCase(Locale.ROOT);
         }
 
-        /** Indica si este modo de bombas esta activo. */
+        /** Indica si el modo coincide con el estado local. */
         @Override
         public boolean isActive() {
+            return matchesCurrentState();
+        }
+
+        /** Aplica y sincroniza el modo sin modificar el sentido seleccionado con R. */
+        @Override
+        public boolean apply() {
+            if (ClientPipeConnectorState.getPumpMode() != mode) {
+                ClientPipeConnectorState.setPumpMode(mode);
+                PacketDistributor.sendToServer(new PumpModePayload(mode));
+            }
+            return true;
+        }
+
+        /** Comprueba el modo automatico actual. */
+        private boolean matchesCurrentState() {
             return ClientPipeConnectorState.getPumpMode() == mode;
         }
 
-        /** Aplica y sincroniza este modo de bombas. */
+        /** Sustituye el texto del modo apagado por el icono vanilla de prohibido. */
         @Override
-        public boolean apply() {
-            ClientPipeConnectorState.setPumpMode(mode);
-            PacketDistributor.sendToServer(new PumpModePayload(mode));
-            return true;
+        public ItemStack icon() {
+            return mode == PumpMode.OFF ? new ItemStack(Items.BARRIER) : ItemStack.EMPTY;
         }
     }
 
-    /** Opciones visuales del sentido de las bombas automaticas. */
-    private enum PumpDirectionOption implements RadialOption {
-        NORMAL(false),
-        REVERSED(true);
-
-        private static final PumpDirectionOption[] VALUES = values();
-        private final boolean reversed;
-
-        /** Asocia la opcion con el sentido normal o invertido. */
-        PumpDirectionOption(boolean reversed) {
-            this.reversed = reversed;
-        }
-
-        /** Devuelve el identificador del sentido. */
-        @Override
-        public String id() {
-            return reversed ? "pump_direction_reversed" : "pump_direction_normal";
-        }
-
-        /** Indica si este modo de bombas esta activo. */
-        @Override
-        public boolean isActive() {
-            return ClientPipeConnectorState.isAutoPumpDirectionReversed() == reversed;
-        }
-
-        /** Aplica y sincroniza este modo de bombas. */
-        @Override
-        public boolean apply() {
-            ClientPipeConnectorState.setAutoPumpDirectionReversed(reversed);
-            PacketDistributor.sendToServer(new ReverseAutoPumpDirectionPayload(reversed));
-            return true;
-        }
-    }
-
-    /** Opciones visuales de aplicacion del revestimiento de cobre. */
+    /** Opciones de revestimiento automatico; las marcas manuales son independientes. */
     private enum CopperCasingModeOption implements RadialOption {
         NONE(CopperCasingMode.NONE),
-        MANUAL(CopperCasingMode.MANUAL),
         ALL(CopperCasingMode.ALL);
 
         private static final CopperCasingModeOption[] VALUES = values();
+        private static final CopperCasingModeOption[] RADIAL_VALUES = VALUES;
         private final CopperCasingMode mode;
 
-        /** Asocia la opcion visual con un modo de revestimiento. */
+        /** Crea una opcion asociada a un modo de revestimiento. */
         CopperCasingModeOption(CopperCasingMode mode) {
             this.mode = mode;
         }
@@ -867,6 +989,47 @@ public final class ConnectorOptionsRadialScreen extends Screen {
             PacketDistributor.sendToServer(new CopperCasingModePayload(mode));
             return true;
         }
+
+        /** Sustituye el texto del modo apagado por el icono vanilla de prohibido. */
+        @Override
+        public ItemStack icon() {
+            return mode == CopperCasingMode.NONE ? new ItemStack(Items.BARRIER) : ItemStack.EMPTY;
+        }
+    }
+
+    /** Opciones que comparten los controles contextuales de anadir y deshacer. */
+    private enum ManualActionOption implements RadialOption {
+        ANCHOR(ManualAction.ANCHOR),
+        MECHANICAL_PUMP(ManualAction.MECHANICAL_PUMP),
+        COPPER_CASING(ManualAction.COPPER_CASING);
+
+        private static final ManualActionOption[] VALUES = values();
+        private final ManualAction action;
+
+        /** Crea una opcion asociada a una accion puntual. */
+        ManualActionOption(ManualAction action) {
+            this.action = action;
+        }
+
+        /** Devuelve el identificador estable mostrado por el radial. */
+        @Override
+        public String id() {
+            return "manual_action_" + action.id();
+        }
+
+        /** Indica si esta accion controla actualmente las teclas contextuales. */
+        @Override
+        public boolean isActive() {
+            return ClientPipeConnectorState.getManualAction() == action;
+        }
+
+        /** Selecciona la accion sin modificar la ruta en curso. */
+        @Override
+        public boolean apply() {
+            ClientPipeConnectorState.setManualAction(action);
+            return true;
+        }
+
     }
 
     /** Opciones visuales del estilo normal o de cristal. */
@@ -877,7 +1040,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
         private static final PipeStyleModeOption[] VALUES = values();
         private final PipeStyleMode mode;
 
-        /** Asocia la opcion visual con un estilo de tuberia. */
+        /** Crea una opcion asociada a un estilo de tuberia. */
         PipeStyleModeOption(PipeStyleMode mode) {
             this.mode = mode;
         }
@@ -888,7 +1051,7 @@ public final class ConnectorOptionsRadialScreen extends Screen {
             return "pipe_style_" + mode.name().toLowerCase(Locale.ROOT);
         }
 
-        /** Indica si este estilo de tuberia esta activo. */
+        /** Indica si este estilo esta activo. */
         @Override
         public boolean isActive() {
             return ClientPipeConnectorState.getPipeStyleMode() == mode;
@@ -901,5 +1064,6 @@ public final class ConnectorOptionsRadialScreen extends Screen {
             PacketDistributor.sendToServer(new PipeStyleModePayload(mode));
             return true;
         }
+
     }
 }
