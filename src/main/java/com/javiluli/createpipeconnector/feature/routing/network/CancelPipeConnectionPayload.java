@@ -3,7 +3,7 @@ package com.javiluli.createpipeconnector.feature.routing.network;
 import net.minecraft.network.FriendlyByteBuf;
 
 /**
- * Cancela la ruta actual sin desactivar el modo conector.
+ * Cancela la ruta actual sin desactivar el modo Pipe Connector.
  */
 public record CancelPipeConnectionPayload() {
     /** Decodifica la accion sin datos de cancelacion. */

@@ -31,7 +31,7 @@ public final class ServerRoutePayloadHandler {
     }
 
     /**
-     * Cancela la ruta activa sin desactivar el modo conector.
+     * Cancela la ruta activa sin desactivar el modo Pipe Connector.
      *
      * @param payload accion de cancelacion sin datos
      * @param contextSupplier contexto de red del paquete

@@ -1,13 +1,12 @@
 package com.javiluli.createpipeconnector.feature.connector.network;
 
-import com.javiluli.createpipeconnector.feature.connector.server.ServerPipeConnectorEvents;
 import com.javiluli.createpipeconnector.feature.connector.session.ConnectorSessionStore;
 import com.javiluli.createpipeconnector.platform.network.ServerPayloadContext;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-/** Gestiona la activacion remota del modo conector. */
+/** Gestiona la activacion remota del modo Pipe Connector. */
 public final class ServerConnectorModePayloadHandler {
     /** Impide crear instancias del manejador estatico. */
     private ServerConnectorModePayloadHandler() {
@@ -25,9 +24,6 @@ public final class ServerConnectorModePayloadHandler {
     ) {
         ServerPayloadContext.enqueue(contextSupplier, player -> {
             ConnectorSessionStore.setConnectorModeEnabled(player.getUUID(), payload.enabled());
-            if (!payload.enabled()) {
-                ServerPipeConnectorEvents.cancelPipeConnection(player);
-            }
         });
     }
 }
