@@ -9,7 +9,6 @@ import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.connector.planning.ConnectionPlanBuilder;
 import com.javiluli.createpipeconnector.feature.material.PipeInventory;
-import com.javiluli.createpipeconnector.feature.pipe.PipeNetworkUpdater;
 import com.javiluli.createpipeconnector.feature.preview.PipePreviewBuilder;
 import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
 import com.javiluli.createpipeconnector.feature.pump.AutoPumpPlanner;
@@ -43,8 +42,6 @@ import java.util.Map;
  * directamente de las utilidades internas del paquete.</p>
  */
 public final class PipeConnectorLogic {
-    private static final Direction[] DIRECTIONS = Direction.values();
-
     /** Impide crear instancias de la fachada estatica. */
     private PipeConnectorLogic() {
     }
@@ -147,11 +144,19 @@ public final class PipeConnectorLogic {
         return canPlacePipeAt(level, selection.position());
     }
 
-    /** Comprueba que el jugador conserva la tuberia y seleccion necesarias. */
-    public static boolean isPlayerInPipeMode(Player player, Selection selection) {
-        Block heldPipeBlock = getHeldPipeBlock(player);
-        return heldPipeBlock == selection.pipeBlock()
-                && isSelectionStillValid(player.level(), selection);
+    /**
+     * Indica si la interaccion principal utiliza la tuberia guardada en la ruta.
+     *
+     * <p>La mano secundaria solo se considera cuando la principal esta vacia,
+     * evitando que una tuberia secundaria bloquee el uso de otro objeto.</p>
+     */
+    public static boolean isUsingSelectedPipe(Player player, Selection selection) {
+        Block mainHandPipe = getPipeBlock(player.getMainHandItem());
+        if (mainHandPipe != null) {
+            return mainHandPipe == selection.pipeBlock();
+        }
+        return player.getMainHandItem().isEmpty()
+                && getPipeBlock(player.getOffhandItem()) == selection.pipeBlock();
     }
 
     /**
@@ -167,34 +172,13 @@ public final class PipeConnectorLogic {
         return PlayerInteractionRange.resolve(player);
     }
 
-    /** Cuenta las tuberias disponibles para el tipo seleccionado. */
-    public static int countAvailablePipes(Player player, Block pipeBlock) {
-        return PipeInventory.countAvailablePipes(player, pipeBlock);
-    }
-
-    /** Cuenta las bombas mecanicas disponibles. */
-    public static int countAvailablePumps(Player player) {
-        return PipeInventory.countAvailablePumps(player);
-    }
-
-    /** Comprueba si el jugador dispone de todos los materiales del plan. */
-    public static boolean hasEnoughItems(Player player, Block pipeBlock, ConnectionPlan plan) {
-        return PipeInventory.hasEnoughItems(player, pipeBlock, plan);
-    }
-
-    /** Consume una cantidad concreta de tuberias. */
-    public static boolean consumePipes(Player player, Block pipeBlock, int requiredPipes) {
-        return PipeInventory.consumePipes(player, pipeBlock, requiredPipes);
-    }
-
-    /** Consume todos los materiales requeridos por el plan. */
-    public static boolean consumeItems(Player player, Block pipeBlock, ConnectionPlan plan) {
-        return PipeInventory.consumeItems(player, pipeBlock, plan);
-    }
-
-    /** Indica mediante un contador si hay revestimiento disponible. */
-    public static int countAvailableCopperCasings(Player player) {
-        return PipeInventory.countAvailableCopperCasings(player);
+    /** Inspecciona todos los materiales y shulkers con un unico recorrido. */
+    public static PipeInventory.MaterialSnapshot inspectMaterials(
+            Player player,
+            Block pipeBlock,
+            boolean includeShulkers
+    ) {
+        return PipeInventory.inspectMaterials(player, pipeBlock, includeShulkers);
     }
 
     /** Crea un estado base de tuberia conservando el agua del origen. */
@@ -224,24 +208,18 @@ public final class PipeConnectorLogic {
         return PipePreviewBuilder.buildPreview(level, plan, pipeBlock);
     }
 
-    /** Anade bombas automaticas eficientes con sentido normal. */
-    public static ConnectionPlan withAutoPumps(ConnectionPlan plan) {
-        return AutoPumpPlanner.apply(plan);
-    }
-
-    /** Anade bombas automaticas eficientes con sentido configurable. */
-    public static ConnectionPlan withAutoPumps(ConnectionPlan plan, boolean reversed) {
-        return AutoPumpPlanner.apply(plan, reversed);
-    }
-
     /** Aplica al plan el modo y sentido de bombas seleccionados. */
     public static ConnectionPlan withPumpMode(ConnectionPlan plan, PumpMode mode, boolean reversed) {
         return AutoPumpPlanner.apply(plan, mode, reversed);
     }
 
-    /** Incorpora al plan las bombas manuales validas. */
-    public static ConnectionPlan withManualPumps(ConnectionPlan plan, List<BlockPos> pumpPositions) {
-        return ManualPumpPlanner.apply(plan, pumpPositions);
+    /** Incorpora bombas manuales validas respetando el sentido seleccionado. */
+    public static ConnectionPlan withManualPumps(
+            ConnectionPlan plan,
+            List<BlockPos> pumpPositions,
+            boolean reversed
+    ) {
+        return ManualPumpPlanner.apply(plan, pumpPositions, reversed);
     }
 
     /** Aplica al plan el modo de revestimiento y las marcas manuales validas. */
@@ -347,11 +325,6 @@ public final class PipeConnectorLogic {
     /** Busca una ruta orientada por caras y prioridad explicitas. */
     public static List<BlockPos> findPath(Level level, BlockPos startPos, Direction startFace, BlockPos endPos, Direction endFace, RoutePriority routePriority) {
         return PipePathfinder.findPath(level, startPos, startFace, endPos, endFace, routePriority);
-    }
-
-    /** Actualiza las tuberias colocadas y sus vecinas para regenerar conexiones. */
-    public static void refreshPipeStates(ServerLevel level, List<BlockPos> path) {
-        PipeNetworkUpdater.refresh(level, path);
     }
 
     /** Crea una vista del nivel que incluye estados de preview virtuales. */

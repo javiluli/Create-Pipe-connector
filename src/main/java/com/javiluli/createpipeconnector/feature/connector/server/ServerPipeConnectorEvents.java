@@ -5,7 +5,10 @@ import com.javiluli.createpipeconnector.feature.connector.PipeConnectorLogic;
 import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
+import com.javiluli.createpipeconnector.feature.connector.interaction.RouteInteractionResolver;
 import com.javiluli.createpipeconnector.feature.connector.session.ConnectorSessionStore;
+import com.javiluli.createpipeconnector.feature.material.PipeInventory.MaterialSnapshot;
+import com.javiluli.createpipeconnector.feature.material.shulker.server.ShulkerMaterialPreferenceStore;
 import com.javiluli.createpipeconnector.feature.placement.server.IncrementalPipePlacementService;
 import com.javiluli.createpipeconnector.feature.placement.server.PlacementAnimationPreferenceStore;
 import com.javiluli.createpipeconnector.feature.pump.PumpMode;
@@ -25,7 +28,6 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.TickEvent;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +37,6 @@ import java.util.UUID;
  * Gestiona en Forge el ciclo de ruta, la colocacion y el doble clic con la llave.
  */
 public final class ServerPipeConnectorEvents {
-    private static final String FIRST_POINT_SELECTED_MESSAGE = "hud.createpipeconnector.first_point_selected";
     private static final String PIPE_STYLE_CLICK_AGAIN_MESSAGE = "hud.createpipeconnector.pipe_style_click_again";
     private static final String PIPE_STYLE_NO_CHANGES_MESSAGE = "hud.createpipeconnector.pipe_style_no_changes";
     private static final String PIPE_STYLE_TO_GLASS_MESSAGE = "hud.createpipeconnector.pipe_style_to_glass";
@@ -70,16 +71,14 @@ public final class ServerPipeConnectorEvents {
 
         if (!ConnectorSessionStore.isConnectorModeEnabled(player.getUUID())) {
             ConnectorSessionStore.clearSelection(player.getUUID());
-            clearActionBar(player);
             return;
         }
 
-        if (PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
+        if (PipeConnectorLogic.isSelectionStillValid(player.level(), selection)) {
             return;
         }
 
         ConnectorSessionStore.clearSelection(player.getUUID());
-        clearActionBar(player);
     }
 
     /**
@@ -135,13 +134,25 @@ public final class ServerPipeConnectorEvents {
         if (!ConnectorSessionStore.isConnectorModeEnabled(player.getUUID())) {
             return;
         }
-
-        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
-        if (heldPipeBlock == null) {
+        Selection currentSelection = ConnectorSessionStore.getSelection(player.getUUID());
+        boolean connectorHandlesInteraction = RouteInteractionResolver.shouldConnectorHandle(
+                player,
+                currentSelection,
+                event.getLevel(),
+                event.getPos()
+        );
+        if (!connectorHandlesInteraction) {
             return;
         }
 
-        PlacementTarget clickedTarget = PipeConnectorLogic.resolvePlacementTarget(event.getLevel(), event.getPos(), event.getFace(), heldPipeBlock);
+        Block routePipeBlock = currentSelection == null
+                ? PipeConnectorLogic.getHeldPipeBlock(player)
+                : currentSelection.pipeBlock();
+        if (routePipeBlock == null) {
+            return;
+        }
+
+        PlacementTarget clickedTarget = PipeConnectorLogic.resolvePlacementTarget(event.getLevel(), event.getPos(), event.getFace(), routePipeBlock);
         if (clickedTarget == null) {
             return;
         }
@@ -163,31 +174,24 @@ public final class ServerPipeConnectorEvents {
             return false;
         }
 
-        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
         Selection currentSelection = ConnectorSessionStore.getSelection(player.getUUID());
-        if (heldPipeBlock == null || !isTargetValid(player, serverLevel, heldPipeBlock, target, currentSelection == null)) {
+        Block routePipeBlock = currentSelection == null
+                ? PipeConnectorLogic.getHeldPipeBlock(player)
+                : currentSelection.pipeBlock();
+        if (routePipeBlock == null || !isTargetValid(player, serverLevel, routePipeBlock, target, currentSelection == null)) {
             if (currentSelection != null) {
                 ConnectorSessionStore.clearSelection(player.getUUID());
-                clearActionBar(player);
             }
             return false;
         }
 
         if (currentSelection == null) {
-            ConnectorSessionStore.setSelection(player.getUUID(), new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
-            player.displayClientMessage(Component.translatable(FIRST_POINT_SELECTED_MESSAGE), true);
+            ConnectorSessionStore.setSelection(player.getUUID(), new Selection(target.position(), routePipeBlock, target.face(), target.existingPipe()));
             return true;
         }
 
         if (currentSelection.position().equals(target.position())) {
             ConnectorSessionStore.clearSelection(player.getUUID());
-            clearActionBar(player);
-            return true;
-        }
-
-        if (currentSelection.pipeBlock() != heldPipeBlock) {
-            ConnectorSessionStore.clearSelection(player.getUUID());
-            clearActionBar(player);
             return true;
         }
 
@@ -200,16 +204,19 @@ public final class ServerPipeConnectorEvents {
         );
         if (plan == null) {
             ConnectorSessionStore.clearSelection(player.getUUID());
-            clearActionBar(player);
             return true;
         }
         PumpMode pumpMode = ConnectorSessionStore.getPumpMode(player.getUUID());
         plan = PipeConnectorLogic.withPumpMode(
                 plan,
                 pumpMode,
-                ConnectorSessionStore.isAutoPumpDirectionReversed(player.getUUID())
+                ConnectorSessionStore.isPumpDirectionReversed(player.getUUID())
         );
-        plan = PipeConnectorLogic.withManualPumps(plan, ConnectorSessionStore.getManualPumps(player.getUUID()));
+        plan = PipeConnectorLogic.withManualPumps(
+                plan,
+                ConnectorSessionStore.getManualPumps(player.getUUID()),
+                ConnectorSessionStore.isPumpDirectionReversed(player.getUUID())
+        );
         plan = PipeConnectorLogic.withCopperCasingMode(
                 plan,
                 ConnectorSessionStore.getCopperCasingMode(player.getUUID()),
@@ -222,31 +229,42 @@ public final class ServerPipeConnectorEvents {
                 currentSelection.pipeBlock()
         );
 
-        if (!PipeConnectorLogic.hasEnoughItems(player, currentSelection.pipeBlock(), plan)) {
-            player.displayClientMessage(missingMaterialsMessage(player, currentSelection.pipeBlock(), plan).copy().withStyle(ChatFormatting.RED), true);
+        MaterialSnapshot materials = PipeConnectorLogic.inspectMaterials(
+                player,
+                currentSelection.pipeBlock(),
+                ShulkerMaterialPreferenceStore.isEnabled(player.getUUID())
+        );
+        if (!materials.hasEnough(plan)) {
+            player.displayClientMessage(missingMaterialsMessage(materials, plan).copy().withStyle(ChatFormatting.RED), true);
             return true;
         }
 
-        IncrementalPipePlacementService.enqueue(player, serverLevel, plan, currentSelection.pipeBlock());
+        IncrementalPipePlacementService.enqueue(
+                player,
+                serverLevel,
+                plan,
+                currentSelection.pipeBlock(),
+                materials
+        );
 
         ConnectorSessionStore.clearSelection(player.getUUID());
-        clearActionBar(player);
         return true;
     }
 
-    /**
-     * Limpia los datos temporales y el mensaje de la barra de accion.
-     */
+    /** Limpia los datos temporales de la ruta. */
     public static void cancelPipeConnection(Player player) {
         ConnectorSessionStore.clearSelection(player.getUUID());
-        clearActionBar(player);
     }
 
     /** Devuelve reservas pendientes cuando el jugador abandona el servidor. */
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!event.getEntity().level().isClientSide()) {
+            UUID playerId = event.getEntity().getUUID();
             IncrementalPipePlacementService.cancelAndRefund(event.getEntity());
-            PlacementAnimationPreferenceStore.clear(event.getEntity().getUUID());
+            ConnectorSessionStore.clearPlayer(playerId);
+            PlacementAnimationPreferenceStore.clear(playerId);
+            ShulkerMaterialPreferenceStore.clear(playerId);
+            WRENCH_PIPE_CLICKS.remove(playerId);
         }
     }
 
@@ -266,17 +284,12 @@ public final class ServerPipeConnectorEvents {
                 && targetState.getBlock() == pipeBlock;
     }
 
-    /** Borra el mensaje temporal mostrado sobre la barra rapida. */
-    private static void clearActionBar(Player player) {
-        player.displayClientMessage(Component.empty(), true);
-    }
-
     /** Construye un mensaje localizado con todos los materiales que faltan. */
-    private static Component missingMaterialsMessage(Player player, Block pipeBlock, ConnectionPlan plan) {
+    private static Component missingMaterialsMessage(MaterialSnapshot materials, ConnectionPlan plan) {
         List<Component> missingMaterials = new ArrayList<>();
-        addMissingMaterial(missingMaterials, plan.requiredPipes(), PipeConnectorLogic.countAvailablePipes(player, pipeBlock), Constants.HUD_MISSING_PIPES);
-        addMissingMaterial(missingMaterials, plan.requiredPumps(), PipeConnectorLogic.countAvailablePumps(player), Constants.HUD_MISSING_PUMPS);
-        addMissingMaterial(missingMaterials, plan.requiredCopperCasings(), PipeConnectorLogic.countAvailableCopperCasings(player), Constants.HUD_MISSING_CASINGS);
+        addMissingMaterial(missingMaterials, plan.requiredPipes(), materials.pipes().totalCount(), Constants.HUD_MISSING_PIPES);
+        addMissingMaterial(missingMaterials, plan.requiredPumps(), materials.pumps().totalCount(), Constants.HUD_MISSING_PUMPS);
+        addMissingMaterial(missingMaterials, plan.requiredCopperCasings(), materials.copperCasings().totalCount(), Constants.HUD_MISSING_CASINGS);
         if (missingMaterials.isEmpty()) {
             return Component.translatable(Constants.HUD_MISSING_MATERIALS, Component.literal("?"));
         }
@@ -305,13 +318,9 @@ public final class ServerPipeConnectorEvents {
 
     /** Elimina registros de primer clic cuya ventana temporal ya expiro. */
     private static void clearExpiredWrenchClicks(long gameTime) {
-        Iterator<Map.Entry<UUID, WrenchPipeClick>> iterator = WRENCH_PIPE_CLICKS.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<UUID, WrenchPipeClick> entry = iterator.next();
-            if (gameTime - entry.getValue().gameTime() > WRENCH_DOUBLE_CLICK_TICKS) {
-                iterator.remove();
-            }
-        }
+        WRENCH_PIPE_CLICKS.entrySet().removeIf(
+                entry -> gameTime - entry.getValue().gameTime() > WRENCH_DOUBLE_CLICK_TICKS
+        );
     }
 
     /** Conserva la posicion y el tick del primer clic con la llave. */
