@@ -3,10 +3,12 @@ package com.javiluli.createpipeconnector.feature.placement.server;
 import com.javiluli.createpipeconnector.core.create.CreatePipeBlocks;
 import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.material.PipeInventory;
+import com.javiluli.createpipeconnector.feature.material.PipeInventory.MaterialSnapshot;
+import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSettings;
+import com.javiluli.createpipeconnector.feature.placement.PlacementCascadeTiming;
 import com.javiluli.createpipeconnector.feature.pipe.PipeNetworkUpdater;
 import com.javiluli.createpipeconnector.feature.preview.PipePreviewBuilder;
 import com.javiluli.createpipeconnector.feature.routing.PipePathfinder;
-import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSettings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -24,10 +26,11 @@ import java.util.Queue;
 import java.util.UUID;
 
 /**
- * Coloca rutas confirmadas a una velocidad estable sin agrupar piezas por tick.
+ * Coloca las rutas confirmadas a una velocidad estable sin agrupar piezas por tick.
  *
- * <p>Los materiales se reservan al confirmar. Si una ruta queda bloqueada,
- * se devuelven las piezas pendientes y se mantienen las ya colocadas.</p>
+ * <p>Los materiales se reservan al confirmar para evitar rutas parciales por cambios
+ * posteriores en el inventario. Si la ruta queda bloqueada, las piezas pendientes se
+ * devuelven al jugador y las ya colocadas permanecen en el mundo.</p>
  */
 public final class IncrementalPipePlacementService {
     private static final Map<UUID, Queue<PendingPlacement>> PENDING_PLACEMENTS = new HashMap<>();
@@ -37,13 +40,19 @@ public final class IncrementalPipePlacementService {
     }
 
     /** Valida, reserva y encola un plan para su construccion progresiva. */
-    public static boolean enqueue(Player player, ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
+    public static boolean enqueue(
+            Player player,
+            ServerLevel level,
+            ConnectionPlan plan,
+            Block pipeBlock,
+            MaterialSnapshot materials
+    ) {
         if (!isPlanPlaceable(level, plan)) {
             return false;
         }
 
         List<PlacementStep> steps = buildSteps(level, plan, pipeBlock);
-        if (!PipeInventory.consumeItems(player, pipeBlock, plan)) {
+        if (!PipeInventory.consumeItems(player, pipeBlock, plan, materials)) {
             return false;
         }
 
@@ -58,7 +67,8 @@ public final class IncrementalPipePlacementService {
                 plan.path(),
                 pipeBlock,
                 steps,
-                settings.piecesPerSecond()
+                settings.zoomEnabled(),
+                settings.delayMilliseconds()
         );
         if (!settings.enabled()) {
             PlacementProgress progress = pendingPlacement.placeAll();
@@ -89,6 +99,7 @@ public final class IncrementalPipePlacementService {
             if (progress == PlacementProgress.CONTINUE) {
                 continue;
             }
+
             iterator.remove();
             pendingPlacement.finish();
             if (progress == PlacementProgress.BLOCKED) {
@@ -107,12 +118,13 @@ public final class IncrementalPipePlacementService {
             completeAllImmediately(player);
             return;
         }
+
         Queue<PendingPlacement> queue = PENDING_PLACEMENTS.get(player.getUUID());
         if (queue == null) {
             return;
         }
         for (PendingPlacement pendingPlacement : queue) {
-            pendingPlacement.updateSpeed(settings.piecesPerSecond());
+            pendingPlacement.updateAnimation(settings.zoomEnabled(), settings.delayMilliseconds());
         }
     }
 
@@ -122,18 +134,20 @@ public final class IncrementalPipePlacementService {
         if (queue == null) {
             return;
         }
+
         for (PendingPlacement pendingPlacement : queue) {
             pendingPlacement.finish();
             pendingPlacement.refundRemaining(player);
         }
     }
 
-    /** Finaliza al instante las rutas pendientes al desactivar la animacion. */
+    /** Finaliza al instante las rutas pendientes cuando el jugador desactiva la animacion. */
     private static void completeAllImmediately(Player player) {
         Queue<PendingPlacement> queue = PENDING_PLACEMENTS.remove(player.getUUID());
         if (queue == null) {
             return;
         }
+
         for (PendingPlacement pendingPlacement : queue) {
             PlacementProgress progress = pendingPlacement.placeAll();
             pendingPlacement.finish();
@@ -146,14 +160,14 @@ public final class IncrementalPipePlacementService {
     /** Comprueba que todas las posiciones siguen libres antes de reservar materiales. */
     private static boolean isPlanPlaceable(ServerLevel level, ConnectionPlan plan) {
         for (BlockPos position : plan.placementPositions()) {
-            if (!level.isLoaded(position) || !PipePathfinder.isTraversableBlock(level, position)) {
+            if (!level.hasChunkAt(position) || !PipePathfinder.isTraversableBlock(level, position)) {
                 return false;
             }
         }
         return true;
     }
 
-    /** Precalcula los estados finales para reducir trabajo durante los ticks. */
+    /** Precalcula los estados finales para reducir trabajo durante los ticks de colocacion. */
     private static List<PlacementStep> buildSteps(ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
         Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
         Map<BlockPos, BlockState> connectionStates = PipePreviewBuilder.buildConnectionStates(level, plan, pipeBlock);
@@ -207,38 +221,77 @@ public final class IncrementalPipePlacementService {
         private final List<BlockPos> path;
         private final Block pipeBlock;
         private final List<PlacementStep> steps;
-        private int piecesPerSecond;
+        private final double[] pieceStartTicks;
+        private double pieceIntervalTicks;
+        private double completionDurationTicks;
         private int nextStepIndex;
-        private int placementProgress;
+        private int nextPieceToAnimate;
+        private double animationClock;
+        private double nextPieceStartTick;
 
-        /** Crea una construccion progresiva con una copia estable del plan. */
         private PendingPlacement(
                 ServerLevel level,
                 List<BlockPos> path,
                 Block pipeBlock,
                 List<PlacementStep> steps,
-                int piecesPerSecond
+                boolean zoomEnabled,
+                int delayMilliseconds
         ) {
             this.level = level;
             this.path = List.copyOf(path);
             this.pipeBlock = pipeBlock;
             this.steps = steps;
-            this.piecesPerSecond = piecesPerSecond;
+            pieceStartTicks = new double[steps.size()];
+            configureAnimation(zoomEnabled, delayMilliseconds);
+            startNextPiece(0.0D);
         }
 
-        /** Cambia la velocidad sin perder el progreso parcial del intervalo. */
-        private void updateSpeed(int piecesPerSecond) {
-            this.piecesPerSecond = piecesPerSecond;
+        /** Cambia el zoom y el retraso sin reiniciar la ruta en marcha. */
+        private void updateAnimation(boolean zoomEnabled, int delayMilliseconds) {
+            configureAnimation(zoomEnabled, delayMilliseconds);
+            if (nextPieceToAnimate > 0 && nextPieceToAnimate < steps.size()) {
+                nextPieceStartTick = Math.max(
+                        animationClock,
+                        pieceStartTicks[nextPieceToAnimate - 1] + pieceIntervalTicks
+                );
+            }
         }
 
-        /** Distribuye piezas individuales entre los veinte ticks de cada segundo. */
+        /** Precalcula los intervalos usados por todos los ticks posteriores. */
+        private void configureAnimation(boolean zoomEnabled, int delayMilliseconds) {
+            pieceIntervalTicks = PlacementCascadeTiming.pieceIntervalTicks(delayMilliseconds);
+            completionDurationTicks = zoomEnabled
+                    ? PlacementCascadeTiming.zoomDurationTicks(delayMilliseconds)
+                    : pieceIntervalTicks;
+        }
+
+        /** Avanza la cascada y coloca como maximo una pieza durante este tick. */
         private PlacementProgress placeNextTick() {
-            placementProgress += piecesPerSecond;
-            if (placementProgress < PlacementAnimationSettings.GAME_TICKS_PER_SECOND) {
+            animationClock += 1.0D;
+            advanceCascade();
+            if (nextStepIndex >= nextPieceToAnimate) {
                 return PlacementProgress.CONTINUE;
             }
-            placementProgress -= PlacementAnimationSettings.GAME_TICKS_PER_SECOND;
+
+            double completionTick = pieceStartTicks[nextStepIndex] + completionDurationTicks;
+            if (animationClock < completionTick) {
+                return PlacementProgress.CONTINUE;
+            }
             return placeNext();
+        }
+
+        /** Inicia nuevas piezas aunque las anteriores todavia esten creciendo. */
+        private void advanceCascade() {
+            while (nextPieceToAnimate < steps.size() && animationClock >= nextPieceStartTick) {
+                startNextPiece(nextPieceStartTick);
+            }
+        }
+
+        /** Registra el instante visual de la siguiente pieza pendiente. */
+        private void startNextPiece(double startTick) {
+            pieceStartTicks[nextPieceToAnimate] = startTick;
+            nextPieceToAnimate++;
+            nextPieceStartTick = startTick + pieceIntervalTicks;
         }
 
         /** Coloca la siguiente pieza o detecta que la ruta ya no es valida. */
@@ -246,27 +299,22 @@ public final class IncrementalPipePlacementService {
             if (nextStepIndex >= steps.size()) {
                 return PlacementProgress.COMPLETED;
             }
-            PlacementStep step = steps.get(nextStepIndex);
-            if (!level.isLoaded(step.position())) {
-                return PlacementProgress.BLOCKED;
-            }
-            BlockState currentState = level.getBlockState(step.position());
-            if (!PipePathfinder.isTraversableBlock(currentState)) {
-                return PlacementProgress.BLOCKED;
-            }
-            BlockState waterloggedState = CreatePipeBlocks.applyCurrentWaterlogging(currentState, step.state());
 
-            // Create usa estas flags al imprimir esquemas. Enviar solo el nuevo
-            // estado evita recalculos de vecinos y remallados duplicados por pieza.
-            int updateFlags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
-            if (!level.setBlock(step.position(), waterloggedState, updateFlags)) {
+            PlacementStep step = steps.get(nextStepIndex);
+            if (!level.hasChunkAt(step.position()) || !PipePathfinder.isTraversableBlock(level, step.position())) {
                 return PlacementProgress.BLOCKED;
             }
+
+            BlockState currentState = level.getBlockState(step.position());
+            BlockState waterloggedState = CreatePipeBlocks.applyCurrentWaterlogging(currentState, step.state());
+            level.setBlockAndUpdate(step.position(), waterloggedState);
             nextStepIndex++;
-            return nextStepIndex >= steps.size() ? PlacementProgress.COMPLETED : PlacementProgress.CONTINUE;
+            return nextStepIndex >= steps.size()
+                    ? PlacementProgress.COMPLETED
+                    : PlacementProgress.CONTINUE;
         }
 
-        /** Coloca todas las piezas en el mismo tick para el modo instantaneo. */
+        /** Coloca todas las piezas en el mismo tick para el modo sin animacion. */
         private PlacementProgress placeAll() {
             PlacementProgress progress;
             do {
@@ -275,12 +323,12 @@ public final class IncrementalPipePlacementService {
             return progress;
         }
 
-        /** Reconstruye las conexiones reales de las piezas ya existentes. */
+        /** Reconstruye las conexiones reales de las piezas que ya existen. */
         private void finish() {
             PipeNetworkUpdater.refresh(level, path);
         }
 
-        /** Devuelve solamente materiales que aun no se habian colocado. */
+        /** Devuelve solamente tuberias y bombas que aun no se habian colocado. */
         private void refundRemaining(Player player) {
             int remainingPipes = 0;
             int remainingPumps = 0;
@@ -295,7 +343,7 @@ public final class IncrementalPipePlacementService {
         }
     }
 
-    /** Describe un estado final y el material que fue reservado para el. */
+    /** Describe un bloque final y el material que fue reservado para el. */
     private record PlacementStep(BlockPos position, BlockState state, boolean pump) {
     }
 

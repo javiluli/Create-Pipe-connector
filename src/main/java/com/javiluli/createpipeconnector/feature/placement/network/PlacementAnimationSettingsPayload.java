@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /** Envia al servidor la preferencia local de construccion progresiva. */
-public record PlacementAnimationSettingsPayload(boolean enabled, int piecesPerSecond)
+public record PlacementAnimationSettingsPayload(boolean enabled, boolean zoomEnabled, int delayMilliseconds)
         implements CustomPacketPayload {
     public static final Type<PlacementAnimationSettingsPayload> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "placement_animation_settings")
@@ -18,18 +18,23 @@ public record PlacementAnimationSettingsPayload(boolean enabled, int piecesPerSe
 
     /** Crea el payload desde una configuracion ya saneada. */
     public PlacementAnimationSettingsPayload(PlacementAnimationSettings settings) {
-        this(settings.enabled(), settings.piecesPerSecond());
+        this(settings.enabled(), settings.zoomEnabled(), settings.delayMilliseconds());
     }
 
-    /** Decodifica el estado y la velocidad solicitados. */
+    /** Decodifica el estado, zoom y retraso solicitados. */
     private static PlacementAnimationSettingsPayload read(RegistryFriendlyByteBuf buffer) {
-        return new PlacementAnimationSettingsPayload(buffer.readBoolean(), buffer.readVarInt());
+        return new PlacementAnimationSettingsPayload(
+                buffer.readBoolean(),
+                buffer.readBoolean(),
+                buffer.readVarInt()
+        );
     }
 
-    /** Codifica el estado y la velocidad solicitados. */
+    /** Codifica el estado, zoom y retraso solicitados. */
     private void write(RegistryFriendlyByteBuf buffer) {
         buffer.writeBoolean(enabled);
-        buffer.writeVarInt(piecesPerSecond);
+        buffer.writeBoolean(zoomEnabled);
+        buffer.writeVarInt(delayMilliseconds);
     }
 
     /** {@inheritDoc} */

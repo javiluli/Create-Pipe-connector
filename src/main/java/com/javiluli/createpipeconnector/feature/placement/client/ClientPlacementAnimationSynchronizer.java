@@ -42,17 +42,21 @@ public final class ClientPlacementAnimationSynchronizer {
     public static void onClientTick(ClientTickEvent.Post event) {
         PlacementAnimationSettings currentSettings = PlacementAnimationClientConfig.get();
         if (loginSyncPending || !currentSettings.equals(lastSyncedSettings)) {
-            loginSyncPending = !syncIfConnected();
+            loginSyncPending = !syncIfConnected(currentSettings);
         }
     }
 
     /** Envia las preferencias actuales si existe una conexion jugable. */
     public static boolean syncIfConnected() {
+        return syncIfConnected(PlacementAnimationClientConfig.get());
+    }
+
+    /** Envia una instantanea ya leida para evitar consultar dos veces la configuracion. */
+    private static boolean syncIfConnected(PlacementAnimationSettings settings) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.getConnection() == null) {
             return false;
         }
-        PlacementAnimationSettings settings = PlacementAnimationClientConfig.get();
         PacketDistributor.sendToServer(new PlacementAnimationSettingsPayload(settings));
         lastSyncedSettings = settings;
         if (!settings.enabled()) {
