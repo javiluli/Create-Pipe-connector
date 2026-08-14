@@ -1,6 +1,5 @@
 package com.javiluli.createpipeconnector.feature.connector.network;
 
-import com.javiluli.createpipeconnector.feature.connector.server.ServerPipeConnectorEvents;
 import com.javiluli.createpipeconnector.feature.connector.session.ConnectorSessionStore;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -15,8 +14,5 @@ public final class ServerConnectorModePayloadHandler {
     public static void handleToggleConnectorMode(ToggleConnectorModePayload payload, IPayloadContext context) {
         Player player = context.player();
         ConnectorSessionStore.setConnectorModeEnabled(player.getUUID(), payload.enabled());
-        if (!payload.enabled()) {
-            ServerPipeConnectorEvents.cancelPipeConnection(player);
-        }
     }
 }

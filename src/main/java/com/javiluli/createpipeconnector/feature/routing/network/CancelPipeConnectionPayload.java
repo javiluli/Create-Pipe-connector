@@ -7,7 +7,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Cancela la ruta activa sin salir del modo conector.
+ * Cancela la ruta actual sin desactivar el modo Pipe Connector.
  */
 public record CancelPipeConnectionPayload() implements CustomPacketPayload {
     public static final Type<CancelPipeConnectionPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "cancel_pipe_connection"));
@@ -19,4 +19,3 @@ public record CancelPipeConnectionPayload() implements CustomPacketPayload {
         return TYPE;
     }
 }
-

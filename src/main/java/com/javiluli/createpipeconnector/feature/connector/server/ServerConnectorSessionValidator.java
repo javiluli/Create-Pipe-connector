@@ -1,21 +1,24 @@
 package com.javiluli.createpipeconnector.feature.connector.server;
 
 import com.javiluli.createpipeconnector.feature.connector.PipeConnectorLogic;
-import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.connector.session.ConnectorSessionStore;
-import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.state.BlockState;
 
-/** Reune validaciones compartidas por los payloads autoritativos del servidor. */
+/**
+ * Comparte las validaciones de sesion que necesitan las features modificables de una ruta.
+ */
 public final class ServerConnectorSessionValidator {
-    /** Impide crear instancias del helper de validacion. */
+    /** Impide crear instancias del validador estatico. */
     private ServerConnectorSessionValidator() {
     }
 
-    /** Devuelve la seleccion activa si el jugador sigue en un estado valido. */
+    /**
+     * Devuelve la seleccion activa solo mientras el jugador conserva un estado compatible.
+     *
+     * @param player jugador cuya sesion se comprueba
+     * @return seleccion valida o {@code null} cuando debe descartarse
+     */
     public static Selection validatedSelection(Player player) {
         if (!ConnectorSessionStore.isConnectorModeEnabled(player.getUUID())) {
             ConnectorSessionStore.clearSelection(player.getUUID());
@@ -23,7 +26,7 @@ public final class ServerConnectorSessionValidator {
         }
 
         Selection selection = ConnectorSessionStore.getSelection(player.getUUID());
-        if (selection != null && PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
+        if (selection != null && PipeConnectorLogic.isSelectionStillValid(player.level(), selection)) {
             return selection;
         }
 
@@ -31,26 +34,16 @@ public final class ServerConnectorSessionValidator {
         return null;
     }
 
-    /** Comprueba que existe una ruta activa y que la posicion esta al alcance. */
-    public static boolean canModifyRouteAt(Player player, BlockPos position) {
-        return validatedSelection(player) != null
-                && PipeConnectorLogic.isWithinInteractionRange(player, position);
-    }
-
-    /** Comprueba alcance, ocupacion y tipo de una nueva ancla. */
-    public static boolean isAnchorValid(Player player, ServerLevel level, Selection selection, PlacementTarget anchor) {
-        if (selection.position().equals(anchor.position())) {
-            return false;
-        }
-        if (!PipeConnectorLogic.isWithinInteractionRange(player, anchor.position())) {
-            return false;
-        }
-        if (!anchor.existingPipe()) {
-            return PipeConnectorLogic.canPlacePipeAt(level, anchor.position());
-        }
-
-        BlockState anchorState = level.getBlockState(anchor.position());
-        return PipeConnectorLogic.isConnectablePipe(anchorState)
-                && anchorState.getBlock() == selection.pipeBlock();
+    /**
+     * Comprueba que existe una ruta activa antes de modificar sus marcas.
+     *
+     * <p>Las posiciones pueden pertenecer a un preview fijado anteriormente y
+     * quedar fuera del alcance actual mientras el jugador usa freecam.</p>
+     *
+     * @param player jugador que solicita el cambio
+     * @return {@code true} si la modificacion puede procesarse
+     */
+    public static boolean canModifyRoute(Player player) {
+        return validatedSelection(player) != null;
     }
 }
