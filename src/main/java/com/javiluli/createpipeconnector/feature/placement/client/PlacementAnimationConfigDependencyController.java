@@ -1,26 +1,31 @@
 package com.javiluli.createpipeconnector.feature.placement.client;
 
 import com.javiluli.createpipeconnector.core.Constants;
+import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSettings;
 import com.javiluli.createpipeconnector.feature.placement.config.PlacementAnimationClientConfig;
 import net.createmod.catnip.config.ui.BaseConfigScreen;
 import net.createmod.catnip.config.ui.ConfigScreen;
 import net.createmod.catnip.config.ui.ConfigScreenList;
 import net.createmod.catnip.config.ui.SubMenuConfigScreen;
 import net.createmod.catnip.config.ui.entries.BooleanEntry;
+import net.createmod.catnip.config.ui.entries.NumberEntry;
 import net.createmod.catnip.gui.UIRenderHelper;
 import net.createmod.catnip.gui.element.RenderElement;
+import net.createmod.catnip.gui.element.TextStencilElement;
 import net.createmod.catnip.gui.widget.AbstractSimiWidget;
 import net.createmod.catnip.gui.widget.BoxWidget;
 import net.createmod.ponder.enums.PonderGuiTextures;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -33,7 +38,12 @@ import java.util.List;
  */
 @Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class PlacementAnimationConfigDependencyController {
+    private static final int DELAY_ENTRY_INDEX = 1;
     private static final Method SET_EDITABLE_METHOD = findSetEditableMethod();
+    private static final Field MIN_TEXT_FIELD = findNumberEntryField("minText");
+    private static final Field MAX_TEXT_FIELD = findNumberEntryField("maxText");
+    private static final Field MIN_OFFSET_FIELD = findNumberEntryField("minOffset");
+    private static final Field MAX_OFFSET_FIELD = findNumberEntryField("maxOffset");
     private static Screen lastScreen;
     private static ConfigScreenList lastConfigList;
     private static Boolean lastAnimationEnabled;
@@ -70,6 +80,7 @@ public final class PlacementAnimationConfigDependencyController {
         }
 
         List<ConfigScreenList.Entry> entries = configList.children();
+        configureDelayBounds(entries.get(DELAY_ENTRY_INDEX));
         for (int index = 1; index < entries.size(); index++) {
             setEditable(entries.get(index), animationEnabled);
         }
@@ -90,8 +101,12 @@ public final class PlacementAnimationConfigDependencyController {
 
     /** Cambia el estado usando el mismo mecanismo visual que Create. */
     private static void setEditable(ConfigScreenList.Entry entry, boolean editable) {
+        Method setEditableMethod = SET_EDITABLE_METHOD;
+        if (setEditableMethod == null) {
+            return;
+        }
         try {
-            SET_EDITABLE_METHOD.invoke(entry, editable);
+            setEditableMethod.invoke(entry, editable);
             if (entry instanceof BooleanEntry booleanEntry) {
                 updateBooleanVisual(booleanEntry, editable);
             }
@@ -139,12 +154,65 @@ public final class PlacementAnimationConfigDependencyController {
         return lastBoxWidget;
     }
 
+    /** Sustituye los limites genericos de Catnip por valores numericos compactos. */
+    private static void configureDelayBounds(ConfigScreenList.Entry entry) {
+        if (!(entry instanceof NumberEntry<?> numberEntry)
+                || MIN_TEXT_FIELD == null
+                || MAX_TEXT_FIELD == null
+                || MIN_OFFSET_FIELD == null
+                || MAX_OFFSET_FIELD == null) {
+            return;
+        }
+
+        String minimumLabel = Integer.toString(PlacementAnimationSettings.MINIMUM_DELAY_MILLISECONDS);
+        String maximumLabel = Integer.toString(PlacementAnimationSettings.MAXIMUM_DELAY_MILLISECONDS);
+        TextStencilElement minimumText = createBoundText(minimumLabel);
+        TextStencilElement maximumText = createBoundText(maximumLabel);
+        try {
+            MIN_TEXT_FIELD.set(numberEntry, minimumText);
+            MAX_TEXT_FIELD.set(numberEntry, maximumText);
+            MIN_OFFSET_FIELD.setInt(numberEntry, Minecraft.getInstance().font.width(minimumLabel));
+            MAX_OFFSET_FIELD.setInt(numberEntry, Minecraft.getInstance().font.width(maximumLabel));
+        } catch (IllegalAccessException ignored) {
+            // Catnip conserva sus limites predeterminados si cambia la API interna.
+        }
+    }
+
+    /** Crea una etiqueta con el mismo estilo visual usado por NumberEntry. */
+    private static TextStencilElement createBoundText(String text) {
+        TextStencilElement element = new TextStencilElement(
+                Minecraft.getInstance().font,
+                Component.literal(text)
+        ).centered(true, false);
+        element.withElementRenderer((graphics, width, height, alpha) -> UIRenderHelper.angledGradient(
+                graphics,
+                0,
+                0,
+                height / 2,
+                height,
+                width,
+                UIRenderHelper.COLOR_TEXT_DARKER
+        ));
+        return element;
+    }
+
     /** Resuelve una sola vez el metodo protegido de Catnip. */
     private static Method findSetEditableMethod() {
         try {
             Method method = ConfigScreenList.Entry.class.getDeclaredMethod("setEditable", boolean.class);
             method.setAccessible(true);
             return method;
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    /** Resuelve una sola vez un campo protegido de NumberEntry. */
+    private static Field findNumberEntryField(String fieldName) {
+        try {
+            Field field = NumberEntry.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field;
         } catch (ReflectiveOperationException | RuntimeException ignored) {
             return null;
         }

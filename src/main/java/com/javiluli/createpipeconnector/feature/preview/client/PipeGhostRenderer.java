@@ -8,6 +8,8 @@ import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConne
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.ActivePreview;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.AnimatedPiece;
+import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSettings;
+import com.javiluli.createpipeconnector.feature.placement.PlacementCascadeTiming;
 import com.javiluli.createpipeconnector.feature.placement.config.PlacementAnimationClientConfig;
 import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -88,12 +90,18 @@ public final class PipeGhostRenderer {
         List<PlacementTarget> anchors = selection == null
                 ? List.of()
                 : ClientPipeConnectorState.getAnchors();
+        PlacementAnimationSettings animationSettings = PlacementAnimationClientConfig.get();
         List<ActivePreview> leadPreviews = ClientPlacementLeadPreview.getActivePreviews(
                 level,
-                event.getPartialTick()
+                event.getPartialTick(),
+                animationSettings
         );
         boolean showFullRoutePreview = PlacementAnimationClientConfig.showFullRoutePreview();
         boolean showNextPiecePreview = PlacementAnimationClientConfig.showNextPiecePreview();
+        boolean zoomAnimationEnabled = animationSettings.enabled() && animationSettings.zoomEnabled();
+        float zoomDurationTicks = zoomAnimationEnabled
+                ? PlacementCascadeTiming.zoomDurationTicks(animationSettings.delayMilliseconds())
+                : 0.0F;
         boolean showPlacementPreview = showFullRoutePreview || showNextPiecePreview;
 
         if (selection == null) {
@@ -126,6 +134,7 @@ public final class PipeGhostRenderer {
                 leadBufferCaches,
                 showFullRoutePreview,
                 showNextPiecePreview,
+                zoomAnimationEnabled,
                 anchors
         );
         RenderLevelStageEvent.Stage targetStage = renderBeforeFluids
@@ -154,8 +163,7 @@ public final class PipeGhostRenderer {
             boolean renderedPreviewBodies = renderPipeBodies(
                     poseStack,
                     bufferSource,
-                    visiblePreviewSections,
-                    GHOST_RENDER_TYPE
+                    visiblePreviewSections
             );
             if (renderedPreviewBodies) {
                 bufferSource.endBatch(GHOST_RENDER_TYPE);
@@ -168,6 +176,8 @@ public final class PipeGhostRenderer {
                     leadBufferCaches,
                     showFullRoutePreview,
                     showNextPiecePreview,
+                    zoomAnimationEnabled,
+                    zoomDurationTicks,
                     frustum,
                     event.getPartialTick()
             );
@@ -182,6 +192,8 @@ public final class PipeGhostRenderer {
                         level,
                         leadPreviews,
                         leadBufferCaches,
+                        zoomAnimationEnabled,
+                        zoomDurationTicks,
                         frustum,
                         event.getPartialTick()
                 );
@@ -207,6 +219,7 @@ public final class PipeGhostRenderer {
             Map<Integer, PipeGhostGeometryCache> leadBufferCaches,
             boolean showFullRoutePreview,
             boolean showNextPiecePreview,
+            boolean zoomAnimationEnabled,
             List<PlacementTarget> anchors
     ) {
         int cameraFluidGroup = PipeGhostFluidClassifier.cameraGroup(camera);
@@ -219,14 +232,13 @@ public final class PipeGhostRenderer {
             if (leadBufferCache == null) {
                 continue;
             }
-            int fluidMask = showFullRoutePreview
-                    ? leadBufferCache.fluidMaskFrom(leadPreview.pieceIndex())
-                    : showNextPiecePreview
-                    ? leadBufferCache.fluidMaskRange(
-                            leadPreview.pieceIndex(),
-                            leadPreview.firstUnstartedPieceIndex()
-                    )
-                    : 0;
+            int fluidMask = leadFluidMask(
+                    leadBufferCache,
+                    leadPreview,
+                    showFullRoutePreview,
+                    showNextPiecePreview,
+                    zoomAnimationEnabled
+            );
             if ((fluidMask & ~cameraFluidMask) != 0) {
                 return true;
             }
@@ -237,6 +249,32 @@ public final class PipeGhostRenderer {
             }
         }
         return false;
+    }
+
+    /** Calcula solo las piezas visibles del modo de construccion seleccionado. */
+    private static int leadFluidMask(
+            PipeGhostGeometryCache bufferCache,
+            ActivePreview leadPreview,
+            boolean showFullRoutePreview,
+            boolean showNextPiecePreview,
+            boolean zoomAnimationEnabled
+    ) {
+        if (showFullRoutePreview) {
+            return bufferCache.fluidMaskFrom(leadPreview.pieceIndex());
+        }
+        if (!showNextPiecePreview) {
+            return 0;
+        }
+        if (!zoomAnimationEnabled) {
+            return bufferCache.fluidMaskRange(
+                    leadPreview.pieceIndex(),
+                    leadPreview.pieceIndex() + 1
+            );
+        }
+        return bufferCache.fluidMaskRange(
+                leadPreview.pieceIndex(),
+                leadPreview.firstUnstartedPieceIndex()
+        );
     }
 
     /** Devuelve una cache valida o reconstruye la geometria del preview. */
@@ -304,13 +342,12 @@ public final class PipeGhostRenderer {
     private static boolean renderPipeBodies(
             PoseStack poseStack,
             MultiBufferSource.BufferSource bufferSource,
-            List<PipeGhostGeometryCache.Section> visibleSections,
-            RenderType renderType
+            List<PipeGhostGeometryCache.Section> visibleSections
     ) {
         boolean rendered = false;
         for (PipeGhostGeometryCache.Section section : visibleSections) {
-            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), renderType, GHOST_TINT);
-            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), renderType, MISSING_GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), GHOST_RENDER_TYPE, GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), GHOST_RENDER_TYPE, MISSING_GHOST_TINT);
         }
         return rendered;
     }
@@ -338,6 +375,8 @@ public final class PipeGhostRenderer {
             Map<Integer, PipeGhostGeometryCache> bufferCaches,
             boolean showFullRoutePreview,
             boolean showNextPiecePreview,
+            boolean zoomAnimationEnabled,
+            float zoomDurationTicks,
             Frustum frustum,
             float partialTick
     ) {
@@ -345,6 +384,23 @@ public final class PipeGhostRenderer {
         for (ActivePreview leadPreview : leadPreviews) {
             PipeGhostGeometryCache bufferCache = bufferCaches.get(leadPreview.version());
             if (bufferCache != null) {
+                if (!zoomAnimationEnabled) {
+                    int firstSection = leadPreview.pieceIndex();
+                    int lastSection = showFullRoutePreview
+                            ? bufferCache.sections().size()
+                            : showNextPiecePreview
+                            ? firstSection + 1
+                            : firstSection;
+                    rendered |= renderPipeBodiesRange(
+                            poseStack,
+                            bufferSource,
+                            bufferCache,
+                            firstSection,
+                            lastSection,
+                            frustum
+                    );
+                    continue;
+                }
                 if (showFullRoutePreview) {
                     rendered |= renderPipeBodiesRange(
                             poseStack,
@@ -352,8 +408,7 @@ public final class PipeGhostRenderer {
                             bufferCache,
                             leadPreview.firstUnstartedPieceIndex(),
                             bufferCache.sections().size(),
-                            frustum,
-                            PLACEMENT_GHOST_RENDER_TYPE
+                            frustum
                     );
                 }
                 if (showFullRoutePreview || showNextPiecePreview) {
@@ -363,6 +418,7 @@ public final class PipeGhostRenderer {
                             level,
                             leadPreview,
                             bufferCache,
+                            zoomDurationTicks,
                             frustum,
                             partialTick
                     );
@@ -379,6 +435,7 @@ public final class PipeGhostRenderer {
             Level level,
             ActivePreview leadPreview,
             PipeGhostGeometryCache bufferCache,
+            float zoomDurationTicks,
             Frustum frustum,
             float partialTick
     ) {
@@ -399,7 +456,8 @@ public final class PipeGhostRenderer {
             float animatedScale = PipeGhostCascadeAnimation.scale(
                     level,
                     animatedPiece,
-                    partialTick
+                    partialTick,
+                    zoomDurationTicks
             );
             poseStack.pushPose();
             try {
@@ -432,8 +490,7 @@ public final class PipeGhostRenderer {
             PipeGhostGeometryCache bufferCache,
             int firstSection,
             int lastSection,
-            Frustum frustum,
-            RenderType renderType
+            Frustum frustum
     ) {
         boolean rendered = false;
         List<PipeGhostGeometryCache.Section> sections = bufferCache.sections();
@@ -443,8 +500,8 @@ public final class PipeGhostRenderer {
             if (!frustum.isVisible(section.bounds())) {
                 continue;
             }
-            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), renderType, GHOST_TINT);
-            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), renderType, MISSING_GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), PLACEMENT_GHOST_RENDER_TYPE, GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), PLACEMENT_GHOST_RENDER_TYPE, MISSING_GHOST_TINT);
         }
         return rendered;
     }

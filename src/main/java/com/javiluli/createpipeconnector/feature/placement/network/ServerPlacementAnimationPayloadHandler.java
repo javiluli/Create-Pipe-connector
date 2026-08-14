@@ -22,6 +22,7 @@ public final class ServerPlacementAnimationPayloadHandler {
         ServerPayloadContext.enqueue(contextSupplier, player -> {
             PlacementAnimationSettings settings = new PlacementAnimationSettings(
                     payload.enabled(),
+                    payload.zoomEnabled(),
                     payload.delayMilliseconds()
             );
             PlacementAnimationPreferenceStore.set(player.getUUID(), settings);

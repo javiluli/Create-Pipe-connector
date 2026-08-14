@@ -67,6 +67,8 @@ final class PipeGhostOutlineRenderer {
             Level level,
             List<ActivePreview> leadPreviews,
             Map<Integer, PipeGhostGeometryCache> bufferCaches,
+            boolean zoomAnimationEnabled,
+            float zoomDurationTicks,
             Frustum frustum,
             float partialTick
     ) {
@@ -83,6 +85,24 @@ final class PipeGhostOutlineRenderer {
             }
 
             List<PipeGhostGeometryCache.Section> sections = bufferCache.sections();
+            if (!zoomAnimationEnabled) {
+                int pieceIndex = leadPreview.pieceIndex();
+                if (pieceIndex < 0 || pieceIndex >= sections.size()) {
+                    continue;
+                }
+                PipeGhostGeometryCache.Section section = sections.get(pieceIndex);
+                if (!frustum.isVisible(section.bounds())) {
+                    continue;
+                }
+                for (PipeGhostGeometryCache.OutlinePiece outline : section.outlines()) {
+                    if (lineBuffer == null) {
+                        lineBuffer = bufferSource.getBuffer(RenderType.lines());
+                    }
+                    renderPiece(poseStack, lineBuffer, outline);
+                    rendered = true;
+                }
+                continue;
+            }
             for (AnimatedPiece animatedPiece : leadPreview.animatedPieces()) {
                 int pieceIndex = animatedPiece.pieceIndex();
                 if (pieceIndex < 0 || pieceIndex >= sections.size()) {
@@ -98,7 +118,8 @@ final class PipeGhostOutlineRenderer {
                 float animatedScale = PipeGhostCascadeAnimation.scale(
                         level,
                         animatedPiece,
-                        partialTick
+                        partialTick,
+                        zoomDurationTicks
                 );
                 poseStack.pushPose();
                 try {
@@ -176,16 +197,6 @@ final class PipeGhostOutlineRenderer {
             VertexConsumer lineBuffer,
             PipeGhostGeometryCache.OutlinePiece outline
     ) {
-        renderPiece(poseStack, lineBuffer, outline, OUTLINE_ALPHA);
-    }
-
-    /** Dibuja una pieza con la opacidad indicada por su fase de animacion. */
-    private static void renderPiece(
-            PoseStack poseStack,
-            VertexConsumer lineBuffer,
-            PipeGhostGeometryCache.OutlinePiece outline,
-            float alpha
-    ) {
         for (PipeGhostGeometryCache.OutlineBox box : outline.boxes()) {
             LevelRenderer.renderLineBox(
                     poseStack,
@@ -194,7 +205,7 @@ final class PipeGhostOutlineRenderer {
                     box.red(),
                     box.green(),
                     box.blue(),
-                    alpha
+                    OUTLINE_ALPHA
             );
         }
     }
