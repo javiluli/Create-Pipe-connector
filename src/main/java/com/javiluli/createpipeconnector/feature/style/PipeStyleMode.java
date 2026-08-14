@@ -11,9 +11,4 @@ public enum PipeStyleMode {
         return modes[(ordinal() + 1) % modes.length];
     }
 
-    /** Devuelve el estilo anterior de forma circular. */
-    public PipeStyleMode previous() {
-        PipeStyleMode[] modes = values();
-        return modes[(ordinal() + modes.length - 1) % modes.length];
-    }
 }
