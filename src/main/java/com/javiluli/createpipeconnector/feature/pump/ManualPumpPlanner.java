@@ -18,8 +18,8 @@ public final class ManualPumpPlanner {
     private ManualPumpPlanner() {
     }
 
-    /** Conserva unicamente marcas colocables que pertenezcan a tramos rectos. */
-    public static ConnectionPlan apply(ConnectionPlan plan, List<BlockPos> pumpPositions) {
+    /** Conserva las marcas validas y orienta sus bombas en el sentido elegido. */
+    public static ConnectionPlan apply(ConnectionPlan plan, List<BlockPos> pumpPositions, boolean reversed) {
         if (CreatePipeBlocks.getMechanicalPumpBlock() == null || pumpPositions == null || pumpPositions.isEmpty()) {
             return plan;
         }
@@ -35,7 +35,7 @@ public final class ManualPumpPlanner {
             Integer pathIndex = pathIndices.get(position);
             Direction facing = pathIndex == null ? null : PipeRouteGeometry.straightPumpFacingAt(plan.path(), pathIndex);
             if (facing != null) {
-                pumpPlacements.put(position, facing);
+                pumpPlacements.put(position, reversed ? facing.getOpposite() : facing);
             }
         }
         return new ConnectionPlan(

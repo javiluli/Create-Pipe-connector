@@ -32,18 +32,18 @@ public final class ServerAnchorPayloadHandler {
     }
 
     /**
-     * Elimina la ultima ancla de la ruta activa.
+     * Elimina el ancla indicada de la ruta activa.
      *
-     * @param payload accion de eliminacion sin datos
+     * @param payload posicion exacta del ancla que debe retirarse
      * @param contextSupplier contexto de red del paquete
      */
-    public static void handleRemoveLastAnchor(
-            RemoveLastAnchorPayload payload,
+    public static void handleRemoveAnchor(
+            RemoveAnchorPayload payload,
             Supplier<NetworkEvent.Context> contextSupplier
     ) {
         ServerPayloadContext.enqueue(contextSupplier, player -> {
             if (ServerConnectorSessionValidator.validatedSelection(player) != null) {
-                ConnectorSessionStore.removeLastAnchor(player.getUUID());
+                ConnectorSessionStore.removeAnchor(player.getUUID(), payload.position());
             }
         });
     }
@@ -56,7 +56,7 @@ public final class ServerAnchorPayloadHandler {
         }
 
         PlacementTarget anchor = new PlacementTarget(payload.position(), payload.face(), payload.existingPipe());
-        if (!isAnchorValid(player, level, selection, anchor)) {
+        if (!isAnchorValid(level, selection, anchor)) {
             return;
         }
 
@@ -72,15 +72,18 @@ public final class ServerAnchorPayloadHandler {
         }
     }
 
-    /** Comprueba alcance, ocupacion y compatibilidad del bloque usado como ancla. */
+    /**
+     * Comprueba ocupacion y compatibilidad del bloque usado como ancla.
+     *
+     * <p>El alcance no se vuelve a exigir porque el objetivo pudo fijarse cerca
+     * y conservarse mediante freecam mientras el jugador se desplaza.</p>
+     */
     private static boolean isAnchorValid(
-            ServerPlayer player,
             ServerLevel level,
             Selection selection,
             PlacementTarget anchor
     ) {
-        if (selection.position().equals(anchor.position())
-                || !PipeConnectorLogic.isWithinInteractionRange(player, anchor.position())) {
+        if (selection.position().equals(anchor.position())) {
             return false;
         }
         if (!anchor.existingPipe()) {

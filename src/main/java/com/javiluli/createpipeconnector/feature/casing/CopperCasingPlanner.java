@@ -27,10 +27,7 @@ public final class CopperCasingPlanner {
             return copyWithCasings(plan, Set.of());
         }
 
-        CopperCasingMode normalizedMode = mode == null ? CopperCasingMode.MANUAL : mode;
-        if (normalizedMode == CopperCasingMode.NONE) {
-            return copyWithCasings(plan, Set.of());
-        }
+        CopperCasingMode normalizedMode = mode == null ? CopperCasingMode.NONE : mode;
 
         Set<BlockPos> placementPositions = new HashSet<>(plan.placementPositions());
         Set<BlockPos> casingPlacements = new LinkedHashSet<>();
