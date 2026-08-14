@@ -97,7 +97,7 @@ Animation, shulker-material, and manual-anchor settings are available under **Mo
 
 | Edition  | Minecraft | Loader              | Java | Create           | Mod     |
 | -------- | --------- | ------------------- | ---- | ---------------- | ------- |
-| NeoForge | `1.21.1`  | NeoForge `21.1.219` | `21` | `6.0.6`–`6.0.10` | `1.1.0` |
+| NeoForge | `1.21.1`  | NeoForge `21.1.219` | `21` | `6.0.6`–`6.0.10` | `1.2.0` |
 | Forge    | `1.20.1`  | Forge `47.4.20`     | `17` | `6.0.6`–`6.0.10` | `1.2.0` |
 
 Download the file matching your loader. Fabric is not currently supported.
