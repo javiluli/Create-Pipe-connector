@@ -9,12 +9,12 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Registra las teclas configurables del modo conector.
+ * Declara los controles configurables y permite consumir sus pulsaciones.
  */
 @EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT)
 public final class ClientPipeConnectorKeyMappings {
-    private static final KeyMapping TOGGLE_CONNECTOR_MODE = new KeyMapping(
-            Constants.TOGGLE_CONNECTOR_MODE,
+    private static final KeyMapping TOGGLE_PIPE_CONNECTOR_MODE = new KeyMapping(
+            Constants.TOGGLE_PIPE_CONNECTOR_MODE,
             GLFW.GLFW_KEY_B,
             Constants.CATEGORY
     );
@@ -23,14 +23,19 @@ public final class ClientPipeConnectorKeyMappings {
             GLFW.GLFW_KEY_LEFT_ALT,
             Constants.CATEGORY
     );
-    private static final KeyMapping ADD_ANCHOR = new KeyMapping(
-            Constants.ADD_ANCHOR,
+    private static final KeyMapping APPLY_MANUAL_ACTION = new KeyMapping(
+            Constants.APPLY_MANUAL_ACTION,
             GLFW.GLFW_KEY_C,
             Constants.CATEGORY
     );
-    private static final KeyMapping REMOVE_LAST_ANCHOR = new KeyMapping(
-            Constants.REMOVE_LAST_ANCHOR,
+    private static final KeyMapping CYCLE_MANUAL_ACTION = new KeyMapping(
+            Constants.CYCLE_MANUAL_ACTION,
             GLFW.GLFW_KEY_UNKNOWN,
+            Constants.CATEGORY
+    );
+    private static final KeyMapping UNDO_LAST_ROUTE_ACTION = new KeyMapping(
+            Constants.UNDO_LAST_ROUTE_ACTION,
+            GLFW.GLFW_KEY_V,
             Constants.CATEGORY
     );
     private static final KeyMapping TOGGLE_COPPER_CASING = new KeyMapping(
@@ -53,8 +58,8 @@ public final class ClientPipeConnectorKeyMappings {
             GLFW.GLFW_KEY_UNKNOWN,
             Constants.CATEGORY
     );
-    private static final KeyMapping TOGGLE_AUTO_PUMPS = new KeyMapping(
-            Constants.TOGGLE_AUTO_PUMPS,
+    private static final KeyMapping CYCLE_PUMP_MODE = new KeyMapping(
+            Constants.CYCLE_PUMP_MODE,
             GLFW.GLFW_KEY_UNKNOWN,
             Constants.CATEGORY
     );
@@ -68,13 +73,13 @@ public final class ClientPipeConnectorKeyMappings {
             GLFW.GLFW_KEY_UNKNOWN,
             Constants.CATEGORY
     );
-    private static final KeyMapping REVERSE_AUTO_PUMP_DIRECTION = new KeyMapping(
-            Constants.REVERSE_AUTO_PUMP_DIRECTION,
-            GLFW.GLFW_KEY_UNKNOWN,
+    private static final KeyMapping REVERSE_PUMP_DIRECTION = new KeyMapping(
+            Constants.REVERSE_PUMP_DIRECTION,
+            GLFW.GLFW_KEY_R,
             Constants.CATEGORY
     );
-    private static final KeyMapping CYCLE_ROUTE_PRIORITY = new KeyMapping(
-            Constants.CYCLE_ROUTE_PRIORITY,
+    private static final KeyMapping OPEN_PIPE_CONNECTOR_OPTIONS = new KeyMapping(
+            Constants.OPEN_PIPE_CONNECTOR_OPTIONS,
             GLFW.GLFW_KEY_N,
             Constants.CATEGORY
     );
@@ -87,24 +92,25 @@ public final class ClientPipeConnectorKeyMappings {
      */
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
-        event.register(TOGGLE_CONNECTOR_MODE);
+        event.register(TOGGLE_PIPE_CONNECTOR_MODE);
         event.register(TOGGLE_PREVIEW_LOCK);
-        event.register(ADD_ANCHOR);
-        event.register(REMOVE_LAST_ANCHOR);
+        event.register(APPLY_MANUAL_ACTION);
+        event.register(CYCLE_MANUAL_ACTION);
+        event.register(UNDO_LAST_ROUTE_ACTION);
         event.register(TOGGLE_COPPER_CASING);
         event.register(REMOVE_LAST_COPPER_CASING);
         event.register(TOGGLE_MANUAL_PUMP);
         event.register(REMOVE_LAST_MANUAL_PUMP);
-        event.register(TOGGLE_AUTO_PUMPS);
+        event.register(CYCLE_PUMP_MODE);
         event.register(CYCLE_COPPER_CASING_MODE);
         event.register(CYCLE_PIPE_STYLE_MODE);
-        event.register(REVERSE_AUTO_PUMP_DIRECTION);
-        event.register(CYCLE_ROUTE_PRIORITY);
+        event.register(REVERSE_PUMP_DIRECTION);
+        event.register(OPEN_PIPE_CONNECTOR_OPTIONS);
     }
 
-    /** Consume una pulsacion del interruptor del modo conector. */
-    public static boolean consumeConnectorModeToggle() {
-        return TOGGLE_CONNECTOR_MODE.consumeClick();
+    /** Consume una pulsacion del interruptor del modo Pipe Connector. */
+    public static boolean consumePipeConnectorModeToggle() {
+        return TOGGLE_PIPE_CONNECTOR_MODE.consumeClick();
     }
 
     /** Consume una pulsacion del bloqueo de preview. */
@@ -112,14 +118,19 @@ public final class ClientPipeConnectorKeyMappings {
         return TOGGLE_PREVIEW_LOCK.consumeClick();
     }
 
-    /** Consume una pulsacion para anadir un ancla. */
-    public static boolean consumeAddAnchor() {
-        return ADD_ANCHOR.consumeClick();
+    /** Consume una pulsacion para aplicar la accion manual seleccionada. */
+    public static boolean consumeApplyManualAction() {
+        return APPLY_MANUAL_ACTION.consumeClick();
     }
 
-    /** Consume una pulsacion para retirar la ultima ancla. */
-    public static boolean consumeRemoveLastAnchor() {
-        return REMOVE_LAST_ANCHOR.consumeClick();
+    /** Consume una pulsacion para cambiar rapidamente la herramienta manual. */
+    public static boolean consumeManualActionCycle() {
+        return CYCLE_MANUAL_ACTION.consumeClick();
+    }
+
+    /** Consume una pulsacion para deshacer la ultima accion de la ruta. */
+    public static boolean consumeUndoLastRouteAction() {
+        return UNDO_LAST_ROUTE_ACTION.consumeClick();
     }
 
     /** Consume una pulsacion para alternar revestimiento manual. */
@@ -142,9 +153,9 @@ public final class ClientPipeConnectorKeyMappings {
         return REMOVE_LAST_COPPER_CASING.consumeClick();
     }
 
-    /** Consume una pulsacion del ajuste heredado de bombas automaticas. */
-    public static boolean consumeAutoPumpsToggle() {
-        return TOGGLE_AUTO_PUMPS.consumeClick();
+    /** Consume una pulsacion para recorrer los modos de bombas automaticas. */
+    public static boolean consumePumpModeCycle() {
+        return CYCLE_PUMP_MODE.consumeClick();
     }
 
     /** Consume una pulsacion para cambiar el modo de revestimiento. */
@@ -157,19 +168,19 @@ public final class ClientPipeConnectorKeyMappings {
         return CYCLE_PIPE_STYLE_MODE.consumeClick();
     }
 
-    /** Consume una pulsacion para invertir las bombas automaticas. */
-    public static boolean consumeAutoPumpDirectionReverse() {
-        return REVERSE_AUTO_PUMP_DIRECTION.consumeClick();
+    /** Consume una pulsacion para invertir las bombas de la ruta. */
+    public static boolean consumePumpDirectionReverse() {
+        return REVERSE_PUMP_DIRECTION.consumeClick();
     }
 
-    /** Consume una pulsacion para cambiar la prioridad de ruta. */
-    public static boolean consumeRoutePriorityCycle() {
-        return CYCLE_ROUTE_PRIORITY.consumeClick();
+    /** Consume una pulsacion para abrir las opciones de Pipe Connector. */
+    public static boolean consumeOpenPipeConnectorOptions() {
+        return OPEN_PIPE_CONNECTOR_OPTIONS.consumeClick();
     }
 
-    /** Devuelve el control que activa el modo conector. */
-    public static KeyMapping toggleConnectorModeKey() {
-        return TOGGLE_CONNECTOR_MODE;
+    /** Devuelve el control que activa el modo Pipe Connector. */
+    public static KeyMapping togglePipeConnectorModeKey() {
+        return TOGGLE_PIPE_CONNECTOR_MODE;
     }
 
     /** Devuelve el control que bloquea el preview. */
@@ -177,25 +188,42 @@ public final class ClientPipeConnectorKeyMappings {
         return TOGGLE_PREVIEW_LOCK;
     }
 
-    /** Devuelve el control que anade anclas. */
-    public static KeyMapping addAnchorKey() {
-        return ADD_ANCHOR;
+    /** Devuelve el control contextual que aplica la accion manual. */
+    public static KeyMapping applyManualActionKey() {
+        return APPLY_MANUAL_ACTION;
     }
 
-    /** Devuelve el control que abre o recorre las opciones de ruta. */
-    public static KeyMapping cycleRoutePriorityKey() {
-        return CYCLE_ROUTE_PRIORITY;
+    /** Devuelve el control que deshace la ultima accion de la ruta. */
+    public static KeyMapping undoLastRouteActionKey() {
+        return UNDO_LAST_ROUTE_ACTION;
+    }
+
+    /** Devuelve el control que invierte todas las bombas de la ruta. */
+    public static KeyMapping reversePumpDirectionKey() {
+        return REVERSE_PUMP_DIRECTION;
+    }
+
+    /** Devuelve el control que abre las opciones de Pipe Connector. */
+    public static KeyMapping openPipeConnectorOptionsKey() {
+        return OPEN_PIPE_CONNECTOR_OPTIONS;
     }
 
     /** Descarta pulsaciones pendientes para evitar acciones al cambiar de contexto. */
     public static void drainPlacementClicks() {
-        while (consumeConnectorModeToggle()) {
+        while (consumePipeConnectorModeToggle()) {
         }
+        drainRouteClicks();
+    }
+
+    /** Descarta pulsaciones pendientes que solo tienen sentido dentro del modo. */
+    public static void drainRouteClicks() {
         while (consumePreviewLockToggle()) {
         }
-        while (consumeAddAnchor()) {
+        while (consumeApplyManualAction()) {
         }
-        while (consumeRemoveLastAnchor()) {
+        while (consumeManualActionCycle()) {
+        }
+        while (consumeUndoLastRouteAction()) {
         }
         while (consumeCopperCasingToggle()) {
         }
@@ -205,15 +233,15 @@ public final class ClientPipeConnectorKeyMappings {
         }
         while (consumeRemoveLastManualPump()) {
         }
-        while (consumeAutoPumpsToggle()) {
+        while (consumePumpModeCycle()) {
         }
         while (consumeCopperCasingModeCycle()) {
         }
         while (consumePipeStyleModeCycle()) {
         }
-        while (consumeAutoPumpDirectionReverse()) {
+        while (consumePumpDirectionReverse()) {
         }
-        while (consumeRoutePriorityCycle()) {
+        while (consumeOpenPipeConnectorOptions()) {
         }
     }
 }

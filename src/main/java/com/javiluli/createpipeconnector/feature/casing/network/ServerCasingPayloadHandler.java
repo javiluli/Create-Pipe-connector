@@ -16,10 +16,10 @@ public final class ServerCasingPayloadHandler {
         ConnectorSessionStore.setCopperCasingMode(context.player().getUUID(), payload.mode());
     }
 
-    /** Alterna una marca de revestimiento cercana. */
+    /** Alterna un revestimiento manual en la ruta activa, incluso con freecam. */
     public static void handleToggleCopperCasing(ToggleCopperCasingPayload payload, IPayloadContext context) {
         Player player = context.player();
-        if (ServerConnectorSessionValidator.canModifyRouteAt(player, payload.position())) {
+        if (ServerConnectorSessionValidator.canModifyRoute(player)) {
             ConnectorSessionStore.toggleCopperCasing(player.getUUID(), payload.position());
         }
     }

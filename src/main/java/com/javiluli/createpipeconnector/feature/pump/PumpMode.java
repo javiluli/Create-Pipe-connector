@@ -17,9 +17,4 @@ public enum PumpMode {
         return modes[(ordinal() + 1) % modes.length];
     }
 
-    /** Devuelve el modo anterior de forma circular. */
-    public PumpMode previous() {
-        PumpMode[] modes = values();
-        return modes[(ordinal() + modes.length - 1) % modes.length];
-    }
 }
