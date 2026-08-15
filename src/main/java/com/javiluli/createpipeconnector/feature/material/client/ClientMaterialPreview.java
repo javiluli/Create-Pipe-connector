@@ -4,6 +4,8 @@ import com.javiluli.createpipeconnector.core.Constants;
 import com.javiluli.createpipeconnector.feature.connector.PipeConnectorLogic;
 import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
+import com.javiluli.createpipeconnector.feature.material.PipeInventory.MaterialSnapshot;
+import com.javiluli.createpipeconnector.feature.material.shulker.config.ShulkerMaterialClientConfig;
 import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorState;
 import net.minecraft.client.player.LocalPlayer;
@@ -67,28 +69,20 @@ public final class ClientMaterialPreview {
         int requiredPipes = plan.requiredPipes();
         int requiredPumps = plan.requiredPumps();
         int requiredCopperCasings = plan.requiredCopperCasings();
-        if (player.getAbilities().instabuild) {
-            return new ClientPipeConnectorState.MaterialStatus(
-                    selection.pipeBlock(),
-                    requiredPipes,
-                    Integer.MAX_VALUE,
-                    requiredPumps,
-                    Integer.MAX_VALUE,
-                    requiredCopperCasings,
-                    Integer.MAX_VALUE,
-                    true
-            );
-        }
-
+        MaterialSnapshot materials = PipeConnectorLogic.inspectMaterials(
+                player,
+                selection.pipeBlock(),
+                ShulkerMaterialClientConfig.isEnabled()
+        );
         return new ClientPipeConnectorState.MaterialStatus(
                 selection.pipeBlock(),
                 requiredPipes,
-                PipeConnectorLogic.countAvailablePipes(player, selection.pipeBlock()),
+                materials.pipes(),
                 requiredPumps,
-                PipeConnectorLogic.countAvailablePumps(player),
+                materials.pumps(),
                 requiredCopperCasings,
-                PipeConnectorLogic.countAvailableCopperCasings(player),
-                false
+                materials.copperCasings(),
+                player.getAbilities().instabuild
         );
     }
 

@@ -7,6 +7,9 @@ import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.connector.client.ClientPipeConnectorState;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview;
 import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.ActivePreview;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview.AnimatedPiece;
+import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSettings;
+import com.javiluli.createpipeconnector.feature.placement.PlacementCascadeTiming;
 import com.javiluli.createpipeconnector.feature.placement.config.PlacementAnimationClientConfig;
 import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -18,6 +21,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -86,9 +90,18 @@ public final class PipeGhostRenderer {
         List<PlacementTarget> anchors = selection == null
                 ? List.of()
                 : ClientPipeConnectorState.getAnchors();
-        List<ActivePreview> leadPreviews = ClientPlacementLeadPreview.getActivePreviews(level);
+        PlacementAnimationSettings animationSettings = PlacementAnimationClientConfig.get();
+        List<ActivePreview> leadPreviews = ClientPlacementLeadPreview.getActivePreviews(
+                level,
+                event.getPartialTick(),
+                animationSettings
+        );
         boolean showFullRoutePreview = PlacementAnimationClientConfig.showFullRoutePreview();
         boolean showNextPiecePreview = PlacementAnimationClientConfig.showNextPiecePreview();
+        boolean zoomAnimationEnabled = animationSettings.enabled() && animationSettings.zoomEnabled();
+        float zoomDurationTicks = zoomAnimationEnabled
+                ? PlacementCascadeTiming.zoomDurationTicks(animationSettings.delayMilliseconds())
+                : 0.0F;
         boolean showPlacementPreview = showFullRoutePreview || showNextPiecePreview;
 
         if (selection == null) {
@@ -121,6 +134,7 @@ public final class PipeGhostRenderer {
                 leadBufferCaches,
                 showFullRoutePreview,
                 showNextPiecePreview,
+                zoomAnimationEnabled,
                 anchors
         );
         RenderLevelStageEvent.Stage targetStage = renderBeforeFluids
@@ -149,8 +163,7 @@ public final class PipeGhostRenderer {
             boolean renderedPreviewBodies = renderPipeBodies(
                     poseStack,
                     bufferSource,
-                    visiblePreviewSections,
-                    GHOST_RENDER_TYPE
+                    visiblePreviewSections
             );
             if (renderedPreviewBodies) {
                 bufferSource.endBatch(GHOST_RENDER_TYPE);
@@ -158,11 +171,15 @@ public final class PipeGhostRenderer {
             boolean renderedPlacementBodies = renderLeadBodies(
                     poseStack,
                     bufferSource,
+                    level,
                     leadPreviews,
                     leadBufferCaches,
                     showFullRoutePreview,
                     showNextPiecePreview,
-                    frustum
+                    zoomAnimationEnabled,
+                    zoomDurationTicks,
+                    frustum,
+                    event.getPartialTick()
             );
             if (renderedPlacementBodies) {
                 bufferSource.endBatch(PLACEMENT_GHOST_RENDER_TYPE);
@@ -172,9 +189,13 @@ public final class PipeGhostRenderer {
                 PipeGhostOutlineRenderer.renderLeadPieces(
                         poseStack,
                         bufferSource,
+                        level,
                         leadPreviews,
                         leadBufferCaches,
-                        frustum
+                        zoomAnimationEnabled,
+                        zoomDurationTicks,
+                        frustum,
+                        event.getPartialTick()
                 );
             }
             AnchorOverlayRenderer.renderFaces(poseStack, bufferSource, anchors);
@@ -198,6 +219,7 @@ public final class PipeGhostRenderer {
             Map<Integer, PipeGhostGeometryCache> leadBufferCaches,
             boolean showFullRoutePreview,
             boolean showNextPiecePreview,
+            boolean zoomAnimationEnabled,
             List<PlacementTarget> anchors
     ) {
         int cameraFluidGroup = PipeGhostFluidClassifier.cameraGroup(camera);
@@ -210,11 +232,13 @@ public final class PipeGhostRenderer {
             if (leadBufferCache == null) {
                 continue;
             }
-            int fluidMask = showFullRoutePreview
-                    ? leadBufferCache.fluidMaskFrom(leadPreview.pieceIndex())
-                    : showNextPiecePreview
-                    ? leadBufferCache.fluidMaskAt(leadPreview.pieceIndex())
-                    : 0;
+            int fluidMask = leadFluidMask(
+                    leadBufferCache,
+                    leadPreview,
+                    showFullRoutePreview,
+                    showNextPiecePreview,
+                    zoomAnimationEnabled
+            );
             if ((fluidMask & ~cameraFluidMask) != 0) {
                 return true;
             }
@@ -225,6 +249,32 @@ public final class PipeGhostRenderer {
             }
         }
         return false;
+    }
+
+    /** Calcula solo las piezas visibles del modo de construccion seleccionado. */
+    private static int leadFluidMask(
+            PipeGhostGeometryCache bufferCache,
+            ActivePreview leadPreview,
+            boolean showFullRoutePreview,
+            boolean showNextPiecePreview,
+            boolean zoomAnimationEnabled
+    ) {
+        if (showFullRoutePreview) {
+            return bufferCache.fluidMaskFrom(leadPreview.pieceIndex());
+        }
+        if (!showNextPiecePreview) {
+            return 0;
+        }
+        if (!zoomAnimationEnabled) {
+            return bufferCache.fluidMaskRange(
+                    leadPreview.pieceIndex(),
+                    leadPreview.pieceIndex() + 1
+            );
+        }
+        return bufferCache.fluidMaskRange(
+                leadPreview.pieceIndex(),
+                leadPreview.firstUnstartedPieceIndex()
+        );
     }
 
     /** Devuelve una cache valida o reconstruye la geometria del preview. */
@@ -292,13 +342,12 @@ public final class PipeGhostRenderer {
     private static boolean renderPipeBodies(
             PoseStack poseStack,
             MultiBufferSource.BufferSource bufferSource,
-            List<PipeGhostGeometryCache.Section> visibleSections,
-            RenderType renderType
+            List<PipeGhostGeometryCache.Section> visibleSections
     ) {
         boolean rendered = false;
         for (PipeGhostGeometryCache.Section section : visibleSections) {
-            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), renderType, GHOST_TINT);
-            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), renderType, MISSING_GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), GHOST_RENDER_TYPE, GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), GHOST_RENDER_TYPE, MISSING_GHOST_TINT);
         }
         return rendered;
     }
@@ -321,31 +370,114 @@ public final class PipeGhostRenderer {
     private static boolean renderLeadBodies(
             PoseStack poseStack,
             MultiBufferSource.BufferSource bufferSource,
+            Level level,
             List<ActivePreview> leadPreviews,
             Map<Integer, PipeGhostGeometryCache> bufferCaches,
             boolean showFullRoutePreview,
             boolean showNextPiecePreview,
-            Frustum frustum
+            boolean zoomAnimationEnabled,
+            float zoomDurationTicks,
+            Frustum frustum,
+            float partialTick
     ) {
         boolean rendered = false;
         for (ActivePreview leadPreview : leadPreviews) {
             PipeGhostGeometryCache bufferCache = bufferCaches.get(leadPreview.version());
             if (bufferCache != null) {
-                int firstSection = leadPreview.pieceIndex();
-                int lastSection = showFullRoutePreview
-                        ? bufferCache.sections().size()
-                        : showNextPiecePreview
-                        ? firstSection + 1
-                        : firstSection;
-                rendered |= renderPipeBodiesRange(
+                if (!zoomAnimationEnabled) {
+                    int firstSection = leadPreview.pieceIndex();
+                    int lastSection = showFullRoutePreview
+                            ? bufferCache.sections().size()
+                            : showNextPiecePreview
+                            ? firstSection + 1
+                            : firstSection;
+                    rendered |= renderPipeBodiesRange(
+                            poseStack,
+                            bufferSource,
+                            bufferCache,
+                            firstSection,
+                            lastSection,
+                            frustum
+                    );
+                    continue;
+                }
+                if (showFullRoutePreview) {
+                    rendered |= renderPipeBodiesRange(
+                            poseStack,
+                            bufferSource,
+                            bufferCache,
+                            leadPreview.firstUnstartedPieceIndex(),
+                            bufferCache.sections().size(),
+                            frustum
+                    );
+                }
+                if (showFullRoutePreview || showNextPiecePreview) {
+                    rendered |= renderAnimatedPieces(
+                            poseStack,
+                            bufferSource,
+                            level,
+                            leadPreview,
+                            bufferCache,
+                            zoomDurationTicks,
+                            frustum,
+                            partialTick
+                    );
+                }
+            }
+        }
+        return rendered;
+    }
+
+    /** Dibuja todas las piezas que crecen de forma simultanea en la cascada. */
+    private static boolean renderAnimatedPieces(
+            PoseStack poseStack,
+            MultiBufferSource.BufferSource bufferSource,
+            Level level,
+            ActivePreview leadPreview,
+            PipeGhostGeometryCache bufferCache,
+            float zoomDurationTicks,
+            Frustum frustum,
+            float partialTick
+    ) {
+        boolean rendered = false;
+        List<PipeGhostGeometryCache.Section> sections = bufferCache.sections();
+        for (AnimatedPiece animatedPiece : leadPreview.animatedPieces()) {
+            int sectionIndex = animatedPiece.pieceIndex();
+            if (sectionIndex < 0 || sectionIndex >= sections.size()) {
+                continue;
+            }
+
+            PipeGhostGeometryCache.Section section = sections.get(sectionIndex);
+            if (!frustum.isVisible(section.bounds())) {
+                continue;
+            }
+
+            BlockPos position = leadPreview.pieces().get(sectionIndex).position();
+            float animatedScale = PipeGhostCascadeAnimation.scale(
+                    level,
+                    animatedPiece,
+                    partialTick,
+                    zoomDurationTicks
+            );
+            poseStack.pushPose();
+            try {
+                PipeGhostCascadeAnimation.applyCentered(poseStack, position, animatedScale);
+                rendered |= renderBufferCache(
                         poseStack,
                         bufferSource,
-                        bufferCache,
-                        firstSection,
-                        lastSection,
-                        frustum,
-                        PLACEMENT_GHOST_RENDER_TYPE
+                        section.base(),
+                        PLACEMENT_GHOST_RENDER_TYPE,
+                        GHOST_TINT
                 );
+                rendered |= renderBufferCache(
+                        poseStack,
+                        bufferSource,
+                        section.missing(),
+                        PLACEMENT_GHOST_RENDER_TYPE,
+                        MISSING_GHOST_TINT
+                );
+            } finally {
+                poseStack.popPose();
             }
         }
         return rendered;
@@ -358,8 +490,7 @@ public final class PipeGhostRenderer {
             PipeGhostGeometryCache bufferCache,
             int firstSection,
             int lastSection,
-            Frustum frustum,
-            RenderType renderType
+            Frustum frustum
     ) {
         boolean rendered = false;
         List<PipeGhostGeometryCache.Section> sections = bufferCache.sections();
@@ -369,8 +500,8 @@ public final class PipeGhostRenderer {
             if (!frustum.isVisible(section.bounds())) {
                 continue;
             }
-            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), renderType, GHOST_TINT);
-            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), renderType, MISSING_GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.base(), PLACEMENT_GHOST_RENDER_TYPE, GHOST_TINT);
+            rendered |= renderBufferCache(poseStack, bufferSource, section.missing(), PLACEMENT_GHOST_RENDER_TYPE, MISSING_GHOST_TINT);
         }
         return rendered;
     }

@@ -46,15 +46,19 @@ public final class ClientPlacementAnimationSynchronizer {
 
         PlacementAnimationSettings currentSettings = PlacementAnimationClientConfig.get();
         if (loginSyncPending || !currentSettings.equals(lastSyncedSettings)) {
-            loginSyncPending = !syncIfConnected();
+            loginSyncPending = !syncIfConnected(currentSettings);
         }
     }
 
     /** Envia las preferencias actuales si existe una conexion jugable. */
     public static boolean syncIfConnected() {
+        return syncIfConnected(PlacementAnimationClientConfig.get());
+    }
+
+    /** Envia una instantanea ya leida para evitar consultar dos veces el TOML. */
+    private static boolean syncIfConnected(PlacementAnimationSettings settings) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.getConnection() != null) {
-            PlacementAnimationSettings settings = PlacementAnimationClientConfig.get();
             CreatePipeConnectorNetwork.sendToServer(new PlacementAnimationSettingsPayload(settings));
             lastSyncedSettings = settings;
             if (!settings.enabled()) {

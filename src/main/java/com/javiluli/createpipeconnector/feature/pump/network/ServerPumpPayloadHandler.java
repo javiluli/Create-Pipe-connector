@@ -13,37 +13,28 @@ public final class ServerPumpPayloadHandler {
     private ServerPumpPayloadHandler() {
     }
 
-    /** Sincroniza el interruptor booleano heredado de bombas automaticas. */
-    public static void handleToggleAutoPumps(
-            ToggleAutoPumpsPayload payload,
-            Supplier<NetworkEvent.Context> contextSupplier
-    ) {
-        ServerPayloadContext.enqueue(contextSupplier,
-                player -> ConnectorSessionStore.setAutoPumpsEnabled(player.getUUID(), payload.enabled()));
-    }
-
     /** Sincroniza la estrategia de separacion de bombas automaticas. */
     public static void handlePumpMode(PumpModePayload payload, Supplier<NetworkEvent.Context> contextSupplier) {
         ServerPayloadContext.enqueue(contextSupplier,
                 player -> ConnectorSessionStore.setPumpMode(player.getUUID(), payload.mode()));
     }
 
-    /** Sincroniza la inversion del sentido de las bombas automaticas. */
-    public static void handleReverseAutoPumpDirection(
-            ReverseAutoPumpDirectionPayload payload,
+    /** Sincroniza la inversion del sentido de todas las bombas de la ruta. */
+    public static void handlePumpDirection(
+            PumpDirectionPayload payload,
             Supplier<NetworkEvent.Context> contextSupplier
     ) {
         ServerPayloadContext.enqueue(contextSupplier,
-                player -> ConnectorSessionStore.setAutoPumpDirectionReversed(player.getUUID(), payload.reversed()));
+                player -> ConnectorSessionStore.setPumpDirectionReversed(player.getUUID(), payload.reversed()));
     }
 
-    /** Alterna una bomba manual en una posicion alcanzable de la ruta. */
+    /** Alterna una bomba manual en la ruta activa, incluso si el preview esta fijado. */
     public static void handleToggleManualPump(
             ToggleManualPumpPayload payload,
             Supplier<NetworkEvent.Context> contextSupplier
     ) {
         ServerPayloadContext.enqueue(contextSupplier, player -> {
-            if (ServerConnectorSessionValidator.canModifyRouteAt(player, payload.position())) {
+            if (ServerConnectorSessionValidator.canModifyRoute(player)) {
                 ConnectorSessionStore.toggleManualPump(player.getUUID(), payload.position());
             }
         });

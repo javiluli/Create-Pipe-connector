@@ -20,7 +20,7 @@ import java.util.UUID;
  * Almacena el estado temporal del conector asociado al UUID de cada jugador.
  *
  * <p>Las selecciones y los modificadores manuales se descartan al desactivar el
- * modo conector o al terminar la sesion del jugador.</p>
+ * modo Pipe Connector o al terminar la sesion del jugador.</p>
  */
 public final class ConnectorSessionStore {
     private static final Map<UUID, Selection> SELECTIONS = new HashMap<>();
@@ -32,18 +32,18 @@ public final class ConnectorSessionStore {
     private static final Map<UUID, CopperCasingMode> COPPER_CASING_MODES = new HashMap<>();
     private static final Map<UUID, PipeStyleMode> PIPE_STYLE_MODES = new HashMap<>();
     private static final Set<UUID> CONNECTOR_MODE_PLAYERS = new HashSet<>();
-    private static final Set<UUID> REVERSED_AUTO_PUMP_PLAYERS = new HashSet<>();
+    private static final Set<UUID> REVERSED_PUMP_PLAYERS = new HashSet<>();
 
     /** Impide crear instancias del almacen global de sesiones. */
     private ConnectorSessionStore() {
     }
 
-    /** Indica si el jugador tiene activo el modo conector. */
+    /** Indica si el jugador tiene activo el modo Pipe Connector. */
     public static boolean isConnectorModeEnabled(UUID playerId) {
         return CONNECTOR_MODE_PLAYERS.contains(playerId);
     }
 
-    /** Actualiza el modo conector y limpia la ruta al desactivarlo. */
+    /** Actualiza el modo Pipe Connector y limpia la ruta al desactivarlo. */
     public static void setConnectorModeEnabled(UUID playerId, boolean enabled) {
         if (enabled) {
             CONNECTOR_MODE_PLAYERS.add(playerId);
@@ -52,16 +52,6 @@ public final class ConnectorSessionStore {
 
         CONNECTOR_MODE_PLAYERS.remove(playerId);
         clearSelection(playerId);
-    }
-
-    /** Indica si el modo actual coloca bombas automaticamente. */
-    public static boolean isAutoPumpsEnabled(UUID playerId) {
-        return getPumpMode(playerId).isAutomatic();
-    }
-
-    /** Traduce el ajuste booleano heredado al modo de bombas correspondiente. */
-    public static void setAutoPumpsEnabled(UUID playerId, boolean enabled) {
-        setPumpMode(playerId, enabled ? PumpMode.EFFICIENT : PumpMode.OFF);
     }
 
     /** Devuelve el modo de bombas guardado o su valor predeterminado. */
@@ -81,12 +71,12 @@ public final class ConnectorSessionStore {
 
     /** Devuelve el modo de revestimiento guardado para el jugador. */
     public static CopperCasingMode getCopperCasingMode(UUID playerId) {
-        return COPPER_CASING_MODES.getOrDefault(playerId, CopperCasingMode.MANUAL);
+        return COPPER_CASING_MODES.getOrDefault(playerId, CopperCasingMode.NONE);
     }
 
     /** Guarda el modo de revestimiento omitiendo el valor predeterminado. */
     public static void setCopperCasingMode(UUID playerId, CopperCasingMode mode) {
-        if (mode == null || mode == CopperCasingMode.MANUAL) {
+        if (mode == null || mode == CopperCasingMode.NONE) {
             COPPER_CASING_MODES.remove(playerId);
             return;
         }
@@ -109,19 +99,19 @@ public final class ConnectorSessionStore {
         PIPE_STYLE_MODES.put(playerId, mode);
     }
 
-    /** Indica si el sentido de las bombas automaticas esta invertido. */
-    public static boolean isAutoPumpDirectionReversed(UUID playerId) {
-        return REVERSED_AUTO_PUMP_PLAYERS.contains(playerId);
+    /** Indica si el sentido de las bombas de la ruta esta invertido. */
+    public static boolean isPumpDirectionReversed(UUID playerId) {
+        return REVERSED_PUMP_PLAYERS.contains(playerId);
     }
 
-    /** Guarda o elimina la inversion de las bombas automaticas. */
-    public static void setAutoPumpDirectionReversed(UUID playerId, boolean reversed) {
+    /** Guarda o elimina la inversion de las bombas de la ruta. */
+    public static void setPumpDirectionReversed(UUID playerId, boolean reversed) {
         if (reversed) {
-            REVERSED_AUTO_PUMP_PLAYERS.add(playerId);
+            REVERSED_PUMP_PLAYERS.add(playerId);
             return;
         }
 
-        REVERSED_AUTO_PUMP_PLAYERS.remove(playerId);
+        REVERSED_PUMP_PLAYERS.remove(playerId);
     }
 
     /** Devuelve la prioridad de ejes activa para el jugador. */
@@ -176,14 +166,13 @@ public final class ConnectorSessionStore {
         storeValues(ANCHORS, playerId, anchors);
     }
 
-    /** Elimina la ultima ancla conservando el orden de las restantes. */
-    public static void removeLastAnchor(UUID playerId) {
-        removeLastValue(ANCHORS, playerId);
-    }
-
-    /** Elimina todas las anclas de la seleccion activa. */
-    public static void clearAnchors(UUID playerId) {
-        ANCHORS.remove(playerId);
+    /** Elimina el ancla y las marcas manuales situadas en el bloque indicado. */
+    public static void removeAnchor(UUID playerId, BlockPos position) {
+        List<PlacementTarget> anchors = new ArrayList<>(getValues(ANCHORS, playerId));
+        anchors.removeIf(anchor -> anchor.position().equals(position));
+        storeValues(ANCHORS, playerId, anchors);
+        removeValue(MANUAL_PUMPS, playerId, position);
+        removeValue(COPPER_CASINGS, playerId, position);
     }
 
     /** Devuelve una copia inmutable de las bombas manuales. */
@@ -216,6 +205,17 @@ public final class ConnectorSessionStore {
         removeLastValue(COPPER_CASINGS, playerId);
     }
 
+    /** Elimina todo el estado temporal conservado para un jugador desconectado. */
+    public static void clearPlayer(UUID playerId) {
+        clearSelection(playerId);
+        ROUTE_PRIORITIES.remove(playerId);
+        PUMP_MODES.remove(playerId);
+        COPPER_CASING_MODES.remove(playerId);
+        PIPE_STYLE_MODES.remove(playerId);
+        CONNECTOR_MODE_PLAYERS.remove(playerId);
+        REVERSED_PUMP_PLAYERS.remove(playerId);
+    }
+
     /** Devuelve una copia inmutable de los valores asociados al jugador. */
     private static <T> List<T> getValues(Map<UUID, List<T>> valuesByPlayer, UUID playerId) {
         return List.copyOf(valuesByPlayer.getOrDefault(playerId, List.of()));
@@ -227,6 +227,13 @@ public final class ConnectorSessionStore {
         if (!values.remove(value)) {
             values.add(value);
         }
+        storeValues(valuesByPlayer, playerId, values);
+    }
+
+    /** Retira un valor concreto y normaliza su almacenamiento. */
+    private static <T> void removeValue(Map<UUID, List<T>> valuesByPlayer, UUID playerId, T value) {
+        List<T> values = new ArrayList<>(getValues(valuesByPlayer, playerId));
+        values.remove(value);
         storeValues(valuesByPlayer, playerId, values);
     }
 

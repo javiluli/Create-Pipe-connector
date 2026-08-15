@@ -2,9 +2,9 @@ package com.javiluli.createpipeconnector;
 
 import com.javiluli.createpipeconnector.bootstrap.ForgePayloadRegistry;
 import com.javiluli.createpipeconnector.bootstrap.ForgeClientBootstrap;
+import com.javiluli.createpipeconnector.config.CreatePipeConnectorClientConfig;
 import com.javiluli.createpipeconnector.core.Constants;
 import com.javiluli.createpipeconnector.feature.connector.server.ServerPipeConnectorEvents;
-import com.javiluli.createpipeconnector.feature.placement.config.PlacementAnimationClientConfig;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.DistExecutor;
@@ -21,7 +21,7 @@ public final class CreatePipeConnector {
     public CreatePipeConnector(FMLJavaModLoadingContext loadingContext) {
         loadingContext.registerConfig(
                 ModConfig.Type.CLIENT,
-                PlacementAnimationClientConfig.SPEC,
+                CreatePipeConnectorClientConfig.SPEC,
                 Constants.MOD_ID + "-client.toml"
         );
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ForgeClientBootstrap.register(loadingContext));

@@ -3,7 +3,9 @@ package com.javiluli.createpipeconnector.feature.placement.server;
 import com.javiluli.createpipeconnector.core.create.CreatePipeBlocks;
 import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.material.PipeInventory;
+import com.javiluli.createpipeconnector.feature.material.PipeInventory.MaterialSnapshot;
 import com.javiluli.createpipeconnector.feature.placement.PlacementAnimationSettings;
+import com.javiluli.createpipeconnector.feature.placement.PlacementCascadeTiming;
 import com.javiluli.createpipeconnector.feature.pipe.PipeNetworkUpdater;
 import com.javiluli.createpipeconnector.feature.preview.PipePreviewBuilder;
 import com.javiluli.createpipeconnector.feature.routing.PipePathfinder;
@@ -42,13 +44,19 @@ public final class IncrementalPipePlacementService {
      *
      * @return {@code true} si el plan quedo preparado para comenzar
      */
-    public static boolean enqueue(Player player, ServerLevel level, ConnectionPlan plan, Block pipeBlock) {
+    public static boolean enqueue(
+            Player player,
+            ServerLevel level,
+            ConnectionPlan plan,
+            Block pipeBlock,
+            MaterialSnapshot materials
+    ) {
         if (!isPlanPlaceable(level, plan)) {
             return false;
         }
 
         List<PlacementStep> steps = buildSteps(level, plan, pipeBlock);
-        if (!PipeInventory.consumeItems(player, pipeBlock, plan)) {
+        if (!PipeInventory.consumeItems(player, pipeBlock, plan, materials)) {
             return false;
         }
 
@@ -63,7 +71,8 @@ public final class IncrementalPipePlacementService {
                 plan.path(),
                 pipeBlock,
                 steps,
-                settings.piecesPerSecond()
+                settings.zoomEnabled(),
+                settings.delayMilliseconds()
         );
         if (!settings.enabled()) {
             PlacementProgress progress = pendingPlacement.placeAll();
@@ -125,7 +134,7 @@ public final class IncrementalPipePlacementService {
             return;
         }
         for (PendingPlacement pendingPlacement : queue) {
-            pendingPlacement.updateSpeed(settings.piecesPerSecond());
+            pendingPlacement.updateAnimation(settings.zoomEnabled(), settings.delayMilliseconds());
         }
     }
 
@@ -222,38 +231,78 @@ public final class IncrementalPipePlacementService {
         private final List<BlockPos> path;
         private final Block pipeBlock;
         private final List<PlacementStep> steps;
-        private int piecesPerSecond;
+        private final double[] pieceStartTicks;
+        private double pieceIntervalTicks;
+        private double completionDurationTicks;
         private int nextStepIndex;
-        private int placementProgress;
+        private int nextPieceToAnimate;
+        private double animationClock;
+        private double nextPieceStartTick;
 
         private PendingPlacement(
                 ServerLevel level,
                 List<BlockPos> path,
                 Block pipeBlock,
                 List<PlacementStep> steps,
-                int piecesPerSecond
+                boolean zoomEnabled,
+                int delayMilliseconds
         ) {
             this.level = level;
             this.path = List.copyOf(path);
             this.pipeBlock = pipeBlock;
             this.steps = steps;
-            this.piecesPerSecond = piecesPerSecond;
+            pieceStartTicks = new double[steps.size()];
+            configureAnimation(zoomEnabled, delayMilliseconds);
+            startNextPiece(0.0D);
         }
 
-        /** Cambia la velocidad sin perder el progreso parcial del intervalo. */
-        private void updateSpeed(int piecesPerSecond) {
-            this.piecesPerSecond = piecesPerSecond;
+        /** Cambia el zoom y el retraso sin reiniciar la ruta en marcha. */
+        private void updateAnimation(boolean zoomEnabled, int delayMilliseconds) {
+            configureAnimation(zoomEnabled, delayMilliseconds);
+            if (nextPieceToAnimate > 0 && nextPieceToAnimate < steps.size()) {
+                nextPieceStartTick = Math.max(
+                        animationClock,
+                        pieceStartTicks[nextPieceToAnimate - 1] + pieceIntervalTicks
+                );
+            }
         }
 
-        /** Distribuye piezas individuales entre los veinte ticks de cada segundo. */
+        /** Precalcula los intervalos usados por todos los ticks posteriores. */
+        private void configureAnimation(boolean zoomEnabled, int delayMilliseconds) {
+            pieceIntervalTicks = PlacementCascadeTiming.pieceIntervalTicks(delayMilliseconds);
+            completionDurationTicks = zoomEnabled
+                    ? PlacementCascadeTiming.zoomDurationTicks(delayMilliseconds)
+                    : pieceIntervalTicks;
+        }
+
+        /** Avanza la cascada y coloca como maximo una pieza durante este tick. */
         private PlacementProgress placeNextTick() {
-            placementProgress += piecesPerSecond;
-            if (placementProgress < PlacementAnimationSettings.GAME_TICKS_PER_SECOND) {
+            animationClock += 1.0D;
+            advanceCascade();
+            if (nextStepIndex >= nextPieceToAnimate) {
                 return PlacementProgress.CONTINUE;
             }
 
-            placementProgress -= PlacementAnimationSettings.GAME_TICKS_PER_SECOND;
+            double completionTick = pieceStartTicks[nextStepIndex] + completionDurationTicks;
+            if (animationClock < completionTick) {
+                return PlacementProgress.CONTINUE;
+            }
+
             return placeNext();
+        }
+
+        /** Inicia nuevas piezas aunque las anteriores todavia esten creciendo. */
+        private void advanceCascade() {
+            while (nextPieceToAnimate < steps.size() && animationClock >= nextPieceStartTick) {
+                startNextPiece(nextPieceStartTick);
+            }
+        }
+
+        /** Registra el instante visual de la siguiente pieza pendiente. */
+        private void startNextPiece(double startTick) {
+            pieceStartTicks[nextPieceToAnimate] = startTick;
+            nextPieceToAnimate++;
+            nextPieceStartTick = startTick + pieceIntervalTicks;
         }
 
         /** Coloca la siguiente pieza o detecta que la ruta ya no es valida. */

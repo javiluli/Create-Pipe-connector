@@ -22,13 +22,13 @@ public final class ServerCasingPayloadHandler {
                 player -> ConnectorSessionStore.setCopperCasingMode(player.getUUID(), payload.mode()));
     }
 
-    /** Alterna un revestimiento manual en una posicion alcanzable de la ruta. */
+    /** Alterna un revestimiento manual en la ruta activa, incluso con freecam. */
     public static void handleToggleCopperCasing(
             ToggleCopperCasingPayload payload,
             Supplier<NetworkEvent.Context> contextSupplier
     ) {
         ServerPayloadContext.enqueue(contextSupplier, player -> {
-            if (ServerConnectorSessionValidator.canModifyRouteAt(player, payload.position())) {
+            if (ServerConnectorSessionValidator.canModifyRoute(player)) {
                 ConnectorSessionStore.toggleCopperCasing(player.getUUID(), payload.position());
             }
         });

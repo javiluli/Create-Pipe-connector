@@ -1,7 +1,7 @@
 package com.javiluli.createpipeconnector.bootstrap;
 
 import com.javiluli.createpipeconnector.feature.anchor.network.AddAnchorPayload;
-import com.javiluli.createpipeconnector.feature.anchor.network.RemoveLastAnchorPayload;
+import com.javiluli.createpipeconnector.feature.anchor.network.RemoveAnchorPayload;
 import com.javiluli.createpipeconnector.feature.anchor.network.ServerAnchorPayloadHandler;
 import com.javiluli.createpipeconnector.feature.casing.network.CopperCasingModePayload;
 import com.javiluli.createpipeconnector.feature.casing.network.RemoveLastCopperCasingPayload;
@@ -11,12 +11,13 @@ import com.javiluli.createpipeconnector.feature.connector.network.ServerConnecto
 import com.javiluli.createpipeconnector.feature.connector.network.ToggleConnectorModePayload;
 import com.javiluli.createpipeconnector.feature.pump.network.PumpModePayload;
 import com.javiluli.createpipeconnector.feature.pump.network.RemoveLastManualPumpPayload;
-import com.javiluli.createpipeconnector.feature.pump.network.ReverseAutoPumpDirectionPayload;
+import com.javiluli.createpipeconnector.feature.pump.network.PumpDirectionPayload;
 import com.javiluli.createpipeconnector.feature.pump.network.ServerPumpPayloadHandler;
-import com.javiluli.createpipeconnector.feature.pump.network.ToggleAutoPumpsPayload;
 import com.javiluli.createpipeconnector.feature.pump.network.ToggleManualPumpPayload;
 import com.javiluli.createpipeconnector.feature.placement.network.PlacementAnimationSettingsPayload;
 import com.javiluli.createpipeconnector.feature.placement.network.ServerPlacementAnimationPayloadHandler;
+import com.javiluli.createpipeconnector.feature.material.shulker.network.ServerShulkerMaterialPayloadHandler;
+import com.javiluli.createpipeconnector.feature.material.shulker.network.ShulkerMaterialSettingsPayload;
 import com.javiluli.createpipeconnector.feature.routing.network.CancelPipeConnectionPayload;
 import com.javiluli.createpipeconnector.feature.routing.network.RoutePriorityPayload;
 import com.javiluli.createpipeconnector.feature.routing.network.SelectPipeTargetPayload;
@@ -41,10 +42,10 @@ public final class ForgePayloadRegistry {
                 ServerAnchorPayloadHandler::handleAddAnchor
         );
         CreatePipeConnectorNetwork.registerMessage(
-                RemoveLastAnchorPayload.class,
-                RemoveLastAnchorPayload::encode,
-                RemoveLastAnchorPayload::decode,
-                ServerAnchorPayloadHandler::handleRemoveLastAnchor
+                RemoveAnchorPayload.class,
+                RemoveAnchorPayload::encode,
+                RemoveAnchorPayload::decode,
+                ServerAnchorPayloadHandler::handleRemoveAnchor
         );
         CreatePipeConnectorNetwork.registerMessage(
                 ToggleConnectorModePayload.class,
@@ -71,10 +72,10 @@ public final class ForgePayloadRegistry {
                 ServerPipeStylePayloadHandler::handlePipeStyleMode
         );
         CreatePipeConnectorNetwork.registerMessage(
-                ReverseAutoPumpDirectionPayload.class,
-                ReverseAutoPumpDirectionPayload::encode,
-                ReverseAutoPumpDirectionPayload::decode,
-                ServerPumpPayloadHandler::handleReverseAutoPumpDirection
+                PumpDirectionPayload.class,
+                PumpDirectionPayload::encode,
+                PumpDirectionPayload::decode,
+                ServerPumpPayloadHandler::handlePumpDirection
         );
         CreatePipeConnectorNetwork.registerMessage(
                 RoutePriorityPayload.class,
@@ -93,12 +94,6 @@ public final class ForgePayloadRegistry {
                 CancelPipeConnectionPayload::encode,
                 CancelPipeConnectionPayload::decode,
                 ServerRoutePayloadHandler::handleCancelPipeConnection
-        );
-        CreatePipeConnectorNetwork.registerMessage(
-                ToggleAutoPumpsPayload.class,
-                ToggleAutoPumpsPayload::encode,
-                ToggleAutoPumpsPayload::decode,
-                ServerPumpPayloadHandler::handleToggleAutoPumps
         );
         CreatePipeConnectorNetwork.registerMessage(
                 RemoveLastManualPumpPayload.class,
@@ -135,6 +130,12 @@ public final class ForgePayloadRegistry {
                 PlacementAnimationSettingsPayload::encode,
                 PlacementAnimationSettingsPayload::decode,
                 ServerPlacementAnimationPayloadHandler::handleSettings
+        );
+        CreatePipeConnectorNetwork.registerMessage(
+                ShulkerMaterialSettingsPayload.class,
+                ShulkerMaterialSettingsPayload::encode,
+                ShulkerMaterialSettingsPayload::decode,
+                ServerShulkerMaterialPayloadHandler::handleSettings
         );
     }
 }

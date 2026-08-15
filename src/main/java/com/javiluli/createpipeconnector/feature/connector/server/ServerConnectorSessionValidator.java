@@ -3,7 +3,6 @@ package com.javiluli.createpipeconnector.feature.connector.server;
 import com.javiluli.createpipeconnector.feature.connector.PipeConnectorLogic;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
 import com.javiluli.createpipeconnector.feature.connector.session.ConnectorSessionStore;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -27,7 +26,7 @@ public final class ServerConnectorSessionValidator {
         }
 
         Selection selection = ConnectorSessionStore.getSelection(player.getUUID());
-        if (selection != null && PipeConnectorLogic.isPlayerInPipeMode(player, selection)) {
+        if (selection != null && PipeConnectorLogic.isSelectionStillValid(player.level(), selection)) {
             return selection;
         }
 
@@ -36,14 +35,15 @@ public final class ServerConnectorSessionValidator {
     }
 
     /**
-     * Comprueba que existe una ruta activa y que la posicion puede alcanzarse legitimamente.
+     * Comprueba que existe una ruta activa antes de modificar sus marcas.
+     *
+     * <p>Las posiciones pueden pertenecer a un preview fijado anteriormente y
+     * quedar fuera del alcance actual mientras el jugador usa freecam.</p>
      *
      * @param player jugador que solicita el cambio
-     * @param position posicion afectada por la feature
      * @return {@code true} si la modificacion puede procesarse
      */
-    public static boolean canModifyRouteAt(ServerPlayer player, BlockPos position) {
-        return validatedSelection(player) != null
-                && PipeConnectorLogic.isWithinInteractionRange(player, position);
+    public static boolean canModifyRoute(ServerPlayer player) {
+        return validatedSelection(player) != null;
     }
 }

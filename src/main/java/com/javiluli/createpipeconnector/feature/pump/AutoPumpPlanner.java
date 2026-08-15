@@ -31,16 +31,6 @@ public final class AutoPumpPlanner {
     private AutoPumpPlanner() {
     }
 
-    /** Aplica el modo eficiente con el sentido de flujo normal. */
-    public static ConnectionPlan apply(ConnectionPlan plan) {
-        return apply(plan, PumpMode.EFFICIENT, false);
-    }
-
-    /** Aplica el modo eficiente con el sentido de flujo indicado. */
-    public static ConnectionPlan apply(ConnectionPlan plan, boolean reversed) {
-        return apply(plan, PumpMode.EFFICIENT, reversed);
-    }
-
     /** Aplica al plan la estrategia y el sentido de bombas seleccionados. */
     public static ConnectionPlan apply(ConnectionPlan plan, PumpMode mode, boolean reversed) {
         if (mode == null || !mode.isAutomatic()) {
@@ -91,8 +81,7 @@ public final class AutoPumpPlanner {
         int pushPipeGap = Math.max(0, getPumpPushPipeGap());
         return switch (mode) {
             case EFFICIENT -> suctionPipeGap + pushPipeGap;
-            case SAFE -> suctionPipeGap;
-            default -> suctionPipeGap;
+            case OFF, SAFE -> suctionPipeGap;
         };
     }
 
