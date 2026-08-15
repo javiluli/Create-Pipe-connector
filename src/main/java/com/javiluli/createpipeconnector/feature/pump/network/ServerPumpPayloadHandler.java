@@ -16,20 +16,15 @@ public final class ServerPumpPayloadHandler {
         ConnectorSessionStore.setPumpMode(context.player().getUUID(), payload.mode());
     }
 
-    /** Conserva compatibilidad con el interruptor automatico directo. */
-    public static void handleToggleAutoPumps(ToggleAutoPumpsPayload payload, IPayloadContext context) {
-        ConnectorSessionStore.setAutoPumpsEnabled(context.player().getUUID(), payload.enabled());
-    }
-
-    /** Invierte la direccion de las bombas automaticas. */
-    public static void handleReverseAutoPumpDirection(ReverseAutoPumpDirectionPayload payload, IPayloadContext context) {
-        ConnectorSessionStore.setAutoPumpDirectionReversed(context.player().getUUID(), payload.reversed());
+    /** Sincroniza la inversion del sentido de todas las bombas de la ruta. */
+    public static void handlePumpDirection(PumpDirectionPayload payload, IPayloadContext context) {
+        ConnectorSessionStore.setPumpDirectionReversed(context.player().getUUID(), payload.reversed());
     }
 
     /** Alterna una marca manual si pertenece a una seleccion valida y cercana. */
     public static void handleToggleManualPump(ToggleManualPumpPayload payload, IPayloadContext context) {
         Player player = context.player();
-        if (ServerConnectorSessionValidator.canModifyRouteAt(player, payload.position())) {
+        if (ServerConnectorSessionValidator.canModifyRoute(player)) {
             ConnectorSessionStore.toggleManualPump(player.getUUID(), payload.position());
         }
     }

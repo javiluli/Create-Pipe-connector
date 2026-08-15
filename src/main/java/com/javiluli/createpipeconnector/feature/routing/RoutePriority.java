@@ -16,18 +16,6 @@ public enum RoutePriority {
         this.verticalCost = verticalCost;
     }
 
-    /** Devuelve la siguiente prioridad de forma circular. */
-    public RoutePriority next() {
-        RoutePriority[] priorities = values();
-        return priorities[(ordinal() + 1) % priorities.length];
-    }
-
-    /** Devuelve la prioridad anterior de forma circular. */
-    public RoutePriority previous() {
-        RoutePriority[] priorities = values();
-        return priorities[(ordinal() + priorities.length - 1) % priorities.length];
-    }
-
     /** Devuelve el coste aplicado a cada movimiento vertical. */
     public int verticalCost() {
         return verticalCost;

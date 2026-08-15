@@ -1,87 +1,65 @@
 package com.javiluli.createpipeconnector.feature.material;
 
-import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.core.create.CreatePipeBlocks;
+import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
+import com.javiluli.createpipeconnector.feature.material.shulker.ShulkerMaterialBridge;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/** Cuenta, consume y devuelve materiales respetando el modo creativo. */
+/**
+ * Cuenta y consume materiales desde el inventario, la mano secundaria y shulkers.
+ *
+ * <p>Los jugadores en creativo conservan el comportamiento de recursos infinitos.</p>
+ */
 public final class PipeInventory {
     /** Impide crear instancias del servicio de inventario. */
     private PipeInventory() {
     }
 
-    /** Cuenta las tuberias compatibles disponibles para colocar. */
-    public static int countAvailablePipes(Player player, Block pipeBlock) {
+    /**
+     * Inspecciona todos los materiales del conector recorriendo cada shulker una sola vez.
+     *
+     * @return cantidades directas, cantidades guardadas y primer shulker util por material
+     */
+    public static MaterialSnapshot inspectMaterials(Player player, Block pipeBlock, boolean includeShulkers) {
         if (player.getAbilities().instabuild) {
-            return Integer.MAX_VALUE;
+            MaterialAvailability unlimited = MaterialAvailability.unlimited();
+            return new MaterialSnapshot(unlimited, unlimited, unlimited);
         }
 
-        Item pipeItem = pipeBlock.asItem();
-        if (pipeItem == Items.AIR) {
-            return 0;
-        }
-
-        return countAvailableItems(player, pipeItem);
-    }
-
-    /** Cuenta las bombas mecanicas disponibles para colocar. */
-    public static int countAvailablePumps(Player player) {
         Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
-        if (pumpBlock == null) {
-            return 0;
-        }
-
-        return countAvailableItems(player, pumpBlock.asItem());
-    }
-
-    /** Indica mediante un contador si hay revestimiento de cobre disponible. */
-    public static int countAvailableCopperCasings(Player player) {
         Block casingBlock = CreatePipeBlocks.getCopperCasingBlock();
-        if (casingBlock == null) {
-            return 0;
-        }
+        AvailabilityAccumulator pipes = new AvailabilityAccumulator(pipeBlock.asItem());
+        AvailabilityAccumulator pumps = new AvailabilityAccumulator(
+                pumpBlock == null ? Items.AIR : pumpBlock.asItem()
+        );
+        AvailabilityAccumulator casings = new AvailabilityAccumulator(
+                casingBlock == null ? Items.AIR : casingBlock.asItem()
+        );
+        List<AvailabilityAccumulator> accumulators = List.of(pipes, pumps, casings);
 
-        return countAvailableItems(player, casingBlock.asItem());
+        inspectStacks(player.getInventory().items, accumulators, includeShulkers);
+        inspectStacks(player.getInventory().offhand, accumulators, includeShulkers);
+        return new MaterialSnapshot(pipes.snapshot(), pumps.snapshot(), casings.snapshot());
     }
 
-    /** Comprueba todos los materiales exigidos por el plan. */
-    public static boolean hasEnoughItems(Player player, Block pipeBlock, ConnectionPlan plan) {
-        return player.getAbilities().instabuild
-                || (countAvailablePipes(player, pipeBlock) >= plan.requiredPipes()
-                && countAvailablePumps(player) >= plan.requiredPumps()
-                && countAvailableCopperCasings(player) >= plan.requiredCopperCasings());
-    }
-
-    /** Consume unicamente las tuberias solicitadas, salvo en creativo. */
-    public static boolean consumePipes(Player player, Block pipeBlock, int requiredPipes) {
-        if (requiredPipes <= 0 || player.getAbilities().instabuild) {
-            return true;
-        }
-
-        if (countAvailablePipes(player, pipeBlock) < requiredPipes) {
-            return false;
-        }
-
-        Item pipeItem = pipeBlock.asItem();
-        int remaining = requiredPipes;
-        remaining = consumeMatchingStacks(player.getInventory().items, pipeItem, remaining);
-        remaining = consumeMatchingStacks(player.getInventory().offhand, pipeItem, remaining);
-        player.getInventory().setChanged();
-        return remaining == 0;
-    }
-
-    /** Consume de forma conjunta los materiales de un plan ya validado. */
-    public static boolean consumeItems(Player player, Block pipeBlock, ConnectionPlan plan) {
+    /** Consume de forma conjunta los materiales usando una instantanea ya validada. */
+    public static boolean consumeItems(
+            Player player,
+            Block pipeBlock,
+            ConnectionPlan plan,
+            MaterialSnapshot materials
+    ) {
         if (player.getAbilities().instabuild) {
             return true;
         }
-        if (!hasEnoughItems(player, pipeBlock, plan)) {
+        if (!materials.hasEnough(plan)) {
             return false;
         }
 
@@ -100,62 +78,59 @@ public final class PipeInventory {
             remainingPumps = consumeMatchingStacks(player.getInventory().offhand, pumpItem, remainingPumps);
         }
 
+        Item pumpItem = pumpBlock == null ? Items.AIR : pumpBlock.asItem();
+        ShulkerMaterialBridge.Consumption remainingMaterials = consumeMatchingShulkerContents(
+                player.getInventory().items,
+                pipeBlock.asItem(),
+                remainingPipes,
+                pumpItem,
+                remainingPumps
+        );
+        remainingMaterials = consumeMatchingShulkerContents(
+                player.getInventory().offhand,
+                pipeBlock.asItem(),
+                remainingMaterials.pipes(),
+                pumpItem,
+                remainingMaterials.pumps()
+        );
+
         player.getInventory().setChanged();
-        return remainingPipes == 0 && remainingPumps == 0;
+        return remainingMaterials.pipes() == 0 && remainingMaterials.pumps() == 0;
     }
 
-    /** Devuelve al inventario los materiales reservados que no llegaron a colocarse. */
-    public static void refundItems(Player player, Block pipeBlock, int pipeCount, int pumpCount) {
+    /** Devuelve tuberias y bombas reservadas que finalmente no fueron colocadas. */
+    public static void refundItems(Player player, Block pipeBlock, int pipes, int pumps) {
         if (player.getAbilities().instabuild) {
             return;
         }
-        refundItem(player, pipeBlock.asItem(), pipeCount);
+
+        giveItems(player, pipeBlock.asItem(), pipes);
         Block pumpBlock = CreatePipeBlocks.getMechanicalPumpBlock();
         if (pumpBlock != null) {
-            refundItem(player, pumpBlock.asItem(), pumpCount);
-        }
-    }
-
-    /** Inserta un material reservado o lo deja caer si el inventario esta lleno. */
-    private static void refundItem(Player player, Item item, int count) {
-        if (item == Items.AIR || count <= 0) {
-            return;
-        }
-        int remaining = count;
-        while (remaining > 0) {
-            ItemStack stack = new ItemStack(item, Math.min(item.getDefaultMaxStackSize(), remaining));
-            remaining -= stack.getCount();
-            if (!player.getInventory().add(stack)) {
-                player.drop(stack, false);
-            }
+            giveItems(player, pumpBlock.asItem(), pumps);
         }
         player.getInventory().setChanged();
     }
 
-    /** Cuenta un tipo de objeto entre manos e inventario. */
-    private static int countAvailableItems(Player player, Item item) {
-        if (player.getAbilities().instabuild) {
-            return Integer.MAX_VALUE;
-        }
-        if (item == Items.AIR) {
-            return 0;
-        }
-
-        int count = 0;
-        count += countMatchingStacks(player.getInventory().items, item);
-        count += countMatchingStacks(player.getInventory().offhand, item);
-        return count;
-    }
-
-    /** Suma las unidades coincidentes de una coleccion de pilas. */
-    private static int countMatchingStacks(List<ItemStack> stacks, Item item) {
-        int count = 0;
+    /** Acumula pilas directas y contenido de shulkers para varios materiales. */
+    private static void inspectStacks(
+            List<ItemStack> stacks,
+            List<AvailabilityAccumulator> accumulators,
+            boolean includeShulkers
+    ) {
         for (ItemStack stack : stacks) {
-            if (stack.is(item)) {
-                count += stack.getCount();
+            for (AvailabilityAccumulator accumulator : accumulators) {
+                accumulator.addDirect(stack);
             }
         }
-        return count;
+        if (!includeShulkers) {
+            return;
+        }
+        ShulkerMaterialBridge.visitContents(stacks, (containedStack, shulkerStack) -> {
+            for (AvailabilityAccumulator accumulator : accumulators) {
+                accumulator.addShulker(containedStack, shulkerStack);
+            }
+        });
     }
 
     /** Retira unidades coincidentes y devuelve la cantidad pendiente. */
@@ -173,5 +148,128 @@ public final class PipeInventory {
         }
         return remaining;
     }
-}
 
+    /** Retira tuberias y bombas cargando cada shulker una sola vez. */
+    private static ShulkerMaterialBridge.Consumption consumeMatchingShulkerContents(
+            List<ItemStack> stacks,
+            Item pipeItem,
+            int remainingPipes,
+            Item pumpItem,
+            int remainingPumps
+    ) {
+        return ShulkerMaterialBridge.consume(stacks, pipeItem, remainingPipes, pumpItem, remainingPumps);
+    }
+
+    /** Inserta objetos en el inventario y deja caer cualquier resto a los pies. */
+    private static void giveItems(Player player, Item item, int amount) {
+        if (item == Items.AIR || amount <= 0) {
+            return;
+        }
+
+        int remaining = amount;
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, item.getDefaultMaxStackSize());
+            ItemStack stack = new ItemStack(item, stackSize);
+            player.getInventory().add(stack);
+            if (!stack.isEmpty()) {
+                player.drop(stack, false);
+            }
+            remaining -= stackSize;
+        }
+    }
+
+    /** Resumen de los tres materiales usados por una ruta. */
+    public record MaterialSnapshot(
+            MaterialAvailability pipes,
+            MaterialAvailability pumps,
+            MaterialAvailability copperCasings
+    ) {
+        /** Comprueba si la instantanea cubre todos los requisitos del plan. */
+        public boolean hasEnough(ConnectionPlan plan) {
+            return pipes.totalCount() >= plan.requiredPipes()
+                    && pumps.totalCount() >= plan.requiredPumps()
+                    && copperCasings.totalCount() >= plan.requiredCopperCasings();
+        }
+    }
+
+    /** Cantidades disponibles y shulkers que aportan un material. */
+    public record MaterialAvailability(
+            int directCount,
+            int shulkerCount,
+            List<ShulkerMaterialSource> shulkerSources
+    ) {
+        /** Conserva una copia inmutable de las fuentes detectadas. */
+        public MaterialAvailability {
+            shulkerSources = shulkerSources == null ? List.of() : List.copyOf(shulkerSources);
+        }
+
+        /** Crea una disponibilidad ilimitada para el modo creativo. */
+        private static MaterialAvailability unlimited() {
+            return new MaterialAvailability(Integer.MAX_VALUE, 0, List.of());
+        }
+
+        /** Devuelve la suma de inventario directo y shulkers. */
+        public int totalCount() {
+            if (directCount == Integer.MAX_VALUE) {
+                return Integer.MAX_VALUE;
+            }
+            return directCount + shulkerCount;
+        }
+    }
+
+    /** Identifica una shulker y la cantidad de material que contiene. */
+    public record ShulkerMaterialSource(ItemStack shulkerStack, int count) {
+    }
+
+    /** Acumulador mutable limitado al recorrido interno del inventario. */
+    private static final class AvailabilityAccumulator {
+        private final Item item;
+        private int directCount;
+        private int shulkerCount;
+        private final List<MutableShulkerSource> shulkerSources = new ArrayList<>();
+        private ItemStack lastSourceContainer = ItemStack.EMPTY;
+
+        private AvailabilityAccumulator(Item item) {
+            this.item = item;
+        }
+
+        /** Suma una pila situada directamente en el inventario. */
+        private void addDirect(ItemStack stack) {
+            if (item != Items.AIR && stack.is(item)) {
+                directCount += stack.getCount();
+            }
+        }
+
+        /** Suma una pila interna y agrupa su cantidad por shulker de origen. */
+        private void addShulker(ItemStack stack, ItemStack shulkerStack) {
+            if (item == Items.AIR || !stack.is(item)) {
+                return;
+            }
+            shulkerCount += stack.getCount();
+            if (lastSourceContainer != shulkerStack) {
+                shulkerSources.add(new MutableShulkerSource(new ItemStack(shulkerStack.getItem())));
+                lastSourceContainer = shulkerStack;
+            }
+            shulkerSources.get(shulkerSources.size() - 1).count += stack.getCount();
+        }
+
+        /** Convierte el acumulador en un resultado inmutable. */
+        private MaterialAvailability snapshot() {
+            List<ShulkerMaterialSource> sources = new ArrayList<>(shulkerSources.size());
+            for (MutableShulkerSource source : shulkerSources) {
+                sources.add(new ShulkerMaterialSource(source.shulkerStack, source.count));
+            }
+            return new MaterialAvailability(directCount, shulkerCount, sources);
+        }
+
+        /** Fuente mutable usada solo durante el recorrido de inventario. */
+        private static final class MutableShulkerSource {
+            private final ItemStack shulkerStack;
+            private int count;
+
+            private MutableShulkerSource(ItemStack shulkerStack) {
+                this.shulkerStack = shulkerStack;
+            }
+        }
+    }
+}

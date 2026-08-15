@@ -1,7 +1,7 @@
 package com.javiluli.createpipeconnector.feature.pump;
 
-import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.core.create.CreatePipeBlocks;
+import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.routing.PipeRouteGeometry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -14,7 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Anade bombas a tramos rectos de un plan inmutable. */
+/**
+ * Anade bombas mecanicas a un plan de conexion inmutable.
+ *
+ * <p>El planificador mantiene las bombas en tramos rectos y consulta los limites
+ * de flujo de Create cuando la API compatible esta disponible.</p>
+ */
 public final class AutoPumpPlanner {
     private static final String FLUID_PROPAGATOR_CLASS = "com.simibubi.create.content.fluids.FluidPropagator";
     private static final String GET_PUMP_RANGE_METHOD = "getPumpRange";
@@ -24,16 +29,6 @@ public final class AutoPumpPlanner {
 
     /** Impide crear instancias del planificador. */
     private AutoPumpPlanner() {
-    }
-
-    /** Aplica el modo eficiente con el sentido de flujo normal. */
-    public static ConnectionPlan apply(ConnectionPlan plan) {
-        return apply(plan, PumpMode.EFFICIENT, false);
-    }
-
-    /** Aplica el modo eficiente con el sentido de flujo indicado. */
-    public static ConnectionPlan apply(ConnectionPlan plan, boolean reversed) {
-        return apply(plan, PumpMode.EFFICIENT, reversed);
     }
 
     /** Aplica al plan la estrategia y el sentido de bombas seleccionados. */
@@ -86,8 +81,7 @@ public final class AutoPumpPlanner {
         int pushPipeGap = Math.max(0, getPumpPushPipeGap());
         return switch (mode) {
             case EFFICIENT -> suctionPipeGap + pushPipeGap;
-            case SAFE -> suctionPipeGap;
-            default -> suctionPipeGap;
+            case OFF, SAFE -> suctionPipeGap;
         };
     }
 
@@ -156,7 +150,8 @@ public final class AutoPumpPlanner {
             return cachedPumpSuctionPipeGap;
         }
 
-        // Create cambia esta API entre versiones; la reflexion mantiene Create 6.x.
+        // Create ha cambiado esta API entre versiones. La reflexion mantiene
+        // compatible el modulo comun con las variantes admitidas de Create 6.x.
         try {
             Class<?> fluidPropagator = Class.forName(FLUID_PROPAGATOR_CLASS);
             Method getPumpRange = fluidPropagator.getMethod(GET_PUMP_RANGE_METHOD);

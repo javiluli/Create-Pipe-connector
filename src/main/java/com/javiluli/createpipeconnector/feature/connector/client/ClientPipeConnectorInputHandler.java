@@ -1,33 +1,40 @@
 package com.javiluli.createpipeconnector.feature.connector.client;
 
 import com.javiluli.createpipeconnector.core.Constants;
-import com.javiluli.createpipeconnector.feature.ui.client.ConnectorOptionsRadialScreen;
 import com.javiluli.createpipeconnector.feature.connector.PipeConnectorLogic;
-import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.casing.CopperCasingMode;
+import com.javiluli.createpipeconnector.core.model.ConnectionPlan;
 import com.javiluli.createpipeconnector.feature.connector.model.PlacementTarget;
 import com.javiluli.createpipeconnector.feature.connector.model.Selection;
+import com.javiluli.createpipeconnector.feature.connector.interaction.RouteInteractionResolver;
+import com.javiluli.createpipeconnector.feature.material.client.ClientMaterialPreview;
+import com.javiluli.createpipeconnector.feature.material.client.MissingMaterialsAlertHud;
+import com.javiluli.createpipeconnector.feature.manual.ManualAction;
+import com.javiluli.createpipeconnector.feature.manual.ManualMarkerChange;
+import com.javiluli.createpipeconnector.feature.manual.ManualRouteChange;
+import com.javiluli.createpipeconnector.feature.manual.config.ManualAnchorClientConfig;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementAnimationSynchronizer;
+import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview;
+import com.javiluli.createpipeconnector.feature.preview.PreviewPipe;
 import com.javiluli.createpipeconnector.feature.pump.PumpMode;
 import com.javiluli.createpipeconnector.feature.routing.RoutePriority;
 import com.javiluli.createpipeconnector.feature.style.PipeStyleMode;
+import com.javiluli.createpipeconnector.feature.ui.client.ConnectorOptionsRadialScreen;
+import com.javiluli.createpipeconnector.feature.ui.client.PipeConnectorModeStatusHud;
 import com.javiluli.createpipeconnector.feature.anchor.network.AddAnchorPayload;
-import com.javiluli.createpipeconnector.feature.routing.network.CancelPipeConnectionPayload;
+import com.javiluli.createpipeconnector.feature.anchor.network.RemoveAnchorPayload;
 import com.javiluli.createpipeconnector.feature.casing.network.CopperCasingModePayload;
-import com.javiluli.createpipeconnector.feature.style.network.PipeStyleModePayload;
-import com.javiluli.createpipeconnector.feature.pump.network.PumpModePayload;
-import com.javiluli.createpipeconnector.feature.anchor.network.RemoveLastAnchorPayload;
 import com.javiluli.createpipeconnector.feature.casing.network.RemoveLastCopperCasingPayload;
-import com.javiluli.createpipeconnector.feature.pump.network.RemoveLastManualPumpPayload;
-import com.javiluli.createpipeconnector.feature.pump.network.ReverseAutoPumpDirectionPayload;
-import com.javiluli.createpipeconnector.feature.routing.network.SelectPipeTargetPayload;
-import com.javiluli.createpipeconnector.feature.connector.network.ToggleConnectorModePayload;
 import com.javiluli.createpipeconnector.feature.casing.network.ToggleCopperCasingPayload;
+import com.javiluli.createpipeconnector.feature.connector.network.ToggleConnectorModePayload;
+import com.javiluli.createpipeconnector.feature.pump.network.PumpModePayload;
+import com.javiluli.createpipeconnector.feature.pump.network.RemoveLastManualPumpPayload;
+import com.javiluli.createpipeconnector.feature.pump.network.PumpDirectionPayload;
 import com.javiluli.createpipeconnector.feature.pump.network.ToggleManualPumpPayload;
+import com.javiluli.createpipeconnector.feature.routing.network.CancelPipeConnectionPayload;
+import com.javiluli.createpipeconnector.feature.routing.network.SelectPipeTargetPayload;
+import com.javiluli.createpipeconnector.feature.style.network.PipeStyleModePayload;
 import com.javiluli.createpipeconnector.feature.style.network.WrenchPipeDisplayPayload;
-import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementAnimationSynchronizer;
-import com.javiluli.createpipeconnector.feature.placement.client.ClientPlacementLeadPreview;
-import com.javiluli.createpipeconnector.feature.material.client.ClientMaterialPreview;
-import com.javiluli.createpipeconnector.feature.preview.client.ClientPipePreviewCache;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -35,6 +42,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
@@ -51,7 +60,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.List;
 
 /**
- * Coordina la entrada, el plan de ruta y la respuesta visual del modo conector.
+ * Traduce la entrada del cliente en estado, preview y paquetes validados.
  */
 @EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.CLIENT)
 public final class ClientPipeConnectorInputHandler {
@@ -63,26 +72,13 @@ public final class ClientPipeConnectorInputHandler {
     private static RoutePlanKey cachedRoutePlanKey;
     private static ConnectionPlan cachedRoutePlan;
     private static boolean hasCachedRoutePlan;
-    private static ConnectionPlan cachedAutoPumpBasePlan;
-    private static ConnectionPlan cachedAutoPumpPlan;
-    private static PumpMode cachedAutoPumpMode;
-    private static boolean cachedAutoPumpDirectionReversed;
-    private static ConnectionPlan cachedModifiedBasePlan;
-    private static ConnectionPlan cachedModifiedPlan;
-    private static List<BlockPos> cachedManualPumps;
-    private static CopperCasingMode cachedCopperCasingMode;
-    private static List<BlockPos> cachedCopperCasings;
-    private static PipeStyleMode cachedPipeStyleMode;
-    private static Block cachedModifiedPipeBlock;
-    private static Selection cachedInitialPreviewSelection;
-    private static ConnectionPlan cachedInitialPreviewPlan;
 
     /** Impide crear instancias del manejador de entrada. */
     private ClientPipeConnectorInputHandler() {
     }
 
     /**
-     * Impide la interaccion vanilla cuando el modo conector controla el objetivo.
+     * Impide la interaccion vanilla cuando el modo Pipe Connector controla el objetivo.
      */
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
@@ -104,13 +100,25 @@ public final class ClientPipeConnectorInputHandler {
             event.setCanceled(true);
             return;
         }
-
-        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
-        if (heldPipeBlock == null) {
+        Selection currentSelection = ClientPipeConnectorState.getSelection();
+        boolean connectorHandlesInteraction = RouteInteractionResolver.shouldConnectorHandle(
+                player,
+                currentSelection,
+                event.getLevel(),
+                event.getPos()
+        );
+        if (!connectorHandlesInteraction) {
             return;
         }
 
-        if (PipeConnectorLogic.resolvePlacementTarget(event.getLevel(), event.getPos(), event.getFace(), heldPipeBlock) == null) {
+        Block routePipeBlock = currentSelection == null
+                ? PipeConnectorLogic.getHeldPipeBlock(player)
+                : currentSelection.pipeBlock();
+        if (routePipeBlock == null) {
+            return;
+        }
+
+        if (PipeConnectorLogic.resolvePlacementTarget(event.getLevel(), event.getPos(), event.getFace(), routePipeBlock) == null) {
             return;
         }
 
@@ -154,15 +162,29 @@ public final class ClientPipeConnectorInputHandler {
             PacketDistributor.sendToServer(new WrenchPipeDisplayPayload(wrenchPipeDisplayTarget));
             return;
         }
+        BlockPos interactionPosition = minecraft.hitResult instanceof BlockHitResult blockHitResult
+                ? blockHitResult.getBlockPos()
+                : null;
+        boolean connectorHandlesInteraction = RouteInteractionResolver.shouldConnectorHandle(
+                player,
+                currentSelection,
+                minecraft.level,
+                interactionPosition
+        );
+        if (!connectorHandlesInteraction) {
+            return;
+        }
 
-        Block heldPipeBlock = PipeConnectorLogic.getHeldPipeBlock(player);
-        if (heldPipeBlock == null) {
+        Block routePipeBlock = currentSelection == null
+                ? PipeConnectorLogic.getHeldPipeBlock(player)
+                : currentSelection.pipeBlock();
+        if (routePipeBlock == null) {
             return;
         }
 
         PlacementTarget target = currentSelection == null
-                ? getBlockPreviewTarget(minecraft, heldPipeBlock)
-                : getActivePreviewTarget(minecraft, heldPipeBlock);
+                ? getBlockPreviewTarget(minecraft, routePipeBlock)
+                : ClientPipeConnectorState.getPreviewTarget();
         if (target == null) {
             if (currentSelection != null) {
                 event.setCanceled(true);
@@ -173,11 +195,6 @@ public final class ClientPipeConnectorInputHandler {
 
         event.setCanceled(true);
         event.setSwingHand(false);
-        if (currentSelection != null && !previewTargetLocked && !PipeConnectorLogic.isWithinInteractionRange(player, target.position())) {
-            clearCurrentConnection(player);
-            PacketDistributor.sendToServer(new CancelPipeConnectionPayload());
-            return;
-        }
         if (currentSelection != null && ClientPipeConnectorState.getPreviewPipes().isEmpty()) {
             clearCurrentConnection(player);
             PacketDistributor.sendToServer(new CancelPipeConnectionPayload());
@@ -186,32 +203,47 @@ public final class ClientPipeConnectorInputHandler {
         if (currentSelection != null) {
             Component missingMaterialsMessage = ClientMaterialPreview.missingMaterialsMessage(ClientPipeConnectorState.getMaterialStatus());
             if (missingMaterialsMessage != null) {
-                player.displayClientMessage(missingMaterialsMessage.copy().withStyle(ChatFormatting.RED), true);
+                player.level().playLocalSound(
+                        player.getX(),
+                        player.getY(),
+                        player.getZ(),
+                        SoundEvents.NOTE_BLOCK_BASS.value(),
+                        SoundSource.PLAYERS,
+                        0.65F,
+                        0.5F,
+                        false
+                );
+                MissingMaterialsAlertHud.show(missingMaterialsMessage.copy().withStyle(ChatFormatting.RED));
                 return;
             }
         }
-        handleClientTarget(player, heldPipeBlock, target);
+        handleClientTarget(player, routePipeBlock, target);
     }
 
     /** Inicia o confirma localmente una ruta y envia el objetivo al servidor. */
-    private static void handleClientTarget(LocalPlayer player, Block heldPipeBlock, PlacementTarget target) {
+    private static void handleClientTarget(LocalPlayer player, Block routePipeBlock, PlacementTarget target) {
         ClientPlacementAnimationSynchronizer.syncIfConnected();
         PacketDistributor.sendToServer(new SelectPipeTargetPayload(target.position(), target.face(), target.existingPipe()));
 
         Selection currentSelection = ClientPipeConnectorState.getSelection();
         if (currentSelection == null) {
-            ClientPipeConnectorState.setSelection(new Selection(target.position(), heldPipeBlock, target.face(), target.existingPipe()));
+            PipeConnectorModeStatusHud.dismiss();
+            ClientPipeConnectorState.setSelection(new Selection(target.position(), routePipeBlock, target.face(), target.existingPipe()));
             clearPreviewTargetLock();
             clearPipeStatus(player);
             return;
         }
 
-        if (currentSelection.position().equals(target.position()) || currentSelection.pipeBlock() != heldPipeBlock) {
+        if (currentSelection.position().equals(target.position())) {
             clearCurrentConnection(player);
             return;
         }
 
-        ClientPlacementLeadPreview.enqueue(player.level(), ClientPipeConnectorState.getPreviewPipes());
+        ClientPlacementLeadPreview.enqueue(
+                player.level(),
+                routePipeBlock,
+                ClientPipeConnectorState.getPreviewPipes()
+        );
         clearCurrentConnection(player);
     }
 
@@ -227,12 +259,18 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
-        if (consumeConnectorModeToggle(minecraft)) {
+        if (minecraft.screen != null) {
+            ClientPipeConnectorKeyMappings.drainPlacementClicks();
+            return;
+        }
+
+        if (ClientPipeConnectorKeyMappings.consumePipeConnectorModeToggle()) {
             boolean enabled = !ClientPipeConnectorState.isConnectorModeEnabled();
             ClientPipeConnectorState.setConnectorModeEnabled(enabled);
             PacketDistributor.sendToServer(new ToggleConnectorModePayload(enabled));
             clearPreviewTargetLock();
             clearPipeStatus(minecraft.player);
+            PipeConnectorModeStatusHud.show(enabled);
         }
 
         if (!ClientPipeConnectorState.isConnectorModeEnabled()) {
@@ -241,42 +279,48 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
-        if (consumeAutoPumpsToggle(minecraft)) {
+        if (ClientPipeConnectorKeyMappings.consumePumpModeCycle()) {
             PumpMode pumpMode = ClientPipeConnectorState.getPumpMode().next();
             ClientPipeConnectorState.setPumpMode(pumpMode);
             PacketDistributor.sendToServer(new PumpModePayload(pumpMode));
             clearPipeStatus(minecraft.player);
         }
 
-        if (consumeAutoPumpDirectionReverse(minecraft) && ClientPipeConnectorState.getPumpMode().isAutomatic()) {
-            boolean reversed = !ClientPipeConnectorState.isAutoPumpDirectionReversed();
-            ClientPipeConnectorState.setAutoPumpDirectionReversed(reversed);
-            PacketDistributor.sendToServer(new ReverseAutoPumpDirectionPayload(reversed));
+        if (ClientPipeConnectorKeyMappings.consumePumpDirectionReverse()) {
+            boolean reversed = !ClientPipeConnectorState.isPumpDirectionReversed();
+            ClientPipeConnectorState.setPumpDirectionReversed(reversed);
+            PacketDistributor.sendToServer(new PumpDirectionPayload(reversed));
             clearPipeStatus(minecraft.player);
         }
 
-        if (consumeCopperCasingModeCycle(minecraft)) {
+        if (ClientPipeConnectorKeyMappings.consumeCopperCasingModeCycle()) {
             CopperCasingMode mode = ClientPipeConnectorState.getCopperCasingMode().next();
             ClientPipeConnectorState.setCopperCasingMode(mode);
             PacketDistributor.sendToServer(new CopperCasingModePayload(mode));
             clearPipeStatus(minecraft.player);
         }
 
-        if (consumePipeStyleModeCycle(minecraft)) {
+        if (ClientPipeConnectorKeyMappings.consumePipeStyleModeCycle()) {
             PipeStyleMode mode = ClientPipeConnectorState.getPipeStyleMode().next();
             ClientPipeConnectorState.setPipeStyleMode(mode);
             PacketDistributor.sendToServer(new PipeStyleModePayload(mode));
             clearPipeStatus(minecraft.player);
         }
 
-        if (consumeRoutePriorityCycle(minecraft)) {
+        if (ClientPipeConnectorKeyMappings.consumeOpenPipeConnectorOptions()) {
             minecraft.setScreen(new ConnectorOptionsRadialScreen());
+            clearPipeStatus(minecraft.player);
+            return;
+        }
+
+        if (ClientPipeConnectorKeyMappings.consumeManualActionCycle()) {
+            ClientPipeConnectorState.setManualAction(ClientPipeConnectorState.getManualAction().next());
             clearPipeStatus(minecraft.player);
         }
 
         Selection selection = ClientPipeConnectorState.getSelection();
         if (selection == null) {
-            drainRoutingKeys();
+            ClientPipeConnectorKeyMappings.drainRouteClicks();
             ClientPipeConnectorState.setPreviewPipes(List.of());
             ClientPipeConnectorState.setMaterialStatus(null);
             clearPreviewTargetLock();
@@ -284,24 +328,47 @@ public final class ClientPipeConnectorInputHandler {
             return;
         }
 
-        if (!PipeConnectorLogic.isPlayerInPipeMode(minecraft.player, selection)) {
+        if (!PipeConnectorLogic.isSelectionStillValid(minecraft.level, selection)) {
             clearCurrentConnection(minecraft.player);
             return;
         }
 
-        Block heldPipeBlock = selection.pipeBlock();
-        boolean anchorPressed = consumeAddAnchor(minecraft);
-        boolean removeAnchorPressed = consumeRemoveLastAnchor(minecraft);
-        boolean copperCasingPressed = consumeCopperCasing(minecraft);
-        boolean manualPumpPressed = consumeManualPump(minecraft);
-        boolean removeManualPumpPressed = consumeRemoveLastManualPump(minecraft) || manualPumpPressed && Screen.hasShiftDown();
-        boolean removeCopperCasingPressed = consumeRemoveLastCopperCasing(minecraft) || copperCasingPressed && Screen.hasShiftDown();
-        if (removeAnchorPressed && ClientPipeConnectorState.removeLastAnchor()) {
-            PacketDistributor.sendToServer(new RemoveLastAnchorPayload());
-            clearPreviewTargetLock();
+        Block routePipeBlock = selection.pipeBlock();
+        boolean applyManualActionPressed = ClientPipeConnectorKeyMappings.consumeApplyManualAction();
+        boolean undoLastRouteActionPressed = ClientPipeConnectorKeyMappings.consumeUndoLastRouteAction();
+        ManualAction manualAction = ClientPipeConnectorState.getManualAction();
+        boolean anchorPressed = applyManualActionPressed && manualAction == ManualAction.ANCHOR;
+        boolean dedicatedCopperCasingPressed = ClientPipeConnectorKeyMappings.consumeCopperCasingToggle();
+        boolean dedicatedManualPumpPressed = ClientPipeConnectorKeyMappings.consumeManualPumpToggle();
+        boolean copperCasingPressed = dedicatedCopperCasingPressed
+                || applyManualActionPressed && manualAction == ManualAction.COPPER_CASING;
+        boolean manualPumpPressed = dedicatedManualPumpPressed
+                || applyManualActionPressed && manualAction == ManualAction.MECHANICAL_PUMP;
+        boolean removeManualPumpPressed = ClientPipeConnectorKeyMappings.consumeRemoveLastManualPump()
+                || dedicatedManualPumpPressed && Screen.hasShiftDown();
+        boolean removeCopperCasingPressed = ClientPipeConnectorKeyMappings.consumeRemoveLastCopperCasing()
+                || dedicatedCopperCasingPressed && Screen.hasShiftDown();
+        if (undoLastRouteActionPressed) {
+            syncManualRouteUndo(ClientPipeConnectorState.undoLastManualRouteAction());
+        }
+        if (removeManualPumpPressed) {
+            manualPumpPressed = false;
+            ManualMarkerChange change = ClientPipeConnectorState.removeLastManualPump();
+            if (change != null) {
+                PacketDistributor.sendToServer(new RemoveLastManualPumpPayload());
+                syncManualSupportAnchor(change, null);
+            }
+        }
+        if (removeCopperCasingPressed) {
+            copperCasingPressed = false;
+            ManualMarkerChange change = ClientPipeConnectorState.removeLastCopperCasing();
+            if (change != null) {
+                PacketDistributor.sendToServer(new RemoveLastCopperCasingPayload());
+                syncManualSupportAnchor(change, null);
+            }
         }
 
-        PlacementTarget target = getTrackingPreviewTarget(minecraft, heldPipeBlock);
+        PlacementTarget target = getTrackingPreviewTarget(minecraft, routePipeBlock);
         if (target == null || target.position().equals(selection.position())) {
             if (!showInitialPipePreview(minecraft, selection)) {
                 ClientPipeConnectorState.setPreviewPipes(List.of());
@@ -315,7 +382,10 @@ public final class ClientPipeConnectorInputHandler {
         if (plan == null) {
             ClientPipeConnectorState.setPreviewPipes(List.of());
             ClientPipeConnectorState.setMaterialStatus(null);
-            showPipeStatus(minecraft.player, Component.translatable(NO_ROUTE_MESSAGE).withStyle(ChatFormatting.RED));
+            showPipeStatus(
+                    minecraft.player,
+                    Component.translatable(NO_ROUTE_MESSAGE).withStyle(ChatFormatting.RED)
+            );
             return;
         }
         plan = applyAutoPumps(plan);
@@ -323,7 +393,6 @@ public final class ClientPipeConnectorInputHandler {
         if (anchorPressed && canAddAnchor(selection, target)) {
             ClientPipeConnectorState.addAnchor(target);
             PacketDistributor.sendToServer(new AddAnchorPayload(target.position(), target.face(), target.existingPipe()));
-            clearPreviewTargetLock();
             plan = getBasePlacementPlan(minecraft, selection, target);
             if (plan == null) {
                 ClientPipeConnectorState.setPreviewPipes(List.of());
@@ -333,39 +402,41 @@ public final class ClientPipeConnectorInputHandler {
             plan = applyAutoPumps(plan);
         }
 
-        if (manualPumpPressed || removeManualPumpPressed) {
-            if (removeManualPumpPressed) {
-                if (ClientPipeConnectorState.removeLastManualPump()) {
-                    PacketDistributor.sendToServer(new RemoveLastManualPumpPayload());
-                }
-            } else {
-                BlockPos manualPumpPosition = closestManualPumpPosition(plan, target.position());
-                if (manualPumpPosition != null) {
-                    ClientPipeConnectorState.toggleManualPump(manualPumpPosition);
-                    PacketDistributor.sendToServer(new ToggleManualPumpPayload(manualPumpPosition));
-                }
+        if (manualPumpPressed) {
+            BlockPos manualPumpPosition = closestManualPumpPosition(plan, target.position());
+            if (manualPumpPosition != null) {
+                PlacementTarget supportAnchor = manualSupportAnchorIfEnabled(
+                        plan,
+                        manualPumpPosition,
+                        target.face()
+                );
+                ManualMarkerChange change = ClientPipeConnectorState.toggleManualPump(manualPumpPosition, supportAnchor);
+                PacketDistributor.sendToServer(new ToggleManualPumpPayload(manualPumpPosition));
+                syncManualSupportAnchor(change, supportAnchor);
             }
         }
-        if ((copperCasingPressed || removeCopperCasingPressed) && PipeConnectorLogic.supportsCopperCasing(selection.pipeBlock())) {
-            if (removeCopperCasingPressed) {
-                if (ClientPipeConnectorState.removeLastCopperCasing()) {
-                    PacketDistributor.sendToServer(new RemoveLastCopperCasingPayload());
-                }
-            } else {
-                if (ClientPipeConnectorState.getCopperCasingMode() != CopperCasingMode.MANUAL) {
-                    ClientPipeConnectorState.setCopperCasingMode(CopperCasingMode.MANUAL);
-                    PacketDistributor.sendToServer(new CopperCasingModePayload(CopperCasingMode.MANUAL));
-                }
-                BlockPos copperCasingPosition = closestCopperCasingPosition(plan, target.position());
-                if (copperCasingPosition != null) {
-                    ClientPipeConnectorState.toggleCopperCasing(copperCasingPosition);
-                    PacketDistributor.sendToServer(new ToggleCopperCasingPayload(copperCasingPosition));
-                }
-            }
-        }
-        plan = applyPreviewModifiers(plan, selection);
+        plan = PipeConnectorLogic.withManualPumps(
+                plan,
+                ClientPipeConnectorState.getManualPumps(),
+                ClientPipeConnectorState.isPumpDirectionReversed()
+        );
 
-        updatePreview(minecraft, selection, plan);
+        if (copperCasingPressed && PipeConnectorLogic.supportsCopperCasing(selection.pipeBlock())) {
+            BlockPos copperCasingPosition = closestCopperCasingPosition(plan, target.position());
+            if (copperCasingPosition != null) {
+                PlacementTarget supportAnchor = manualSupportAnchorIfEnabled(
+                        plan,
+                        copperCasingPosition,
+                        target.face()
+                );
+                ManualMarkerChange change = ClientPipeConnectorState.toggleCopperCasing(copperCasingPosition, supportAnchor);
+                PacketDistributor.sendToServer(new ToggleCopperCasingPayload(copperCasingPosition));
+                syncManualSupportAnchor(change, supportAnchor);
+            }
+        }
+        plan = applyPreviewAppearance(plan, selection);
+
+        updatePreview(minecraft, selection, target, plan);
         clearPipeStatus(minecraft.player);
     }
 
@@ -375,23 +446,52 @@ public final class ClientPipeConnectorInputHandler {
             return false;
         }
 
-        if (!selection.equals(cachedInitialPreviewSelection)) {
-            cachedInitialPreviewSelection = selection;
-            cachedInitialPreviewPlan = new ConnectionPlan(
-                    List.of(selection.position()),
-                    List.of(selection.position())
-            );
-        }
-        ConnectionPlan plan = applyPreviewModifiers(cachedInitialPreviewPlan, selection);
+        ConnectionPlan plan = new ConnectionPlan(
+                List.of(selection.position()),
+                List.of(selection.position())
+        );
+        plan = applyPreviewAppearance(plan, selection);
 
-        updatePreview(minecraft, selection, plan);
+        updatePreview(minecraft, selection, null, plan);
         clearPipeStatus(minecraft.player);
         return true;
     }
 
+    /** Aplica bombas, revestimientos y estilo al plan base del preview. */
+    private static ConnectionPlan applyPreviewAppearance(ConnectionPlan plan, Selection selection) {
+        ConnectionPlan styledPlan = PipeConnectorLogic.withCopperCasingMode(
+                plan,
+                ClientPipeConnectorState.getCopperCasingMode(),
+                ClientPipeConnectorState.getCopperCasings(),
+                selection.pipeBlock()
+        );
+        return PipeConnectorLogic.withPipeStyleMode(
+                styledPlan,
+                ClientPipeConnectorState.getPipeStyleMode(),
+                selection.pipeBlock()
+        );
+    }
+
     /** Calcula materiales y publica las piezas definitivas del preview. */
-    private static void updatePreview(Minecraft minecraft, Selection selection, ConnectionPlan plan) {
-        ClientPipePreviewCache.update(minecraft, selection, plan);
+    private static void updatePreview(
+            Minecraft minecraft,
+            Selection selection,
+            PlacementTarget target,
+            ConnectionPlan plan
+    ) {
+        ClientPipeConnectorState.MaterialStatus materialStatus = ClientMaterialPreview.createStatus(
+                minecraft.player,
+                selection,
+                plan
+        );
+        List<PreviewPipe> previewPipes = ClientMaterialPreview.markMissingMaterials(
+                plan,
+                PipeConnectorLogic.buildPreview(minecraft.level, plan, selection.pipeBlock()),
+                materialStatus
+        );
+        ClientPipeConnectorState.setPreviewPipes(previewPipes);
+        ClientPipeConnectorState.setPreviewTarget(previewPipes.isEmpty() ? null : target);
+        ClientPipeConnectorState.setMaterialStatus(materialStatus);
     }
 
     /** Obtiene o reutiliza el plan base para una seleccion y objetivo. */
@@ -410,7 +510,7 @@ public final class ClientPipeConnectorInputHandler {
     /** Obtiene el objetivo que sigue a la mirada mientras el preview esta libre. */
     private static PlacementTarget getTrackingPreviewTarget(Minecraft minecraft, Block pipeBlock) {
         PlacementTarget hoveredTarget = getPreviewTarget(minecraft, pipeBlock);
-        if (consumePreviewLockToggle(minecraft)) {
+        if (ClientPipeConnectorKeyMappings.consumePreviewLockToggle()) {
             if (previewTargetLocked) {
                 clearPreviewTargetLock();
             } else if (hoveredTarget != null) {
@@ -420,76 +520,6 @@ public final class ClientPipeConnectorInputHandler {
         }
 
         return previewTargetLocked ? lockedPreviewTarget : hoveredTarget;
-    }
-
-    /** Devuelve el objetivo fijado o el objetivo actual de la mirada. */
-    private static PlacementTarget getActivePreviewTarget(Minecraft minecraft, Block pipeBlock) {
-        return previewTargetLocked ? lockedPreviewTarget : getPreviewTarget(minecraft, pipeBlock);
-    }
-
-    /** Consume el control de bloqueo si la pantalla permite entrada de juego. */
-    private static boolean consumePreviewLockToggle(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumePreviewLockToggle();
-    }
-
-    /** Consume el control del modo conector si la pantalla lo permite. */
-    private static boolean consumeConnectorModeToggle(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeConnectorModeToggle();
-    }
-
-    /** Consume el control heredado de bombas automaticas si procede. */
-    private static boolean consumeAutoPumpsToggle(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle();
-    }
-
-    /** Consume el control de inversion automatica si procede. */
-    private static boolean consumeAutoPumpDirectionReverse(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse();
-    }
-
-    /** Consume el control de ciclo de revestimiento si procede. */
-    private static boolean consumeCopperCasingModeCycle(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeCopperCasingModeCycle();
-    }
-
-    /** Consume el control de ciclo de estilo si procede. */
-    private static boolean consumePipeStyleModeCycle(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumePipeStyleModeCycle();
-    }
-
-    /** Consume el control de prioridad o abre el menu radial. */
-    private static boolean consumeRoutePriorityCycle(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRoutePriorityCycle();
-    }
-
-    /** Consume el control para anadir anclas. */
-    private static boolean consumeAddAnchor(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeAddAnchor();
-    }
-
-    /** Consume el control para retirar la ultima ancla. */
-    private static boolean consumeRemoveLastAnchor(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastAnchor();
-    }
-
-    /** Consume el control para alternar revestimiento manual. */
-    private static boolean consumeCopperCasing(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeCopperCasingToggle();
-    }
-
-    /** Consume el control para alternar una bomba manual. */
-    private static boolean consumeManualPump(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeManualPumpToggle();
-    }
-
-    /** Consume el control para retirar la ultima bomba manual. */
-    private static boolean consumeRemoveLastManualPump(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastManualPump();
-    }
-
-    /** Consume el control para retirar el ultimo revestimiento manual. */
-    private static boolean consumeRemoveLastCopperCasing(Minecraft minecraft) {
-        return minecraft.screen == null && ClientPipeConnectorKeyMappings.consumeRemoveLastCopperCasing();
     }
 
     /** Comprueba que el objetivo puede anadirse como nueva ancla. */
@@ -504,54 +534,7 @@ public final class ClientPipeConnectorInputHandler {
 
     /** Aplica al plan la configuracion local de bombas automaticas. */
     private static ConnectionPlan applyAutoPumps(ConnectionPlan plan) {
-        PumpMode pumpMode = ClientPipeConnectorState.getPumpMode();
-        boolean reversed = ClientPipeConnectorState.isAutoPumpDirectionReversed();
-        if (cachedAutoPumpBasePlan == plan
-                && cachedAutoPumpMode == pumpMode
-                && cachedAutoPumpDirectionReversed == reversed) {
-            return cachedAutoPumpPlan;
-        }
-
-        cachedAutoPumpBasePlan = plan;
-        cachedAutoPumpMode = pumpMode;
-        cachedAutoPumpDirectionReversed = reversed;
-        cachedAutoPumpPlan = PipeConnectorLogic.withPumpMode(plan, pumpMode, reversed);
-        return cachedAutoPumpPlan;
-    }
-
-    /** Reutiliza los modificadores finales mientras sus entradas no cambien. */
-    private static ConnectionPlan applyPreviewModifiers(ConnectionPlan plan, Selection selection) {
-        List<BlockPos> manualPumps = ClientPipeConnectorState.getManualPumps();
-        CopperCasingMode copperCasingMode = ClientPipeConnectorState.getCopperCasingMode();
-        List<BlockPos> copperCasings = ClientPipeConnectorState.getCopperCasings();
-        PipeStyleMode pipeStyleMode = ClientPipeConnectorState.getPipeStyleMode();
-        Block pipeBlock = selection.pipeBlock();
-        if (cachedModifiedBasePlan == plan
-                && cachedManualPumps == manualPumps
-                && cachedCopperCasingMode == copperCasingMode
-                && cachedCopperCasings == copperCasings
-                && cachedPipeStyleMode == pipeStyleMode
-                && cachedModifiedPipeBlock == pipeBlock) {
-            return cachedModifiedPlan;
-        }
-
-        ConnectionPlan modifiedPlan = PipeConnectorLogic.withManualPumps(plan, manualPumps);
-        modifiedPlan = PipeConnectorLogic.withCopperCasingMode(
-                modifiedPlan,
-                copperCasingMode,
-                copperCasings,
-                pipeBlock
-        );
-        modifiedPlan = PipeConnectorLogic.withPipeStyleMode(modifiedPlan, pipeStyleMode, pipeBlock);
-
-        cachedModifiedBasePlan = plan;
-        cachedManualPumps = manualPumps;
-        cachedCopperCasingMode = copperCasingMode;
-        cachedCopperCasings = copperCasings;
-        cachedPipeStyleMode = pipeStyleMode;
-        cachedModifiedPipeBlock = pipeBlock;
-        cachedModifiedPlan = modifiedPlan;
-        return modifiedPlan;
+        return PipeConnectorLogic.withPumpMode(plan, ClientPipeConnectorState.getPumpMode(), ClientPipeConnectorState.isPumpDirectionReversed());
     }
 
     /** Busca la posicion colocable mas cercana para marcar revestimiento. */
@@ -595,6 +578,67 @@ public final class ClientPipeConnectorInputHandler {
             }
         }
         return closestDistance <= MANUAL_MARKER_SNAP_DISTANCE ? closestPosition : null;
+    }
+
+    /** Crea un ancla colocable que conserva la posicion elegida por la accion manual. */
+    private static PlacementTarget manualSupportAnchor(
+            ConnectionPlan plan,
+            BlockPos position,
+            Direction fallbackFace
+    ) {
+        List<BlockPos> path = plan.path();
+        int index = path.indexOf(position);
+        Direction face = fallbackFace;
+        if (index >= 0 && index + 1 < path.size()) {
+            face = PipeConnectorLogic.directionBetween(position, path.get(index + 1));
+        } else if (index > 0) {
+            face = PipeConnectorLogic.directionBetween(position, path.get(index - 1));
+        }
+        return new PlacementTarget(position, face == null ? Direction.UP : face, false);
+    }
+
+    /** Crea el ancla auxiliar solo cuando la preferencia individual esta activa. */
+    private static PlacementTarget manualSupportAnchorIfEnabled(
+            ConnectionPlan plan,
+            BlockPos position,
+            Direction fallbackFace
+    ) {
+        return ManualAnchorClientConfig.isEnabled()
+                ? manualSupportAnchor(plan, position, fallbackFace)
+                : null;
+    }
+
+    /** Sincroniza el alta o retirada del ancla creada por una marca manual. */
+    private static void syncManualSupportAnchor(ManualMarkerChange change, PlacementTarget supportAnchor) {
+        if (change == null || !change.anchorChanged()) {
+            return;
+        }
+        if (change.added() && supportAnchor != null) {
+            PacketDistributor.sendToServer(new AddAnchorPayload(
+                    supportAnchor.position(),
+                    supportAnchor.face(),
+                    supportAnchor.existingPipe()
+            ));
+            return;
+        }
+        PacketDistributor.sendToServer(new RemoveAnchorPayload(change.position()));
+    }
+
+    /** Sincroniza el deshacer global respetando el tipo real de la ultima accion. */
+    private static void syncManualRouteUndo(ManualRouteChange change) {
+        if (change == null) {
+            return;
+        }
+
+        if (change.action() == ManualAction.MECHANICAL_PUMP) {
+            PacketDistributor.sendToServer(new RemoveLastManualPumpPayload());
+        } else if (change.action() == ManualAction.COPPER_CASING) {
+            PacketDistributor.sendToServer(new RemoveLastCopperCasingPayload());
+        }
+
+        if (change.anchorRemoved()) {
+            PacketDistributor.sendToServer(new RemoveAnchorPayload(change.position()));
+        }
     }
 
     /** Resuelve un objetivo de bloque o aire para el preview activo. */
@@ -647,7 +691,7 @@ public final class ClientPipeConnectorInputHandler {
             return null;
         }
 
-        double reach = player.blockInteractionRange();
+        double reach = PipeConnectorLogic.getInteractionRange(player);
         Vec3 lookVector = player.getViewVector(1.0F);
         BlockPos targetPosition = BlockPos.containing(player.getEyePosition().add(lookVector.scale(reach)));
         if (!PipeConnectorLogic.canPlacePipeAt(minecraft.level, targetPosition)) {
@@ -693,47 +737,6 @@ public final class ClientPipeConnectorInputHandler {
         cachedRoutePlanKey = null;
         cachedRoutePlan = null;
         hasCachedRoutePlan = false;
-        cachedAutoPumpBasePlan = null;
-        cachedAutoPumpPlan = null;
-        cachedAutoPumpMode = null;
-        cachedModifiedBasePlan = null;
-        cachedModifiedPlan = null;
-        cachedManualPumps = null;
-        cachedCopperCasingMode = null;
-        cachedCopperCasings = null;
-        cachedPipeStyleMode = null;
-        cachedModifiedPipeBlock = null;
-        cachedInitialPreviewSelection = null;
-        cachedInitialPreviewPlan = null;
-        ClientPipePreviewCache.clear();
-    }
-
-    /** Descarta pulsaciones pendientes de controles asociados a una ruta. */
-    private static void drainRoutingKeys() {
-        while (ClientPipeConnectorKeyMappings.consumePreviewLockToggle()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeAddAnchor()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeRemoveLastAnchor()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeCopperCasingToggle()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeRemoveLastCopperCasing()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeManualPumpToggle()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeRemoveLastManualPump()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeAutoPumpsToggle()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeCopperCasingModeCycle()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumePipeStyleModeCycle()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeAutoPumpDirectionReverse()) {
-        }
-        while (ClientPipeConnectorKeyMappings.consumeRoutePriorityCycle()) {
-        }
     }
 
     /** Clave inmutable utilizada para reutilizar calculos de ruta identicos. */

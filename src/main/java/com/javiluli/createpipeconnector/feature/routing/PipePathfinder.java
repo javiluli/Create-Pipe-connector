@@ -247,11 +247,10 @@ public final class PipePathfinder {
         Axis secondaryHorizontalAxis = primaryHorizontalAxis == Axis.X ? Axis.Z : Axis.X;
 
         return switch (routePriority) {
-            case HORIZONTAL_FIRST -> new Axis[]{primaryHorizontalAxis, secondaryHorizontalAxis, Axis.Y};
+            case HORIZONTAL_FIRST, AVOID_VERTICAL -> new Axis[]{primaryHorizontalAxis, secondaryHorizontalAxis, Axis.Y};
             case VERTICAL_FIRST -> new Axis[]{Axis.Y, primaryHorizontalAxis, secondaryHorizontalAxis};
             case X_FIRST -> new Axis[]{Axis.X, Axis.Z, Axis.Y};
             case Z_FIRST -> new Axis[]{Axis.Z, Axis.X, Axis.Y};
-            case AVOID_VERTICAL -> new Axis[]{primaryHorizontalAxis, secondaryHorizontalAxis, Axis.Y};
             case AUTO -> automaticAxisOrder(startPos, endPos);
         };
     }
@@ -320,11 +319,7 @@ public final class PipePathfinder {
 
     /** Comprueba si el bloque permite colocar o reutilizar una tuberia. */
     public static boolean isTraversableBlock(Level level, BlockPos position) {
-        return isTraversableBlock(level.getBlockState(position));
-    }
-
-    /** Comprueba un estado ya consultado sin volver a leer el mundo. */
-    public static boolean isTraversableBlock(BlockState state) {
+        BlockState state = level.getBlockState(position);
         return state.isAir() || state.canBeReplaced() || CreatePipeBlocks.isConnectablePipe(state);
     }
 

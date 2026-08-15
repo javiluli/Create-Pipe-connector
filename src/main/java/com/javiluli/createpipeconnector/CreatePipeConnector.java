@@ -2,8 +2,8 @@ package com.javiluli.createpipeconnector;
 
 import com.javiluli.createpipeconnector.core.Constants;
 import com.javiluli.createpipeconnector.bootstrap.NeoForgeClientBootstrap;
+import com.javiluli.createpipeconnector.config.CreatePipeConnectorClientConfig;
 import com.javiluli.createpipeconnector.feature.connector.server.ServerPipeConnectorEvents;
-import com.javiluli.createpipeconnector.feature.placement.config.PlacementAnimationClientConfig;
 import com.javiluli.createpipeconnector.platform.network.CreatePipeConnectorNetwork;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.api.distmarker.Dist;
@@ -22,7 +22,7 @@ public class CreatePipeConnector {
     public CreatePipeConnector(IEventBus eventBus, ModContainer modContainer) {
         modContainer.registerConfig(
                 ModConfig.Type.CLIENT,
-                PlacementAnimationClientConfig.SPEC,
+                CreatePipeConnectorClientConfig.SPEC,
                 Constants.MOD_ID + "-client.toml"
         );
         if (FMLEnvironment.dist == Dist.CLIENT) {
